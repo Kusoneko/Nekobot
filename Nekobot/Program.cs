@@ -401,7 +401,8 @@ namespace Nekobot
                     case "say":
                         Say(e);
                         break;
-
+                    //Killed temporarily because causes a random RuntimeBinderException
+/*
                     case "sidetail":
                         if (!sfw.Contains(e.Message.ChannelId))
                             Danbooru(e, "sidetail", 480);
@@ -424,7 +425,7 @@ namespace Nekobot
                         else
                             SfwChannel(e);
                         break;
-
+*/
                     case "rule34":
                         if (!sfw.Contains(e.Message.ChannelId))
                             Rule34(e);
@@ -2505,9 +2506,6 @@ namespace Nekobot
  !kona tags - Grabs a random image fitting the tags from http://konachan.com/ Warning: can return a nsfw image, if nothing is returned, the tag is incorrect or doesn't have a minimum of 100 pictures
  !rule34 tags - Grabs a random image from http://rule34.xxx/ Warning: can return a nsfw image, if nothing is returned, tag is incorrect or doesn't have a minimum of 100 pictures
  !gelbooru tags - Grabs a random image from http://gelbooru.com/ Warning: can return a nsfw image, if nothing is returned, tag is incorrect or doesn't have a minimum of 100 pictures
- !sidetail - Grabs a random sidetail image from https://danbooru.donmai.us/posts?tags=sidetail Warning: can return a nsfw image
- !futanari (!futa) - Grabs a random futa image from http://danbooru.donmai.us/posts?tags=futanari Warning: can return a nsfw image
- !wincest (!incest) - Grabs a random incest image from https://danbooru.donmai.us/posts?tags=incest Warning: can return a nsfw image
  !cosplay - Grabs a random cosplay image from Salvy's folder - doesn't update, contains 157 images.
  !pitur - Grabs a random lewd image from Pitur's collection - doesn't update, contains 4396 images.
  !gold - Grabs a random kancolle image from Au-chan's collection - updates, though not in real time.
@@ -2517,6 +2515,11 @@ namespace Nekobot
  !cid channelname - Gets the ID of all channel with the same name.
  !commands (!help) - How you got this to show up. Will still send them in PM if you ask in a channel.
 That's all for now! Suggest ideas to Kusoneko, might add it at some point.");
+/* removed temporarily due to a random bug
+ !sidetail - Grabs a random sidetail image from https://danbooru.donmai.us/posts?tags=sidetail Warning: can return a nsfw image
+ !futanari (!futa) - Grabs a random futa image from http://danbooru.donmai.us/posts?tags=futanari Warning: can return a nsfw image
+ !wincest (!incest) - Grabs a random incest image from https://danbooru.donmai.us/posts?tags=incest Warning: can return a nsfw image
+*/
         }
 
         public static void Main(string[] args)
@@ -2601,7 +2604,7 @@ That's all for now! Suggest ideas to Kusoneko, might add it at some point.");
             return source.Substring(source.Length - tail_length);
         }
     }
-/*
+/* 64 bit stuffs, but voice doesn't support 64 bits so rolled back to 32 bit until it does
     static class RandomExtensions
     {
         static int NextInt32(this Random rg)
