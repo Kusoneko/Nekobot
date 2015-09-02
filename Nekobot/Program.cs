@@ -671,7 +671,7 @@ namespace Nekobot
             {
                 try
                 {
-                    wr = WebRequest.Create("http://gelbooru.com/index.php?page=dapi&s=post&q=index&limit=100&tags=" + e.Message.RawText.Substring(9)) as HttpWebRequest;
+                    wr = WebRequest.Create("http://gelbooru.com/index.php?page=dapi&s=post&q=index&tags=" + e.Message.RawText.Substring(9)) as HttpWebRequest;
                     res = wr.GetResponse() as HttpWebResponse;
                     xdoc.Load(res.GetResponseStream());
                     break;
@@ -699,9 +699,8 @@ namespace Nekobot
             count = int.Parse(posts.Attributes["count"].Value.ToString());
             if (count < 1)
                 return;
-            count = count / 100;
             string sURL;
-            sURL = "http://gelbooru.com/index.php?page=dapi&s=post&q=index&limit=100&tags=" + e.Message.RawText.Substring(9) + "&pid=" + rnd.Next(0, count).ToString();
+            sURL = "http://gelbooru.com/index.php?page=dapi&s=post&q=index&limit=1&tags=" + e.Message.RawText.Substring(9) + "&pid=" + rnd.Next(0, count).ToString();
             WebRequest wrGETURL;
             wrGETURL = WebRequest.Create(sURL);
             Stream objStream = null;
@@ -738,11 +737,10 @@ namespace Nekobot
             XmlDocument xml = new XmlDocument();
             xml.LoadXml(sLine);
             dynamic result = Newtonsoft.Json.Linq.JObject.Parse(JsonConvert.SerializeXmlNode(xml));
-            int post = rnd.Next(0, 100);
             string file_url = "";
             try
             {
-                foreach (string key in result.posts.post[post])
+                foreach (string key in result.posts.post[0])
                 {
                     if (key.Contains("http://"))
                     {
@@ -798,7 +796,7 @@ namespace Nekobot
             {
                 try
                 {
-                    wr = WebRequest.Create("http://rule34.xxx/index.php?page=dapi&s=post&q=index&limit=100&tags=" + e.Message.RawText.Substring(8)) as HttpWebRequest;
+                    wr = WebRequest.Create("http://rule34.xxx/index.php?page=dapi&s=post&q=index&tags=" + e.Message.RawText.Substring(8)) as HttpWebRequest;
                     res = wr.GetResponse() as HttpWebResponse;
                     xdoc.Load(res.GetResponseStream());
                     break;
@@ -826,9 +824,8 @@ namespace Nekobot
             count = int.Parse(posts.Attributes["count"].Value.ToString());
             if (count < 1)
                 return;
-            count = count / 100;
             string sURL;
-            sURL = "http://rule34.xxx/index.php?page=dapi&s=post&q=index&limit=100&tags=" + e.Message.RawText.Substring(8) + "&pid=" + rnd.Next(0, count).ToString();
+            sURL = "http://rule34.xxx/index.php?page=dapi&s=post&q=index&limit=1&tags=" + e.Message.RawText.Substring(8) + "&pid=" + rnd.Next(0, count).ToString();
             WebRequest wrGETURL;
             wrGETURL = WebRequest.Create(sURL);
             Stream objStream = null;
@@ -865,11 +862,10 @@ namespace Nekobot
             XmlDocument xml = new XmlDocument();
             xml.LoadXml(sLine);
             dynamic result = Newtonsoft.Json.Linq.JObject.Parse(JsonConvert.SerializeXmlNode(xml));
-            int post = rnd.Next(0, 100);
             string file_url = "";
             try
             {
-                foreach (string key in result.posts.post[post])
+                foreach (string key in result.posts.post[0])
                 {
                     if (key.Contains("http://"))
                     {
@@ -952,9 +948,8 @@ namespace Nekobot
             count = int.Parse(posts.Attributes["count"].Value.ToString());
             if (count < 1)
                 return;
-            count = count / 100;
             string sURL;
-            sURL = "http://konachan.com/post.json?tags=" + e.Message.RawText.Substring(6) + "&limit=100&page=" + rnd.Next(1, count + 1).ToString();
+            sURL = "http://konachan.com/post.json?tags=" + e.Message.RawText.Substring(6) + "&limit=1&page=" + rnd.Next(1, count + 1).ToString();
             WebRequest wrGETURL;
             wrGETURL = WebRequest.Create(sURL);
             Stream objStream = null;
@@ -999,7 +994,7 @@ namespace Nekobot
             {
                 try
                 {
-                    await client.SendMessage(e.Message.Channel, result[rnd.Next(0, 100)].file_url.ToString());
+                    await client.SendMessage(e.Message.Channel, result[0].file_url.ToString());
                     break;
                 }
                 catch (WebException ex)
