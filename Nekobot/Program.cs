@@ -484,6 +484,11 @@ namespace Nekobot
                         Cid(e);
                         break;
 
+                    case "kys":
+                    case "killyourself":
+                        Kys(e);
+                        break;
+
                     case "help":
                     case "commands":
                         Commands(e);
