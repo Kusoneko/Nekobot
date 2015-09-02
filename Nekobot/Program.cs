@@ -698,7 +698,35 @@ namespace Nekobot
             XmlNode posts = xdoc.SelectSingleNode("posts");
             count = int.Parse(posts.Attributes["count"].Value.ToString());
             if (count < 1)
-                return;
+            {
+                retry = 0;
+                while (retry < 5)
+                {
+                    try
+                    {
+                        await client.SendMessage(e.Message.Channel, "There isn't anything under the tag(s) " + e.Message.RawText.Substring(9) + " on gelbooru.");
+                        return;
+                    }
+                    catch (WebException ex)
+                    {
+                        Console.WriteLine(ex.Message);
+                        await Task.Delay(5000);
+                    }
+                    catch (HttpRequestException we)
+                    {
+                        Console.WriteLine(we.Message);
+                        await Task.Delay(5000);
+                    }
+                    catch (Exception aex)
+                    {
+                        Console.WriteLine(aex.Message);
+                        await Task.Delay(5000);
+                    }
+                    retry++;
+                    if (retry == 5)
+                        return;
+                }
+            }
             string sURL;
             sURL = "http://gelbooru.com/index.php?page=dapi&s=post&q=index&limit=1&tags=" + e.Message.RawText.Substring(9) + "&pid=" + rnd.Next(0, count).ToString();
             WebRequest wrGETURL;
@@ -823,7 +851,35 @@ namespace Nekobot
             XmlNode posts = xdoc.SelectSingleNode("posts");
             count = int.Parse(posts.Attributes["count"].Value.ToString());
             if (count < 1)
-                return;
+            {
+                retry = 0;
+                while (retry < 5)
+                {
+                    try
+                    {
+                        await client.SendMessage(e.Message.Channel, "There isn't anything under the tag(s) " + e.Message.RawText.Substring(8) + " on rule34.");
+                        return;
+                    }
+                    catch (WebException ex)
+                    {
+                        Console.WriteLine(ex.Message);
+                        await Task.Delay(5000);
+                    }
+                    catch (HttpRequestException we)
+                    {
+                        Console.WriteLine(we.Message);
+                        await Task.Delay(5000);
+                    }
+                    catch (Exception aex)
+                    {
+                        Console.WriteLine(aex.Message);
+                        await Task.Delay(5000);
+                    }
+                    retry++;
+                    if (retry == 5)
+                        return;
+                }
+            }
             string sURL;
             sURL = "http://rule34.xxx/index.php?page=dapi&s=post&q=index&limit=1&tags=" + e.Message.RawText.Substring(8) + "&pid=" + rnd.Next(0, count).ToString();
             WebRequest wrGETURL;
@@ -947,7 +1003,35 @@ namespace Nekobot
             XmlNode posts = xdoc.SelectSingleNode("posts");
             count = int.Parse(posts.Attributes["count"].Value.ToString());
             if (count < 1)
-                return;
+            {
+                retry = 0;
+                while (retry < 5)
+                {
+                    try
+                    {
+                        await client.SendMessage(e.Message.Channel, "There isn't anything under the tag(s) " + e.Message.RawText.Substring(6) + " on konachan.");
+                        return;
+                    }
+                    catch (WebException ex)
+                    {
+                        Console.WriteLine(ex.Message);
+                        await Task.Delay(5000);
+                    }
+                    catch (HttpRequestException we)
+                    {
+                        Console.WriteLine(we.Message);
+                        await Task.Delay(5000);
+                    }
+                    catch (Exception aex)
+                    {
+                        Console.WriteLine(aex.Message);
+                        await Task.Delay(5000);
+                    }
+                    retry++;
+                    if (retry == 5)
+                        return;
+                }
+            }
             string sURL;
             sURL = "http://konachan.com/post.json?tags=" + e.Message.RawText.Substring(6) + "&limit=1&page=" + rnd.Next(1, count + 1).ToString();
             WebRequest wrGETURL;
