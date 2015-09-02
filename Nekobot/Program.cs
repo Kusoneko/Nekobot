@@ -404,7 +404,7 @@ namespace Nekobot
 
                     case "sidetail":
                         if (!sfw.Contains(e.Message.ChannelId))
-                            Danbooru(e, "sidetail", 481);
+                            Danbooru(e, "sidetail", 480);
                         else
                             SfwChannel(e);
                         break;
@@ -412,7 +412,7 @@ namespace Nekobot
                     case "futa":
                     case "futanari":
                         if (!sfw.Contains(e.Message.ChannelId))
-                            Danbooru(e, "futanari", 69);
+                            Danbooru(e, "futanari", 68);
                         else
                             SfwChannel(e);
                         break;
@@ -420,7 +420,7 @@ namespace Nekobot
                     case "incest":
                     case "wincest":
                         if (!sfw.Contains(e.Message.ChannelId))
-                            Danbooru(e, "incest", 42);
+                            Danbooru(e, "incest", 41);
                         else
                             SfwChannel(e);
                         break;
