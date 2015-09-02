@@ -1,0 +1,823 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Discord.Net</name>
+    </assembly>
+    <members>
+        <member name="P:Discord.Channel.Id">
+            <summary> Returns the unique identifier for this channel. </summary>
+        </member>
+        <member name="P:Discord.Channel.Name">
+            <summary> Returns the name of this channel. </summary>
+        </member>
+        <member name="P:Discord.Channel.Position">
+            <summary> Returns the position of this channel in the channel list for this server. </summary>
+        </member>
+        <member name="P:Discord.Channel.IsPrivate">
+            <summary> Returns false is this is a public chat and true if this is a private chat with another user (see Recipient). </summary>
+        </member>
+        <member name="P:Discord.Channel.Type">
+            <summary> Returns the type of this channel (see ChannelTypes). </summary>
+        </member>
+        <member name="P:Discord.Channel.ServerId">
+            <summary> Returns the id of the server containing this channel. </summary>
+        </member>
+        <member name="P:Discord.Channel.Server">
+            <summary> Returns the server containing this channel. </summary>
+        </member>
+        <member name="P:Discord.Channel.RecipientId">
+            For private chats, returns the Id of the target user, otherwise null.
+        </member>
+        <member name="P:Discord.Channel.Recipient">
+            For private chats, returns the target user, otherwise null.
+        </member>
+        <member name="P:Discord.Channel.Messages">
+            <summary> Returns a collection of all messages the client has in cache. </summary>
+            <remarks> This collection does not guarantee any ordering. </remarks>
+        </member>
+        <member name="P:Discord.Channel.PermissionOverwrites">
+            <summary> Returns a collection of all custom permissions used for this channel. </summary>
+        </member>
+        <member name="F:Discord.ChannelTypes.Text">
+            <summary> A text-only channel. </summary>
+        </member>
+        <member name="F:Discord.ChannelTypes.Voice">
+            <summary> A voice-only channel. </summary>
+        </member>
+        <member name="T:Discord.DiscordClient">
+            <summary> Provides a connection to the DiscordApp service. </summary>
+        </member>
+        <member name="M:Discord.DiscordClient.CreateServer(System.String,System.String)">
+            <summary> Creates a new server with the provided name and region (see Regions). </summary>
+        </member>
+        <member name="M:Discord.DiscordClient.LeaveServer(Discord.Server)">
+            <summary> Leaves the provided server, destroying it if you are the owner. </summary>
+        </member>
+        <member name="M:Discord.DiscordClient.LeaveServer(System.String)">
+            <summary> Leaves the provided server, destroying it if you are the owner. </summary>
+        </member>
+        <member name="M:Discord.DiscordClient.CreateChannel(Discord.Server,System.String,System.String)">
+            <summary> Creates a new channel with the provided name and type (see ChannelTypes). </summary>
+        </member>
+        <member name="M:Discord.DiscordClient.CreateChannel(System.String,System.String,System.String)">
+            <summary> Creates a new channel with the provided name and type (see ChannelTypes). </summary>
+        </member>
+        <member name="M:Discord.DiscordClient.DestroyChannel(Discord.Channel)">
+            <summary> Destroys the provided channel. </summary>
+        </member>
+        <member name="M:Discord.DiscordClient.DestroyChannel(System.String)">
+            <summary> Destroys the provided channel. </summary>
+        </member>
+        <member name="M:Discord.DiscordClient.Ban(Discord.Server,Discord.User)">
+            <summary> Bans a user from the provided server. </summary>
+        </member>
+        <member name="M:Discord.DiscordClient.Ban(Discord.Server,System.String)">
+            <summary> Bans a user from the provided server. </summary>
+        </member>
+        <member name="M:Discord.DiscordClient.Ban(System.String,Discord.User)">
+            <summary> Bans a user from the provided server. </summary>
+        </member>
+        <member name="M:Discord.DiscordClient.Ban(System.String,System.String)">
+            <summary> Bans a user from the provided server. </summary>
+        </member>
+        <member name="M:Discord.DiscordClient.Unban(Discord.Server,Discord.User)">
+            <summary> Unbans a user from the provided server. </summary>
+        </member>
+        <member name="M:Discord.DiscordClient.Unban(Discord.Server,System.String)">
+            <summary> Unbans a user from the provided server. </summary>
+        </member>
+        <member name="M:Discord.DiscordClient.Unban(System.String,Discord.User)">
+            <summary> Unbans a user from the provided server. </summary>
+        </member>
+        <member name="M:Discord.DiscordClient.Unban(System.String,System.String)">
+            <summary> Unbans a user from the provided server. </summary>
+        </member>
+        <member name="M:Discord.DiscordClient.CreateInvite(Discord.Server,System.Int32,System.Int32,System.Boolean,System.Boolean)">
+            <summary> Creates a new invite to the default channel of the provided server. </summary>
+            <param name="maxAge"> Time (in seconds) until the invite expires. Set to 0 to never expire. </param>
+            <param name="isTemporary"> If true, a user accepting this invite will be kicked from the server after closing their client. </param>
+            <param name="hasXkcdPass"> If true, creates a human-readable link. Not supported if maxAge is set to 0. </param>
+            <param name="maxUses"> The max amount  of times this invite may be used. </param>
+        </member>
+        <member name="M:Discord.DiscordClient.CreateInvite(Discord.Channel,System.Int32,System.Int32,System.Boolean,System.Boolean)">
+            <summary> Creates a new invite to the provided channel. </summary>
+            <param name="maxAge"> Time (in seconds) until the invite expires. Set to 0 to never expire. </param>
+            <param name="isTemporary"> If true, a user accepting this invite will be kicked from the server after closing their client. </param>
+            <param name="hasXkcdPass"> If true, creates a human-readable link. Not supported if maxAge is set to 0. </param>
+            <param name="maxUses"> The max amount  of times this invite may be used. </param>
+        </member>
+        <member name="M:Discord.DiscordClient.CreateInvite(System.String,System.Int32,System.Int32,System.Boolean,System.Boolean)">
+            <summary> Creates a new invite to the provided channel. </summary>
+            <param name="maxAge"> Time (in seconds) until the invite expires. Set to 0 to never expire. </param>
+            <param name="isTemporary"> If true, a user accepting this invite will be kicked from the server after closing their client. </param>
+            <param name="hasXkcdPass"> If true, creates a human-readable link. Not supported if maxAge is set to 0. </param>
+            <param name="maxUses"> The max amount  of times this invite may be used. </param>
+        </member>
+        <member name="M:Discord.DiscordClient.GetInvite(System.String)">
+            <summary> Gets more info about the provided invite. </summary>
+            <remarks> Supported formats: inviteCode, xkcdCode, https://discord.gg/inviteCode, https://discord.gg/xkcdCode </remarks>
+        </member>
+        <member name="M:Discord.DiscordClient.AcceptInvite(Discord.Invite)">
+            <summary> Accepts the provided invite. </summary>
+        </member>
+        <member name="M:Discord.DiscordClient.AcceptInvite(System.String)">
+            <summary> Accepts the provided invite. </summary>
+        </member>
+        <member name="M:Discord.DiscordClient.DeleteInvite(System.String)">
+            <summary> Deletes the provided invite. </summary>
+        </member>
+        <member name="M:Discord.DiscordClient.SendMessage(Discord.Channel,System.String)">
+            <summary> Sends a message to the provided channel. </summary>
+        </member>
+        <member name="M:Discord.DiscordClient.SendMessage(System.String,System.String)">
+            <summary> Sends a message to the provided channel. </summary>
+        </member>
+        <member name="M:Discord.DiscordClient.SendMessage(Discord.Channel,System.String,System.String[])">
+            <summary> Sends a message to the provided channel, mentioning certain users. </summary>
+            <remarks> While not required, it is recommended to include a mention reference in the text (see User.Mention). </remarks>
+        </member>
+        <member name="M:Discord.DiscordClient.SendMessage(System.String,System.String,System.String[])">
+            <summary> Sends a message to the provided channel, mentioning certain users. </summary>
+            <remarks> While not required, it is recommended to include a mention reference in the text (see User.Mention). </remarks>
+        </member>
+        <member name="M:Discord.DiscordClient.SendPrivateMessage(Discord.User,System.String)">
+            <summary> Sends a private message to the provided channel. </summary>
+        </member>
+        <member name="M:Discord.DiscordClient.SendPrivateMessage(System.String,System.String)">
+            <summary> Sends a private message to the provided channel. </summary>
+        </member>
+        <member name="M:Discord.DiscordClient.EditMessage(Discord.Message,System.String)">
+            <summary> Edits a message the provided message. </summary>
+        </member>
+        <member name="M:Discord.DiscordClient.EditMessage(Discord.Channel,System.String,System.String)">
+            <summary> Edits a message the provided message. </summary>
+        </member>
+        <member name="M:Discord.DiscordClient.EditMessage(System.String,System.String,System.String)">
+            <summary> Edits a message the provided message. </summary>
+        </member>
+        <member name="M:Discord.DiscordClient.EditMessage(Discord.Message,System.String,System.String[])">
+            <summary> Edits a message the provided message, mentioning certain users. </summary>
+            <remarks> While not required, it is recommended to include a mention reference in the text (see User.Mention). </remarks>
+        </member>
+        <member name="M:Discord.DiscordClient.EditMessage(Discord.Channel,System.String,System.String,System.String[])">
+            <summary> Edits a message the provided message, mentioning certain users. </summary>
+            <remarks> While not required, it is recommended to include a mention reference in the text (see User.Mention). </remarks>
+        </member>
+        <member name="M:Discord.DiscordClient.EditMessage(System.String,System.String,System.String,System.String[])">
+            <summary> Edits a message the provided message, mentioning certain users. </summary>
+            <remarks> While not required, it is recommended to include a mention reference in the text (see User.Mention). </remarks>
+        </member>
+        <member name="M:Discord.DiscordClient.DeleteMessage(Discord.Message)">
+            <summary> Deletes the provided message. </summary>
+        </member>
+        <member name="M:Discord.DiscordClient.DeleteMessage(System.String,System.String)">
+            <summary> Deletes the provided message. </summary>
+        </member>
+        <member name="M:Discord.DiscordClient.SendFile(Discord.Channel,System.String)">
+            <summary> Sends a file to the provided channel. </summary>
+        </member>
+        <member name="M:Discord.DiscordClient.SendFile(System.String,System.String)">
+            <summary> Sends a file to the provided channel. </summary>
+        </member>
+        <member name="M:Discord.DiscordClient.SendFile(Discord.Channel,System.IO.Stream,System.String)">
+            <summary> Reads a stream and sends it to the provided channel as a file. </summary>
+            <remarks> It is highly recommended that this stream be cached in memory or on disk, or the request may time out. </remarks>
+        </member>
+        <member name="M:Discord.DiscordClient.SendFile(System.String,System.IO.Stream,System.String)">
+            <summary> Reads a stream and sends it to the provided channel as a file. </summary>
+            <remarks> It is highly recommended that this stream be cached in memory or on disk, or the request may time out. </remarks>
+        </member>
+        <member name="M:Discord.DiscordClient.DownloadMessages(Discord.Channel,System.Int32,System.String)">
+            <summary> Downloads last count messages from the server, starting at beforeMessageId if it's provided. </summary>
+        </member>
+        <member name="M:Discord.DiscordClient.DownloadMessages(System.String,System.Int32,System.String)">
+            <summary> Downloads last count messages from the server, starting at beforeMessageId if it's provided. </summary>
+        </member>
+        <member name="M:Discord.DiscordClient.Mute(Discord.Server,Discord.User)">
+            <summary> Mutes a user on the provided server. </summary>
+        </member>
+        <member name="M:Discord.DiscordClient.Mute(Discord.Server,System.String)">
+            <summary> Mutes a user on the provided server. </summary>
+        </member>
+        <member name="M:Discord.DiscordClient.Mute(System.String,Discord.User)">
+            <summary> Mutes a user on the provided server. </summary>
+        </member>
+        <member name="M:Discord.DiscordClient.Mute(System.String,System.String)">
+            <summary> Mutes a user on the provided server. </summary>
+        </member>
+        <member name="M:Discord.DiscordClient.Unmute(Discord.Server,Discord.User)">
+            <summary> Unmutes a user on the provided server. </summary>
+        </member>
+        <member name="M:Discord.DiscordClient.Unmute(Discord.Server,System.String)">
+            <summary> Unmutes a user on the provided server. </summary>
+        </member>
+        <member name="M:Discord.DiscordClient.Unmute(System.String,Discord.User)">
+            <summary> Unmutes a user on the provided server. </summary>
+        </member>
+        <member name="M:Discord.DiscordClient.Unmute(System.String,System.String)">
+            <summary> Unmutes a user on the provided server. </summary>
+        </member>
+        <member name="M:Discord.DiscordClient.Deafen(Discord.Server,Discord.User)">
+            <summary> Deafens a user on the provided server. </summary>
+        </member>
+        <member name="M:Discord.DiscordClient.Deafen(Discord.Server,System.String)">
+            <summary> Deafens a user on the provided server. </summary>
+        </member>
+        <member name="M:Discord.DiscordClient.Deafen(System.String,Discord.User)">
+            <summary> Deafens a user on the provided server. </summary>
+        </member>
+        <member name="M:Discord.DiscordClient.Deafen(System.String,System.String)">
+            <summary> Deafens a user on the provided server. </summary>
+        </member>
+        <member name="M:Discord.DiscordClient.Undeafen(Discord.Server,Discord.User)">
+            <summary> Undeafens a user on the provided server. </summary>
+        </member>
+        <member name="M:Discord.DiscordClient.Undeafen(Discord.Server,System.String)">
+            <summary> Undeafens a user on the provided server. </summary>
+        </member>
+        <member name="M:Discord.DiscordClient.Undeafen(System.String,Discord.User)">
+            <summary> Undeafens a user on the provided server. </summary>
+        </member>
+        <member name="M:Discord.DiscordClient.Undeafen(System.String,System.String)">
+            <summary> Undeafens a user on the provided server. </summary>
+        </member>
+        <member name="M:Discord.DiscordClient.SendVoicePCM(System.Byte[],System.Int32)">
+            <summary> Sends a PCM frame to the voice server. </summary>
+            <param name="data">PCM frame to send.</param>
+            <param name="count">Number of bytes in this frame. </param>
+        </member>
+        <member name="M:Discord.DiscordClient.ClearVoicePCM">
+            <summary> Clears the PCM buffer. </summary>
+        </member>
+        <member name="M:Discord.DiscordClient.ChangeUsername(System.String,System.String,System.String)">
+            <summary> Changes your username to newName. </summary>
+        </member>
+        <member name="M:Discord.DiscordClient.ChangeEmail(System.String,System.String)">
+            <summary> Changes your email to newEmail. </summary>
+        </member>
+        <member name="M:Discord.DiscordClient.ChangePassword(System.String,System.String,System.String)">
+            <summary> Changes your password to newPassword. </summary>
+        </member>
+        <member name="M:Discord.DiscordClient.ChangeAvatar(Discord.AvatarImageType,System.Byte[],System.String,System.String)">
+            <summary> Changes your avatar. </summary>
+            <remarks>Only supports PNG and JPEG (see AvatarImageType)</remarks>
+        </member>
+        <member name="P:Discord.DiscordClient.Users">
+            <summary> Returns a collection of all users the client can see across all servers. </summary>
+            <remarks> This collection does not guarantee any ordering. </remarks>
+        </member>
+        <member name="P:Discord.DiscordClient.Servers">
+            <summary> Returns a collection of all servers the client is a member of. </summary>
+            <remarks> This collection does not guarantee any ordering. </remarks>
+        </member>
+        <member name="P:Discord.DiscordClient.Channels">
+            <summary> Returns a collection of all channels the client can see across all servers. </summary>
+            <remarks> This collection does not guarantee any ordering. </remarks>
+        </member>
+        <member name="P:Discord.DiscordClient.Messages">
+            <summary> Returns a collection of all messages the client has in cache. </summary>
+            <remarks> This collection does not guarantee any ordering. </remarks>
+        </member>
+        <member name="P:Discord.DiscordClient.Roles">
+            <summary> Returns a collection of all roles the client can see across all servers. </summary>
+            <remarks> This collection does not guarantee any ordering. </remarks>
+        </member>
+        <member name="M:Discord.DiscordClient.GetUser(System.String)">
+            <summary> Returns the user with the specified id, or null if none was found. </summary>
+        </member>
+        <member name="M:Discord.DiscordClient.GetUser(System.String,System.String)">
+            <summary> Returns the user with the specified name and discriminator, or null if none was found. </summary>
+            <remarks> Name formats supported: Name and @Name. Search is case-insensitive. </remarks>
+        </member>
+        <member name="M:Discord.DiscordClient.FindUsers(System.String)">
+            <summary> Returns all users with the specified name across all servers. </summary>
+            <remarks> Name formats supported: Name and @Name. Search is case-insensitive. </remarks>
+        </member>
+        <member name="M:Discord.DiscordClient.GetMember(System.String,Discord.User)">
+            <summary> Returns the user with the specified id, along with their server-specific data, or null if none was found. </summary>
+        </member>
+        <member name="M:Discord.DiscordClient.GetMember(System.String,System.String)">
+            <summary> Returns the user with the specified id, along with their server-specific data, or null if none was found. </summary>
+        </member>
+        <member name="M:Discord.DiscordClient.GetMember(Discord.Server,Discord.User)">
+            <summary> Returns the user with the specified id, along with their server-specific data, or null if none was found. </summary>
+        </member>
+        <member name="M:Discord.DiscordClient.GetMember(Discord.Server,System.String)">
+            <summary> Returns the user with the specified id, along with their server-specific data, or null if none was found. </summary>
+        </member>
+        <member name="M:Discord.DiscordClient.FindMembers(System.String,System.String)">
+            <summary> Returns all users in with the specified server and name, along with their server-specific data. </summary>
+            <remarks> Name formats supported: Name and @Name. Search is case-insensitive.</remarks>
+        </member>
+        <member name="M:Discord.DiscordClient.FindMembers(Discord.Server,System.String)">
+            <summary> Returns all users in with the specified server and name, along with their server-specific data. </summary>
+            <remarks> Name formats supported: Name and @Name. Search is case-insensitive.</remarks>
+        </member>
+        <member name="M:Discord.DiscordClient.GetServer(System.String)">
+            <summary> Returns the server with the specified id, or null if none was found. </summary>
+        </member>
+        <member name="M:Discord.DiscordClient.FindServers(System.String)">
+            <summary> Returns all servers with the specified name. </summary>
+            <remarks> Search is case-insensitive. </remarks>
+        </member>
+        <member name="M:Discord.DiscordClient.GetChannel(System.String)">
+            <summary> Returns the channel with the specified id, or null if none was found. </summary>
+        </member>
+        <member name="M:Discord.DiscordClient.GetPMChannel(System.String)">
+            <summary> Returns the private channel with the provided user, creating one if it does not currently exist. </summary>
+        </member>
+        <member name="M:Discord.DiscordClient.GetPMChannel(Discord.User)">
+            <summary> Returns the private channel with the provided user, creating one if it does not currently exist. </summary>
+        </member>
+        <member name="M:Discord.DiscordClient.FindChannels(Discord.Server,System.String)">
+            <summary> Returns all channels with the specified server and name. </summary>
+            <remarks> Name formats supported: Name and #Name. Search is case-insensitive. </remarks>
+        </member>
+        <member name="M:Discord.DiscordClient.FindChannels(System.String,System.String)">
+            <summary> Returns all channels with the specified server and name. </summary>
+            <remarks> Name formats supported: Name and #Name. Search is case-insensitive. </remarks>
+        </member>
+        <member name="M:Discord.DiscordClient.GetRole(System.String)">
+            <summary> Returns the role with the specified id, or null if none was found. </summary>
+        </member>
+        <member name="M:Discord.DiscordClient.FindRoles(Discord.Server,System.String)">
+            <summary> Returns all roles with the specified server and name. </summary>
+            <remarks> Name formats supported: Name and @Name. Search is case-insensitive. </remarks>
+        </member>
+        <member name="M:Discord.DiscordClient.FindRoles(System.String,System.String)">
+            <summary> Returns all roles with the specified server and name. </summary>
+            <remarks> Name formats supported: Name and @Name. Search is case-insensitive. </remarks>
+        </member>
+        <member name="M:Discord.DiscordClient.GetMessage(System.String)">
+            <summary> Returns the message with the specified id, or null if none was found. </summary>
+        </member>
+        <member name="P:Discord.DiscordClient.User">
+            <summary> Returns the User object for the current logged in user. </summary>
+        </member>
+        <member name="P:Discord.DiscordClient.IsConnected">
+            <summary> Returns true if the user has successfully logged in and the websocket connection has been established. </summary>
+        </member>
+        <member name="P:Discord.DiscordClient.IsClosing">
+            <summary> Returns true if this client was requested to disconnect. </summary>
+        </member>
+        <member name="P:Discord.DiscordClient.CloseToken">
+            <summary> Returns a cancel token that is triggered when a disconnect is requested. </summary>
+        </member>
+        <member name="M:Discord.DiscordClient.#ctor(Discord.DiscordClientConfig)">
+            <summary> Initializes a new instance of the DiscordClient class. </summary>
+        </member>
+        <member name="M:Discord.DiscordClient.Connect(System.String)">
+            <summary> Connects to the Discord server with the provided token. </summary>
+        </member>
+        <member name="M:Discord.DiscordClient.Connect(System.String,System.String)">
+            <summary> Connects to the Discord server with the provided email and password. </summary>
+            <returns> Returns a token for future connections. </returns>
+        </member>
+        <member name="M:Discord.DiscordClient.Connect(System.String,System.String,System.String)">
+            <summary> Connects to the Discord server with the provided token, and will fall back to username and password. </summary>
+            <returns> Returns a token for future connections. </returns>
+        </member>
+        <member name="M:Discord.DiscordClient.ConnectAnonymous(System.String)">
+            <summary> Connects to the Discord server as an anonymous user with the provided username. </summary>
+            <returns> Returns a token for future connections. </returns>
+        </member>
+        <member name="M:Discord.DiscordClient.Disconnect">
+            <summary> Disconnects from the Discord server, canceling any pending requests. </summary>
+        </member>
+        <member name="M:Discord.DiscordClient.Block">
+            <summary> Blocking call that will not return until client has been stopped. This is mainly intended for use in console applications. </summary>
+        </member>
+        <member name="P:Discord.DiscordClientConfig.EnableVoice">
+            <summary> Enables the voice websocket and UDP client (Experimental!). </summary>
+            <remarks> This option requires the opus .dll or .so be in the local lib/ folder. </remarks>
+        </member>
+        <member name="P:Discord.DiscordClientConfig.EnableDebug">
+            <summary> Enables the verbose DebugMessage event handler. May hinder performance but should help debug any issues. </summary>
+        </member>
+        <member name="P:Discord.DiscordClientConfig.ConnectionTimeout">
+            <summary> Max time in milliseconds to wait for the web socket to connect. </summary>
+        </member>
+        <member name="P:Discord.DiscordClientConfig.VoiceConnectionTimeout">
+            <summary> Max time in milliseconds to wait for the voice web socket to connect. </summary>
+        </member>
+        <member name="P:Discord.DiscordClientConfig.ReconnectDelay">
+            <summary> Gets or sets the time (in milliseconds) to wait after an unexpected disconnect before reconnecting. </summary>
+        </member>
+        <member name="P:Discord.DiscordClientConfig.FailedReconnectDelay">
+            <summary> Gets or sets the time (in milliseconds) to wait after an reconnect fails before retrying. </summary>
+        </member>
+        <member name="P:Discord.DiscordClientConfig.WebSocketInterval">
+            <summary> Gets or sets the time (in milliseconds) to wait when the websocket's message queue is empty before checking again. </summary>
+        </member>
+        <member name="P:Discord.DiscordClientConfig.UseMessageQueue">
+            <summary> Enables or disables the internal message queue. This will allow SendMessage to return immediately and handle messages internally. Messages will set the IsQueued and HasFailed properties to show their progress. </summary>
+        </member>
+        <member name="P:Discord.DiscordClientConfig.MessageQueueInterval">
+            <summary> Gets or sets the time (in milliseconds) to wait when the message queue is empty before checking again. </summary>
+        </member>
+        <member name="P:Discord.Invite.Id">
+            <summary> Returns the unique identifier for this invite. </summary>
+        </member>
+        <member name="P:Discord.Invite.MaxAge">
+            <summary> Time (in seconds) until the invite expires. Set to 0 to never expire. </summary>
+        </member>
+        <member name="P:Discord.Invite.Uses">
+            <summary> The amount  of times this invite has been used. </summary>
+        </member>
+        <member name="P:Discord.Invite.MaxUses">
+            <summary> The max amount  of times this invite may be used. </summary>
+        </member>
+        <member name="P:Discord.Invite.IsRevoked">
+            <summary> Returns true if this invite has been destroyed, or you are banned from that server. </summary>
+        </member>
+        <member name="P:Discord.Invite.IsTemporary">
+            <summary> If true, a user accepting this invite will be kicked from the server after closing their client. </summary>
+        </member>
+        <member name="P:Discord.Invite.XkcdPass">
+            <summary> Returns, if enabled, an alternative human-readable code for URLs. </summary>
+        </member>
+        <member name="P:Discord.Invite.Url">
+            <summary> Returns a URL for this invite using XkcdPass if available or Id if not. </summary>
+        </member>
+        <member name="P:Discord.Invite.InviterId">
+            <summary> Returns the id of the user that created this invite. </summary>
+        </member>
+        <member name="P:Discord.Invite.Inviter">
+            <summary> Returns the user that created this invite. </summary>
+        </member>
+        <member name="P:Discord.Invite.ServerId">
+            <summary> Returns the id of the server this invite is to. </summary>
+        </member>
+        <member name="P:Discord.Invite.Server">
+            <summary> Returns the server this invite is to. </summary>
+        </member>
+        <member name="P:Discord.Invite.ChannelId">
+            <summary> Returns the id of the channel this invite is to. </summary>
+        </member>
+        <member name="P:Discord.Invite.Channel">
+            <summary> Returns the channel this invite is to. </summary>
+        </member>
+        <member name="P:Discord.Membership.GameId">
+            <summary> Returns the id for the game this user is currently playing. </summary>
+        </member>
+        <member name="P:Discord.Membership.Status">
+            <summary> Returns the current status for this user. </summary>
+        </member>
+        <member name="P:Discord.Message.Attachment.Id">
+            <summary> Unique identifier for this file. </summary>
+        </member>
+        <member name="P:Discord.Message.Attachment.Size">
+            <summary> Size, in bytes, of this file file. </summary>
+        </member>
+        <member name="P:Discord.Message.Attachment.Filename">
+            <summary> Filename of this file. </summary>
+        </member>
+        <member name="P:Discord.Message.Embed.Url">
+            <summary> URL of this embed. </summary>
+        </member>
+        <member name="P:Discord.Message.Embed.Type">
+            <summary> Type of this embed. </summary>
+        </member>
+        <member name="P:Discord.Message.Embed.Title">
+            <summary> Title for this embed. </summary>
+        </member>
+        <member name="P:Discord.Message.Embed.Description">
+            <summary> Summary of this embed. </summary>
+        </member>
+        <member name="P:Discord.Message.Embed.Author">
+            <summary> Returns information about the author of this embed. </summary>
+        </member>
+        <member name="P:Discord.Message.Embed.Provider">
+            <summary> Returns information about the providing website of this embed. </summary>
+        </member>
+        <member name="P:Discord.Message.Embed.Thumbnail">
+            <summary> Returns the thumbnail of this embed. </summary>
+        </member>
+        <member name="P:Discord.Message.EmbedReference.Url">
+            <summary> URL of this embed provider. </summary>
+        </member>
+        <member name="P:Discord.Message.EmbedReference.Name">
+            <summary> Name of this embed provider. </summary>
+        </member>
+        <member name="P:Discord.Message.File.Url">
+            <summary> Download url for this file. </summary>
+        </member>
+        <member name="P:Discord.Message.File.ProxyUrl">
+            <summary> Preview url for this file. </summary>
+        </member>
+        <member name="P:Discord.Message.File.Width">
+            <summary> Width of the this file, if it is an image. </summary>
+        </member>
+        <member name="P:Discord.Message.File.Height">
+            <summary> Height of this file, if it is an image. </summary>
+        </member>
+        <member name="P:Discord.Message.Id">
+            <summary> Returns the global unique identifier for this message. </summary>
+        </member>
+        <member name="P:Discord.Message.Nonce">
+            <summary> Returns the local unique identifier for this message. </summary>
+        </member>
+        <member name="P:Discord.Message.IsMentioningMe">
+            <summary> Returns true if the logged-in user was mentioned. </summary>
+            <remarks> This is not set to true if the user was mentioned with @everyone (see IsMentioningEverone). </remarks>
+        </member>
+        <member name="P:Discord.Message.IsMentioningEveryone">
+            <summary> Returns true if @everyone was mentioned by someone with permissions to do so. </summary>
+        </member>
+        <member name="P:Discord.Message.IsTTS">
+            <summary> Returns true if the message was sent as text-to-speech by someone with permissions to do so. </summary>
+        </member>
+        <member name="P:Discord.Message.IsQueued">
+            <summary> Returns true if the message is still in the outgoing message queue. </summary>
+        </member>
+        <member name="P:Discord.Message.HasFailed">
+            <summary> Returns true if the message was rejected by the server. </summary>
+        </member>
+        <member name="P:Discord.Message.RawText">
+            <summary> Returns the raw content of this message as it was received from the server.. </summary>
+        </member>
+        <member name="P:Discord.Message.Text">
+            <summary> Returns the content of this message with any special references such as mentions converted. </summary>
+            <remarks> This value is lazy loaded and only processed on first request. Each subsequent request will pull from cache. </remarks>
+        </member>
+        <member name="P:Discord.Message.Timestamp">
+            <summary> Returns the timestamp for when this message was sent. </summary>
+        </member>
+        <member name="P:Discord.Message.EditedTimestamp">
+            <summary> Returns the timestamp for when this message was last edited. </summary>
+        </member>
+        <member name="P:Discord.Message.Attachments">
+            <summary> Returns the attachments included in this message. </summary>
+        </member>
+        <member name="P:Discord.Message.Embeds">
+            <summary> Returns a collection of all embeded content in this message. </summary>
+        </member>
+        <member name="P:Discord.Message.MentionIds">
+            <summary> Returns a collection of all user ids mentioned in this message. </summary>
+        </member>
+        <member name="P:Discord.Message.Mentions">
+            <summary> Returns a collection of all users mentioned in this message. </summary>
+        </member>
+        <member name="P:Discord.Message.ChannelId">
+            <summary> Returns the id of the channel this message was sent in. </summary>
+        </member>
+        <member name="P:Discord.Message.Channel">
+            <summary> Returns the the channel this message was sent in. </summary>
+        </member>
+        <member name="P:Discord.Message.UserId">
+            <summary> Returns the id of the author of this message. </summary>
+        </member>
+        <member name="P:Discord.Message.User">
+            <summary> Returns the author of this message. </summary>
+        </member>
+        <member name="P:Discord.Message.IsAuthor">
+            <summary> Returns true if the current user created this message. </summary>
+        </member>
+        <member name="P:Discord.PackedPermissions.General_CreateInstantInvite">
+            <summary> If True, a user may create invites. </summary>
+        </member>
+        <member name="P:Discord.PackedPermissions.General_BanMembers">
+            <summary> If True, a user may ban users from the server. </summary>
+        </member>
+        <member name="P:Discord.PackedPermissions.General_KickMembers">
+            <summary> If True, a user may kick users from the server. </summary>
+        </member>
+        <member name="P:Discord.PackedPermissions.General_ManageRoles">
+            <summary> If True, a user may adjust roles. This also bypasses all other permissions, granting all the others. </summary>
+        </member>
+        <member name="P:Discord.PackedPermissions.General_ManageChannels">
+            <summary> If True, a user may create, delete and modify channels. </summary>
+        </member>
+        <member name="P:Discord.PackedPermissions.General_ManageServer">
+            <summary> If True, a user may adjust server properties. </summary>
+        </member>
+        <member name="P:Discord.PackedPermissions.Text_ReadMessages">
+            <summary> If True, a user may join channels. </summary>
+            <remarks> Note that without this permission, a channel is not sent by the server. </remarks>
+        </member>
+        <member name="P:Discord.PackedPermissions.Text_SendMessages">
+            <summary> If True, a user may send messages. </summary>
+        </member>
+        <member name="P:Discord.PackedPermissions.Text_SendTTSMessages">
+            <summary> If True, a user may send text-to-speech messages. </summary>
+        </member>
+        <member name="P:Discord.PackedPermissions.Text_ManageMessages">
+            <summary> If True, a user may delete messages. </summary>
+        </member>
+        <member name="P:Discord.PackedPermissions.Text_EmbedLinks">
+            <summary> If True, Discord will auto-embed links sent by this user. </summary>
+        </member>
+        <member name="P:Discord.PackedPermissions.Text_AttachFiles">
+            <summary> If True, a user may send files. </summary>
+        </member>
+        <member name="P:Discord.PackedPermissions.Text_ReadMessageHistory">
+            <summary> If True, a user may read previous messages. </summary>
+        </member>
+        <member name="P:Discord.PackedPermissions.Text_MentionEveryone">
+            <summary> If True, a user may mention @everyone. </summary>
+        </member>
+        <member name="P:Discord.PackedPermissions.Voice_Connect">
+            <summary> If True, a user may connect to a voice channel. </summary>
+        </member>
+        <member name="P:Discord.PackedPermissions.Voice_Speak">
+            <summary> If True, a user may speak in a voice channel. </summary>
+        </member>
+        <member name="P:Discord.PackedPermissions.Voice_MuteMembers">
+            <summary> If True, a user may mute users. </summary>
+        </member>
+        <member name="P:Discord.PackedPermissions.Voice_DeafenMembers">
+            <summary> If True, a user may deafen users. </summary>
+        </member>
+        <member name="P:Discord.PackedPermissions.Voice_MoveMembers">
+            <summary> If True, a user may move other users between voice channels. </summary>
+        </member>
+        <member name="P:Discord.PackedPermissions.Voice_UseVoiceActivation">
+            <summary> If True, a user may use voice activation rather than push-to-talk. </summary>
+        </member>
+        <member name="P:Discord.Role.Id">
+            <summary> Returns the unique identifier for this role. </summary>
+        </member>
+        <member name="P:Discord.Role.Name">
+            <summary> Returns the name of this role. </summary>
+        </member>
+        <member name="P:Discord.Role.Permissions">
+            <summary> Returns the the permissions contained by this role. </summary>
+        </member>
+        <member name="P:Discord.Role.ServerId">
+            <summary> Returns the id of the server this role is a member of. </summary>
+        </member>
+        <member name="P:Discord.Role.Server">
+            <summary> Returns the server this role is a member of. </summary>
+        </member>
+        <member name="P:Discord.Server.Id">
+            <summary> Returns the unique identifier for this server. </summary>
+        </member>
+        <member name="P:Discord.Server.Name">
+            <summary> Returns the name of this channel. </summary>
+        </member>
+        <member name="P:Discord.Server.AFKTimeout">
+            <summary> Returns the amount of time (in seconds) a user must be inactive for until they are automatically moved to the AFK channel (see AFKChannel). </summary>
+        </member>
+        <member name="P:Discord.Server.JoinedAt">
+            <summary> Returns the date and time your joined this server. </summary>
+        </member>
+        <member name="P:Discord.Server.Region">
+            <summary> Returns the region for this server (see Regions). </summary>
+        </member>
+        <member name="P:Discord.Server.VoiceServer">
+            <summary> Returns the endpoint for this server's voice server. </summary>
+        </member>
+        <member name="P:Discord.Server.OwnerId">
+            <summary> Returns the id of the user that first created this server. </summary>
+        </member>
+        <member name="P:Discord.Server.Owner">
+            <summary> Returns the user that first created this server. </summary>
+        </member>
+        <member name="P:Discord.Server.IsOwner">
+            <summary> Returns true if the current user created this server. </summary>
+        </member>
+        <member name="P:Discord.Server.AFKChannelId">
+            <summary> Returns the id of the AFK voice channel for this server (see AFKTimeout). </summary>
+        </member>
+        <member name="P:Discord.Server.AFKChannel">
+            <summary> Returns the AFK voice channel for this server (see AFKTimeout). </summary>
+        </member>
+        <member name="P:Discord.Server.DefaultChannelId">
+            <summary> Returns the id of the default channel for this server. </summary>
+        </member>
+        <member name="P:Discord.Server.DefaultChannel">
+            <summary> Returns the default channel for this server. </summary>
+        </member>
+        <member name="P:Discord.Server.Members">
+            <summary> Returns a collection of all channels within this server. </summary>
+        </member>
+        <member name="P:Discord.Server.Bans">
+            <summary> Returns a collection of all users banned on this server. </summary>
+            <remarks> Only users seen in other servers will be returned. To get a list of all users, use BanIds. </remarks>
+        </member>
+        <member name="P:Discord.Server.BanIds">
+            <summary> Returns a collection of the ids of all users banned on this server. </summary>
+        </member>
+        <member name="P:Discord.Server.Channels">
+            <summary> Returns a collection of all channels within this server. </summary>
+        </member>
+        <member name="P:Discord.Server.TextChannels">
+            <summary> Returns a collection of all channels within this server. </summary>
+        </member>
+        <member name="P:Discord.Server.VoiceChannels">
+            <summary> Returns a collection of all channels within this server. </summary>
+        </member>
+        <member name="P:Discord.Server.Roles">
+            <summary> Returns a collection of all roles within this server. </summary>
+        </member>
+        <member name="P:Discord.User.Id">
+            <summary> Returns the unique identifier for this user. </summary>
+        </member>
+        <member name="P:Discord.User.Name">
+            <summary> Returns the name of this channel. </summary>
+        </member>
+        <member name="P:Discord.User.AvatarId">
+            <summary> Returns the unique identifier for this user's current avatar. </summary>
+        </member>
+        <member name="P:Discord.User.AvatarUrl">
+            <summary> Returns the URL to this user's current avatar. </summary>
+        </member>
+        <member name="P:Discord.User.Discriminator">
+            <summary> Returns a by-name unique identifier separating this user from others with the same name. </summary>
+        </member>
+        <member name="P:Discord.User.Mention">
+            <summary> Returns the string "&lt;@Id&gt;" to be used as a shortcut when including mentions in text. </summary>
+        </member>
+        <member name="P:Discord.User.LastActivity">
+            <summary> Returns the time this user last sent a message. </summary>
+            <remarks> Is not currently affected by voice activity </remarks>
+        </member>
+        <member name="T:Discord.Opus.Application">
+            <summary>Supported coding modes.</summary>
+        </member>
+        <member name="F:Discord.Opus.Application.Voip">
+            <summary>
+            Gives best quality at a given bitrate for voice signals. It enhances the input signal by high-pass filtering and emphasizing formants and harmonics. 
+            Optionally it includes in-band forward error correction to protect against packet loss. Use this mode for typical VoIP applications. 
+            Because of the enhancement, even at high bitrates the output may sound different from the input.
+            </summary>
+        </member>
+        <member name="F:Discord.Opus.Application.Audio">
+            <summary>
+            Gives best quality at a given bitrate for most non-voice signals like music. 
+            Use this mode for music and mixed (music/voice) content, broadcast, and applications requiring less than 15 ms of coding delay.
+            </summary>
+        </member>
+        <member name="F:Discord.Opus.Application.Restricted_LowLatency">
+            <summary> Low-delay mode that disables the speech-optimized mode in exchange for slightly reduced delay.  </summary>
+        </member>
+        <member name="F:Discord.Opus.Error.OK">
+            <summary>  No error. </summary>
+        </member>
+        <member name="F:Discord.Opus.Error.BadArg">
+            <summary> One or more invalid/out of range arguments. </summary>
+        </member>
+        <member name="F:Discord.Opus.Error.BufferToSmall">
+            <summary> The mode struct passed is invalid. </summary>
+        </member>
+        <member name="F:Discord.Opus.Error.InternalError">
+            <summary> An internal error was detected. </summary>
+        </member>
+        <member name="F:Discord.Opus.Error.InvalidPacket">
+            <summary> The compressed data passed is corrupted. </summary>
+        </member>
+        <member name="F:Discord.Opus.Error.Unimplemented">
+            <summary> Invalid/unsupported request number. </summary>
+        </member>
+        <member name="F:Discord.Opus.Error.InvalidState">
+            <summary> An encoder or decoder structure is invalid or already freed.  </summary>
+        </member>
+        <member name="F:Discord.Opus.Error.AllocFail">
+            <summary> Memory allocation has failed. </summary>
+        </member>
+        <member name="T:Discord.Opus.OpusEncoder">
+            <summary> Opus codec wrapper. </summary>
+        </member>
+        <member name="F:Discord.Opus.OpusEncoder.BitRate">
+            <summary> Gets the bit rate of the encoder. </summary>
+        </member>
+        <member name="P:Discord.Opus.OpusEncoder.InputSamplingRate">
+            <summary> Gets the input sampling rate of the encoder. </summary>
+        </member>
+        <member name="P:Discord.Opus.OpusEncoder.InputChannels">
+            <summary> Gets the number of channels of the encoder. </summary>
+        </member>
+        <member name="P:Discord.Opus.OpusEncoder.FrameLength">
+            <summary> Gets the milliseconds per frame. </summary>
+        </member>
+        <member name="P:Discord.Opus.OpusEncoder.SamplesPerFrame">
+            <summary> Gets the number of samples per frame. </summary>
+        </member>
+        <member name="P:Discord.Opus.OpusEncoder.SampleSize">
+            <summary> Gets the bytes per sample. </summary>
+        </member>
+        <member name="P:Discord.Opus.OpusEncoder.FrameSize">
+            <summary> Gets the bytes per frame. </summary>
+        </member>
+        <member name="P:Discord.Opus.OpusEncoder.Application">
+            <summary> Gets the coding mode of the encoder. </summary>
+        </member>
+        <member name="M:Discord.Opus.OpusEncoder.#ctor(System.Int32,System.Int32,System.Int32,Discord.Opus.Application)">
+            <summary> Creates a new Opus encoder. </summary>
+            <param name="samplingRate">Sampling rate of the input signal (Hz). Supported Values:  8000, 12000, 16000, 24000, or 48000.</param>
+            <param name="channels">Number of channels (1 or 2) in input signal.</param>
+            <param name="frameLength">Length, in milliseconds, that each frame takes. Supported Values: 2.5, 5, 10, 20, 40, 60</param>
+            <param name="application">Coding mode.</param>
+            <returns>A new <c>OpusEncoder</c></returns>
+        </member>
+        <member name="M:Discord.Opus.OpusEncoder.EncodeFrame(System.Byte[],System.Byte[])">
+            <summary> Produces Opus encoded audio from PCM samples. </summary>
+            <param name="pcmSamples">PCM samples to encode.</param>
+            <param name="encodedLength">Length of encoded audio.</param>
+            <returns>Opus encoded audio buffer.</returns>
+        </member>
+        <member name="M:Discord.Opus.OpusEncoder.SetForwardErrorCorrection(System.Boolean)">
+            <summary> Gets or sets whether Forward Error Correction is enabled. </summary>
+        </member>
+    </members>
+</doc>
