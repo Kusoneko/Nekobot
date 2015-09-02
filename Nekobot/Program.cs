@@ -740,7 +740,7 @@ namespace Nekobot
             string file_url = "";
             try
             {
-                foreach (string key in result.posts.post[0])
+                foreach (string key in result.posts.post)
                 {
                     if (key.Contains("http://"))
                     {
@@ -865,7 +865,7 @@ namespace Nekobot
             string file_url = "";
             try
             {
-                foreach (string key in result.posts.post[0])
+                foreach (string key in result.posts.post)
                 {
                     if (key.Contains("http://"))
                     {
