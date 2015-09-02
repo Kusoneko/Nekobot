@@ -1849,6 +1849,11 @@ namespace Nekobot
             client.SendMessage(e.Message.Channel, "https://www.youtube.com/watch?v=iNCXiMt1bR4");
         }
 
+        public static void Kys(MessageEventArgs e)
+        {
+            client.SendMessage(e.Message.Channel, "https://www.youtube.com/watch?v=2dbR2JZmlWo");
+        }
+
         public static void Roll(MessageEventArgs e)
         {
             string[] words = e.Message.Text.Substring(1).Split(' ');
@@ -2566,6 +2571,7 @@ namespace Nekobot
  !lewd - Grabs a random lewd image from https://lewdchan.com/lewd Warning: can return a nsfw image
  !qt - Grabs a random 2d qt image from https://lewdchan.com/qt
  !uninstall - A great advice in any situation.
+ !kys (!killyourself) - Another good advice.
  !roll [y] [x] [z] - Roll x y-faced dices z times. x and z are optional and both default to 1, y is also optional and default to 6 (for a 6-faced dice)
  !reverse - Replies with everything that follows the command reversed
  !playerpost id - Replies with the content of the post at https://player.me/feed/id
