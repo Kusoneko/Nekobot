@@ -440,6 +440,13 @@ namespace Nekobot
                             SfwChannel(e);
                         break;
 
+                    case "safebooru":
+                        if (!sfw.Contains(e.Message.ChannelId))
+                            Safebooru(e);
+                        else
+                            SfwChannel(e);
+                        break;
+
                     case "cosplay":
                         if (!sfw.Contains(e.Message.ChannelId))
                             Cosplay(e);
@@ -655,6 +662,159 @@ namespace Nekobot
                 catch (WebException ex)
                 {
                     Console.WriteLine(ex.Message);
+                    await Task.Delay(5000);
+                }
+                retry++;
+                if (retry == 5)
+                    return;
+            }
+        }
+
+        public static async void Safebooru(MessageEventArgs e)
+        {
+            int count = 0;
+            int retry = 0;
+            Random rnd = new Random();
+            HttpWebRequest wr;
+            HttpWebResponse res;
+            XmlDocument xdoc = new XmlDocument();
+            retry = 0;
+            while (retry < 5)
+            {
+                try
+                {
+                    wr = WebRequest.Create("http://safebooru.org/index.php?page=dapi&s=post&q=index&tags=" + e.Message.RawText.Substring(10)) as HttpWebRequest;
+                    res = wr.GetResponse() as HttpWebResponse;
+                    xdoc.Load(res.GetResponseStream());
+                    break;
+                }
+                catch (WebException ex)
+                {
+                    Console.WriteLine(ex.Message);
+                    await Task.Delay(5000);
+                }
+                catch (HttpRequestException we)
+                {
+                    Console.WriteLine(we.Message);
+                    await Task.Delay(5000);
+                }
+                catch (Exception aex)
+                {
+                    Console.WriteLine(aex.Message);
+                    await Task.Delay(5000);
+                }
+                retry++;
+                if (retry == 5)
+                    return;
+            }
+            XmlNode posts = xdoc.SelectSingleNode("posts");
+            count = int.Parse(posts.Attributes["count"].Value.ToString());
+            if (count < 1)
+            {
+                retry = 0;
+                while (retry < 5)
+                {
+                    try
+                    {
+                        await client.SendMessage(e.Message.Channel, "There isn't anything under the tag(s) " + e.Message.RawText.Substring(10) + " on safebooru.");
+                        return;
+                    }
+                    catch (WebException ex)
+                    {
+                        Console.WriteLine(ex.Message);
+                        await Task.Delay(5000);
+                    }
+                    catch (HttpRequestException we)
+                    {
+                        Console.WriteLine(we.Message);
+                        await Task.Delay(5000);
+                    }
+                    catch (Exception aex)
+                    {
+                        Console.WriteLine(aex.Message);
+                        await Task.Delay(5000);
+                    }
+                    retry++;
+                    if (retry == 5)
+                        return;
+                }
+            }
+            string sURL;
+            sURL = "http://safebooru.org/index.php?page=dapi&s=post&q=index&limit=1&tags=" + e.Message.RawText.Substring(10) + "&pid=" + rnd.Next(0, count).ToString();
+            WebRequest wrGETURL;
+            wrGETURL = WebRequest.Create(sURL);
+            Stream objStream = null;
+            retry = 0;
+            while (retry < 5)
+            {
+                try
+                {
+                    objStream = (await wrGETURL.GetResponseAsync()).GetResponseStream();
+                    break;
+                }
+                catch (WebException ex)
+                {
+                    Console.WriteLine(ex.Message);
+                    await Task.Delay(5000);
+                }
+                catch (HttpRequestException we)
+                {
+                    Console.WriteLine(we.Message);
+                    await Task.Delay(5000);
+                }
+                catch (Exception aex)
+                {
+                    Console.WriteLine(aex.Message);
+                    await Task.Delay(5000);
+                }
+                retry++;
+                if (retry == 5)
+                    return;
+            }
+            StreamReader objReader = new StreamReader(objStream);
+            string sLine = "";
+            sLine = objReader.ReadToEnd();
+            XmlDocument xml = new XmlDocument();
+            xml.LoadXml(sLine);
+            dynamic result = Newtonsoft.Json.Linq.JObject.Parse(JsonConvert.SerializeXmlNode(xml));
+            string file_url = "";
+            try
+            {
+                foreach (string key in result.posts.post)
+                {
+                    if (key.Contains("http://"))
+                    {
+                        file_url = key;
+                        break;
+                    }
+                }
+            }
+            catch (Exception aex)
+            {
+                Console.WriteLine(aex.Message);
+                return;
+            }
+            retry = 0;
+            while (retry < 5)
+            {
+                try
+                {
+                    await client.SendMessage(e.Message.Channel, file_url);
+                    break;
+                }
+                catch (WebException ex)
+                {
+                    Console.WriteLine(ex.Message);
+                    await Task.Delay(5000);
+                }
+                catch (HttpRequestException we)
+                {
+                    Console.WriteLine(we.Message);
+                    await Task.Delay(5000);
+                }
+                catch (Exception aex)
+                {
+                    Console.WriteLine(aex.Message);
                     await Task.Delay(5000);
                 }
                 retry++;
