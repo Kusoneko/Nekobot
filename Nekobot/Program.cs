@@ -22,7 +22,7 @@ namespace Nekobot
 {
     class Program
     {
-        public static DiscordClient client = new DiscordClient(new DiscordClientConfig { EnableVoice = false, EnableDebug = false });
+        public static DiscordClient client = new DiscordClient(new DiscordClientConfig { EnableVoice = true, EnableDebug = false });
         public static string email = "";
         public static string pass = "";
         public static List<string> sfw = new List<string> { };
@@ -150,7 +150,15 @@ namespace Nekobot
         private static async void StreamMusic(string cid/*, DiscordClient _client*/)
         {
             Channel c = client.GetChannel(cid);
-            await client.JoinVoiceServer(c.Server, c);
+            try
+            {
+                await client.JoinVoiceServer(c);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Join Voice Server Error: " + e.Message);
+                return;
+            }
             Random rnd = new Random();
             while (streams.Contains(cid))
             {
@@ -177,6 +185,10 @@ namespace Nekobot
                                     for (int j = byteCount; j < blockSize; j++)
                                         buffer[j] = 0;
                                 }
+                                if (!streams.Contains(cid))
+                                {
+                                    break;
+                                }
                                 client.SendVoicePCM(buffer, blockSize);
                             }
                         }
@@ -184,6 +196,7 @@ namespace Nekobot
                     }
                     i++;
                 }
+                await client.WaitVoice(); //Prevent endless queueing which would eventually eat up all the ram
             }
             await client.LeaveVoiceServer();
         }
@@ -483,9 +496,9 @@ namespace Nekobot
                         Nsfw(e);
                         break;
 
-                    //case "music":
-                        //Music(e);
-                        //break;
+                    case "music":
+                        Music(e);
+                        break;
 
                     case "cid":
                         Cid(e);
@@ -2791,8 +2804,8 @@ That's all for now! Suggest ideas to Kusoneko, might add it at some point.");
             permissions[3] = owner;
             Console.WriteLine("Loading channel sfw settings...");
             LoadChannels();
-            //Console.WriteLine("Loading streaming channels...");
-            //LoadStreamChannels();
+            Console.WriteLine("Loading streaming channels...");
+            LoadStreamChannels();
             Console.WriteLine("Connecting...");
             try
             {
@@ -2808,7 +2821,7 @@ That's all for now! Suggest ideas to Kusoneko, might add it at some point.");
             input.Start();
 
             //Start music streaming
-            //StartMusicThreads();
+            StartMusicThreads();
 
             //Bot events below
 

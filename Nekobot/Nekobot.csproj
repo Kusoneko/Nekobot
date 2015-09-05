@@ -55,8 +55,8 @@
     <Prefer32Bit>true</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Discord.Net, Version=0.6.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\Discord.Net.0.6.0\lib\net45\Discord.Net.dll</HintPath>
+    <Reference Include="Discord.Net, Version=0.6.1.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\Discord.Net.0.6.1-beta2\lib\net45\Discord.Net.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="NAudio, Version=1.7.3.0, Culture=neutral, processorArchitecture=MSIL">
