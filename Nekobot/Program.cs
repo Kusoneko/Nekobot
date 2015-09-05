@@ -216,21 +216,22 @@ namespace Nekobot
                                 {
                                     string title = "";
                                     TagLib.File song = TagLib.File.Create(f.File);
-                                    if (song.Tag.Title != null | song.Tag.Title != "")
+                                    if (song.Tag.Title != null && song.Tag.Title != "")
                                     {
-                                        title = song.Tag.Title;
                                         if (song.Tag.Performers != null)
                                         {
-                                            title += " - ";
                                             foreach (string p in song.Tag.Performers)
                                             {
                                                 title += p + " ";
                                             }
                                         }
+                                        if (title != "")
+                                            title += "- ";
+                                        title += song.Tag.Title;
                                     }
                                     else
                                     {
-                                        title = song.Name;
+                                        title = Path.GetFileNameWithoutExtension(song.Name);
                                     }
                                     client.SendMessage(songrequest[cid],"Song: " + title);
                                     songrequest.Remove(cid);
@@ -581,6 +582,10 @@ namespace Nekobot
                         Kys(e);
                         break;
 
+                    case "notnow":
+                        NotNow(e);
+                        break;
+
                     case "help":
                     case "commands":
                         Commands(e);
@@ -590,6 +595,11 @@ namespace Nekobot
                         break;
                 }
             }
+        }
+
+        private static void NotNow(MessageEventArgs e)
+        {
+            client.SendMessage(e.Message.Channel, "https://www.youtube.com/watch?v=2BZUzJfKFwM");
         }
 
         private static void Song(MessageEventArgs e)
@@ -2918,6 +2928,7 @@ namespace Nekobot
  !skip - Votes to skip currently playing song, requires user to be in a Nekobot music streaming channel, votes reset at the end of a song. Requires half or more of the amount of people who where in the channel before the song began to vote to skip.
  !forceskip - Force to skip currently playing song, requires user to be in a Nekobot music streaming channel and permission level 1 or higher.
  !song - Returns the ID3 tag title and author if possible, else filename of the currently playing song.
+ !notnow - How to rekt rin 101.
  !commands (!help) - How you got this to show up. Will still send them in PM if you ask in a channel.
 That's all for now! Suggest ideas to Kusoneko, might add it at some point.");
 /* removed temporarily due to a random bug
