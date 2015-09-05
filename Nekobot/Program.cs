@@ -32,6 +32,8 @@ namespace Nekobot
         public static List<string> mods = new List<string> { };
         public static List<string> normal = new List<string> { };
         public static List<List<string>> permissions = new List<List<string>> { normal, mods, admins, owner };
+        public static Dictionary<string, List<string>> votes = new Dictionary<string, List<string>>();
+        public static Dictionary<string, bool> forceskip = new Dictionary<string, bool>();
 
         public static void AI(MessageEventArgs e) // empty for now, will be the place to insert the AI-fication stuffs
         {
@@ -162,6 +164,30 @@ namespace Nekobot
             Random rnd = new Random();
             while (streams.Contains(cid))
             {
+                if (votes.ContainsKey(cid))
+                {
+                    votes[cid] = new List<string> { };
+                }
+                else
+                {
+                    votes.Add(cid, new List<string> { });
+                }
+                if (forceskip.ContainsKey(cid))
+                {
+                    forceskip[cid] = false;
+                }
+                else
+                {
+                    forceskip.Add(cid, false);
+                }
+                int listeningcount = 0;
+                foreach (Membership m in c.Server.Members)
+                {
+                    if (m.VoiceChannelId == cid)
+                    {
+                        listeningcount++;
+                    }
+                }
                 var files = from file in Directory.EnumerateFiles(@"D:\Users\Kusoneko\Google Drive\Music", "*.mp3", System.IO.SearchOption.AllDirectories) select new { File = file };
                 int mp3 = rnd.Next(0, Directory.GetFiles(@"D:\Users\Kusoneko\Google Drive\Music", "*.mp3", System.IO.SearchOption.AllDirectories).Length);
                 int i = 0;
@@ -189,6 +215,14 @@ namespace Nekobot
                                 {
                                     break;
                                 }
+                                if (votes[cid].Count >= listeningcount/2)
+                                {
+                                    break;
+                                }
+                                if (forceskip[cid])
+                                {
+                                    break;
+                                }
                                 client.SendVoicePCM(buffer, blockSize);
                             }
                         }
@@ -198,6 +232,8 @@ namespace Nekobot
                 }
                 await client.WaitVoice(); //Prevent endless queueing which would eventually eat up all the ram
             }
+            votes.Remove(cid);
+            forceskip.Remove(cid);
             await client.LeaveVoiceServer();
         }
 
@@ -504,6 +540,14 @@ namespace Nekobot
                         Cid(e);
                         break;
 
+                    case "skip":
+                        Skip(e);
+                        break;
+
+                    case "forceskip":
+                        AdminSkip(e);
+                        break;
+
                     case "kys":
                     case "killyourself":
                         Kys(e);
@@ -516,6 +560,44 @@ namespace Nekobot
 
                     default:
                         break;
+                }
+            }
+        }
+
+        private static void AdminSkip(MessageEventArgs e)
+        {
+            if (permissions[1].Contains(e.Message.UserId) | permissions[2].Contains(e.Message.UserId) | permissions[3].Contains(e.Message.UserId))
+            {
+                foreach (string id in streams)
+                {
+                    if (e.Message.Channel.Server.VoiceChannels.Contains(client.GetChannel(id)))
+                    {
+                        foreach (Membership m in e.Message.Channel.Server.Members)
+                        {
+                            if (m.VoiceChannelId == id && m.UserId == e.Message.UserId)
+                            {
+                                forceskip[id] = true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        private static void Skip(MessageEventArgs e)
+        {
+            foreach (string id in streams)
+            {
+                if (e.Message.Channel.Server.VoiceChannels.Contains(client.GetChannel(id)))
+                {
+                    foreach (Membership m in e.Message.Channel.Server.Members)
+                    {
+                        if (m.VoiceChannelId == id && m.UserId == e.Message.UserId)
+                        {
+                            if (!votes[id].Contains(e.Message.UserId))
+                                votes[id].Add(e.Message.UserId);
+                        }
+                    }
                 }
             }
         }
@@ -2776,6 +2858,8 @@ namespace Nekobot
  !nsfw on/off/status - (on/off)Enables or disables the use of nsfw commands in a particular channel. Requires permission level 1 or higher. (status)Tells whether the channel allows the use of nsfw commands. Doesn't require any permission level.
  !music on/off channelid - Enables or disables music streaming in a particular voice channel. Requires permission level 3 for now because doesn't seem to be able to stream to more than one channel at once. Will require permission level 1 or higher if it ever becomes possible to send voice data to more than one server at once.
  !cid channelname - Gets the ID of all channel with the same name.
+ !skip - Votes to skip currently playing song, requires user to be in a Nekobot music streaming channel, votes reset at the end of a song. Requires half or more of the amount of people who where in the channel before the song began to vote to skip.
+ !forceskip - Force to skip currently playing song, requires user to be in a Nekobot music streaming channel and permission level 1 or higher.
  !commands (!help) - How you got this to show up. Will still send them in PM if you ask in a channel.
 That's all for now! Suggest ideas to Kusoneko, might add it at some point.");
 /* removed temporarily due to a random bug
