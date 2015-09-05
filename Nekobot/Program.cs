@@ -162,8 +162,8 @@ namespace Nekobot
             Random rnd = new Random();
             while (streams.Contains(cid))
             {
-                var files = from file in Directory.EnumerateFiles(@"D:\Users\Kusoneko\Google Drive\Music", "*.mp3") select new { File = file };
-                int mp3 = rnd.Next(0, Directory.GetFiles(@"D:\Users\Kusoneko\Google Drive\Music").Length);
+                var files = from file in Directory.EnumerateFiles(@"D:\Users\Kusoneko\Google Drive\Music", "*.mp3", System.IO.SearchOption.AllDirectories) select new { File = file };
+                int mp3 = rnd.Next(0, Directory.GetFiles(@"D:\Users\Kusoneko\Google Drive\Music", "*.mp3", System.IO.SearchOption.AllDirectories).Length);
                 int i = 0;
                 foreach (var f in files)
                 {
