@@ -34,6 +34,7 @@ namespace Nekobot
         public static List<List<string>> permissions = new List<List<string>> { normal, mods, admins, owner };
         public static Dictionary<string, List<string>> votes = new Dictionary<string, List<string>>();
         public static Dictionary<string, bool> forceskip = new Dictionary<string, bool>();
+        public static Dictionary<string, string> songrequest = new Dictionary<string, string>();
 
         public static void AI(MessageEventArgs e) // empty for now, will be the place to insert the AI-fication stuffs
         {
@@ -183,7 +184,7 @@ namespace Nekobot
                 int listeningcount = 0;
                 foreach (Membership m in c.Server.Members)
                 {
-                    if (m.VoiceChannelId == cid)
+                    if (m.VoiceChannelId == cid && m.UserId != client.User.Id)
                     {
                         listeningcount++;
                     }
@@ -210,6 +211,29 @@ namespace Nekobot
                                     //Incomplete frame (end of audio?), wipe the end of the buffer
                                     for (int j = byteCount; j < blockSize; j++)
                                         buffer[j] = 0;
+                                }
+                                if (songrequest.ContainsKey(cid))
+                                {
+                                    string title = "";
+                                    TagLib.File song = TagLib.File.Create(f.File);
+                                    if (song.Tag.Title != null | song.Tag.Title != "")
+                                    {
+                                        title = song.Tag.Title;
+                                        if (song.Tag.Performers != null)
+                                        {
+                                            title += " - ";
+                                            foreach (string p in song.Tag.Performers)
+                                            {
+                                                title += p + " ";
+                                            }
+                                        }
+                                    }
+                                    else
+                                    {
+                                        title = song.Name;
+                                    }
+                                    client.SendMessage(songrequest[cid],"Song: " + title);
+                                    songrequest.Remove(cid);
                                 }
                                 if (!streams.Contains(cid))
                                 {
@@ -548,6 +572,10 @@ namespace Nekobot
                         AdminSkip(e);
                         break;
 
+                    case "song":
+                        Song(e);
+                        break;
+
                     case "kys":
                     case "killyourself":
                         Kys(e);
@@ -560,6 +588,23 @@ namespace Nekobot
 
                     default:
                         break;
+                }
+            }
+        }
+
+        private static void Song(MessageEventArgs e)
+        {
+            foreach (string id in streams)
+            {
+                if (e.Message.Channel.Server.VoiceChannels.Contains(client.GetChannel(id)))
+                {
+                    foreach (Membership m in e.Message.Channel.Server.Members)
+                    {
+                        if (m.VoiceChannelId == id && m.UserId == e.Message.UserId)
+                        {
+                            songrequest.Add(id, e.Message.ChannelId);
+                        }
+                    }
                 }
             }
         }
@@ -577,6 +622,7 @@ namespace Nekobot
                             if (m.VoiceChannelId == id && m.UserId == e.Message.UserId)
                             {
                                 forceskip[id] = true;
+                                client.SendMessage(e.Message.Channel, "Skipping song.");
                             }
                         }
                     }
@@ -590,12 +636,23 @@ namespace Nekobot
             {
                 if (e.Message.Channel.Server.VoiceChannels.Contains(client.GetChannel(id)))
                 {
+                    int listeningcount = 0;
+                    foreach (Membership m in e.Message.Channel.Server.Members)
+                    {
+                        if (m.VoiceChannelId == id && m.UserId != client.User.Id)
+                        {
+                            listeningcount++;
+                        }
+                    }
                     foreach (Membership m in e.Message.Channel.Server.Members)
                     {
                         if (m.VoiceChannelId == id && m.UserId == e.Message.UserId)
                         {
                             if (!votes[id].Contains(e.Message.UserId))
+                            {
                                 votes[id].Add(e.Message.UserId);
+                                client.SendMessage(e.Message.Channel, votes[id].Count + "/" + listeningcount + " votes to skip current song.");
+                            }
                         }
                     }
                 }
@@ -2860,6 +2917,7 @@ namespace Nekobot
  !cid channelname - Gets the ID of all channel with the same name.
  !skip - Votes to skip currently playing song, requires user to be in a Nekobot music streaming channel, votes reset at the end of a song. Requires half or more of the amount of people who where in the channel before the song began to vote to skip.
  !forceskip - Force to skip currently playing song, requires user to be in a Nekobot music streaming channel and permission level 1 or higher.
+ !song - Returns the ID3 tag title and author if possible, else filename of the currently playing song.
  !commands (!help) - How you got this to show up. Will still send them in PM if you ask in a channel.
 That's all for now! Suggest ideas to Kusoneko, might add it at some point.");
 /* removed temporarily due to a random bug
