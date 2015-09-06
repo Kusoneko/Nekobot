@@ -221,10 +221,11 @@ namespace Nekobot
                 {
                     if (mp3 == i)
                     {
+                        Console.WriteLine("Playing song: " + f.File);
                         prevsong = f.File;
                         var outFormat = new WaveFormat(48000, 16, 1);
-                        using (var mp3Reader = new Mp3FileReader(f.File))
-                        using (var resampler = new MediaFoundationResampler(mp3Reader, outFormat))
+                        using (var musicReader = new MediaFoundationReader(f.File))
+                        using (var resampler = new MediaFoundationResampler(musicReader, outFormat))
                         {
                             resampler.ResamplerQuality = 60;
                             int blockSize = outFormat.AverageBytesPerSecond / 50; //20 ms
