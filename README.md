@@ -1,5 +1,5 @@
 # Nekobot
-Version 1.0.0
+Version 1.1.0
 
 Bot for Discord using the [Discord.Net](https://github.com/RogueException/Discord.Net) Library.
 
@@ -14,3 +14,4 @@ Requires the following NuGet Packages (Latest version will do):
 - [Microsoft.Net.Http](https://www.nuget.org/packages/Microsoft.Net.Http/)
 - [NAudio](https://www.nuget.org/packages/NAudio)
 - [Newtonsoft.Json](https://www.nuget.org/packages/Newtonsoft.Json)
+- [TagLib#](https://www.nuget.org/packages/taglib)
