@@ -33,9 +33,12 @@ namespace Nekobot
         public static List<string> normal = new List<string> { };
         public static List<List<string>> permissions = new List<List<string>> { normal, mods, admins, owner };
         public static Dictionary<string, List<string>> votes = new Dictionary<string, List<string>>();
+        public static Dictionary<string, bool> skipsong = new Dictionary<string, bool>();
         public static Dictionary<string, bool> forceskip = new Dictionary<string, bool>();
         public static Dictionary<string, string> songrequest = new Dictionary<string, string>();
         public static Dictionary<string, List<string>> replay = new Dictionary<string, List<string>>();
+        public static Dictionary<string, List<Tuple<string, string, string>>> requestedsongs = new Dictionary<string, List<Tuple<string, string, string>>>();
+        public static string[] musicexts = { ".wma", ".aac", ".mp3", ".m4a", ".wav", ".flac" };
 
         public static void AI(MessageEventArgs e) // empty for now, will be the place to insert the AI-fication stuffs
         {
@@ -166,6 +169,7 @@ namespace Nekobot
             Random rnd = new Random();
             string prevsong = null;
             bool willreplay = false;
+            requestedsongs.Add(cid, new List<Tuple<string,string,string>>());
             while (streams.Contains(cid))
             {
                 if (votes.ContainsKey(cid))
@@ -192,6 +196,14 @@ namespace Nekobot
                 {
                     forceskip.Add(cid, false);
                 }
+                if (skipsong.ContainsKey(cid))
+                {
+                    skipsong[cid] = false;
+                }
+                else
+                {
+                    skipsong.Add(cid, false);
+                }
                 int listeningcount = 0;
                 foreach (Membership m in c.Server.Members)
                 {
@@ -200,8 +212,8 @@ namespace Nekobot
                         listeningcount++;
                     }
                 }
-                var files = from file in Directory.EnumerateFiles(@"D:\Users\Kusoneko\Google Drive\Music", "*.mp3", System.IO.SearchOption.AllDirectories) select new { File = file };
-                int mp3 = rnd.Next(0, Directory.GetFiles(@"D:\Users\Kusoneko\Google Drive\Music", "*.mp3", System.IO.SearchOption.AllDirectories).Length);
+                var files = from file in Directory.EnumerateFiles(@"E:\Sync\Music", "*.*", System.IO.SearchOption.AllDirectories).Where(s => musicexts.Contains(Path.GetExtension(s))) select new { File = file };
+                int mp3 = rnd.Next(0, files.Count());
                 if (willreplay)
                 {
                     int j = 0;
@@ -214,6 +226,37 @@ namespace Nekobot
                             break;
                         }
                         j++;
+                    }
+                }
+                else
+                {
+                    if (requestedsongs[cid].Any()) //Only look for requests if at least one exists.
+                    {
+                        bool requestfound = false;
+                        while (!requestfound)
+                        {
+                            int j = -1;
+                            foreach (var f in files)
+                            {
+                                j++;
+                                if (f.File.Contains(requestedsongs[cid][0].Item2))
+                                {
+                                    mp3 = j;
+                                    requestedsongs[cid].RemoveAt(0);
+                                    requestfound = true;
+                                    break;
+                                }
+                            }
+                            if (!requestfound)
+                            {
+                                client.SendMessage(requestedsongs[cid][0].Item3, "<@" + requestedsongs[cid][0].Item1 + "> Your request was not found. Skipping request.", new string[] { requestedsongs[cid][0].Item1 });
+                                requestedsongs[cid].RemoveAt(0);
+                            }
+                            if (!requestedsongs[cid].Any()) //If no requests left, no reason to continue searching for requests
+                            {
+                                requestfound = true;
+                            }
+                        }
                     }
                 }
                 int i = 0;
@@ -267,15 +310,11 @@ namespace Nekobot
                                 {
                                     break;
                                 }
-                                if (votes[cid].Count >= Math.Ceiling((decimal)listeningcount / 2))
-                                {
-                                    break;
-                                }
                                 if (replay[cid].Count >= Math.Ceiling((decimal)listeningcount / 2))
                                 {
                                     willreplay = true;
                                 }
-                                if (forceskip[cid])
+                                if (forceskip[cid] | skipsong[cid])
                                 {
                                     break;
                                 }
@@ -291,6 +330,8 @@ namespace Nekobot
             votes.Remove(cid);
             forceskip.Remove(cid);
             replay.Remove(cid);
+            requestedsongs.Remove(cid);
+            skipsong.Remove(cid);
             await client.LeaveVoiceServer();
         }
 
@@ -632,6 +673,10 @@ namespace Nekobot
                         SadHorn(e);
                         break;
 
+                    case "request":
+                        Request(e);
+                        break;
+
                     case "help":
                     case "commands":
                         Commands(e);
@@ -639,6 +684,48 @@ namespace Nekobot
 
                     default:
                         break;
+                }
+            }
+        }
+
+        private static void Request(MessageEventArgs e)
+        {
+            foreach (string id in streams)
+            {
+                if (e.Message.Channel.Server.VoiceChannels.Contains(client.GetChannel(id)))
+                {
+                    foreach (Membership m in e.Message.Channel.Server.Members)
+                    {
+                        if (m.VoiceChannelId == id && m.UserId == e.Message.UserId)
+                        {
+                            bool hasrequested = false;
+                            for (int i = 0; i < requestedsongs[id].Count; i++)
+                            {
+                                if (requestedsongs[id][i].Item1 == e.Message.UserId)
+                                {
+                                    hasrequested = true;
+                                }
+                            }
+                            if (hasrequested)
+                            {
+                                client.SendMessage(e.Message.Channel, "<@" + e.Message.UserId + "> You have already made a request, please wait for it to play before making another.", new string[] { e.Message.UserId });
+                            }
+                            else
+                            {
+                                try
+                                {
+                                    requestedsongs[id].Add(Tuple.Create(e.Message.UserId, e.Message.Text.Substring(9), e.Message.ChannelId));
+                                    client.SendMessage(e.Message.Channel, "<@" + e.Message.UserId + "> Your request has been added to the list.", new string[] { e.Message.UserId });
+                                }
+                                catch (Exception ex)
+                                {
+                                    Console.WriteLine(ex.Message);
+                                    client.SendMessage(e.Message.Channel, "<@" + e.Message.UserId + "> Your request wasn't added because it was invalid.", new string[] { e.Message.UserId });
+                                    return;
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -741,7 +828,15 @@ namespace Nekobot
                             if (!votes[id].Contains(e.Message.UserId))
                             {
                                 votes[id].Add(e.Message.UserId);
-                                client.SendMessage(e.Message.Channel, votes[id].Count + "/" + listeningcount + " votes to skip current song. (Needs 50%+ to skip)");
+                                if (votes[id].Count >= Math.Ceiling((decimal)listeningcount/2))
+                                {
+                                    client.SendMessage(e.Message.Channel, votes[id].Count + "/" + listeningcount + " votes to skip current song. 50%+ achieved, skipping song.");
+                                    skipsong[id] = true;
+                                }
+                                else
+                                {
+                                    client.SendMessage(e.Message.Channel, votes[id].Count + "/" + listeningcount + " votes to skip current song. (Needs 50%+ to skip)");
+                                }
                             }
                         }
                     }
@@ -1511,7 +1606,7 @@ namespace Nekobot
 
         public static void Say(MessageEventArgs e)
         {
-            client.SendMessage(e.Message.Channel, e.Message.Text.Substring(5));
+            client.SendMessage(e.Message.Channel, e.Message.RawText.Substring(5), e.Message.MentionIds);
         }
 
         public static void Owner(MessageEventArgs e)
@@ -3009,6 +3104,7 @@ namespace Nekobot
  !forceskip - Force to skip currently playing song, requires user to be in a Nekobot music streaming channel and permission level 1 or higher.
  !song - Returns the ID3 tag title and author if possible, else filename of the currently playing song.
  !replay (!encore) (!ankouru) - Votes to replay the currently playing song after it's done, requires user to be in a Nekobot music streaming channel, votes reset at the end of a song. Requires half or more of the amount of people who where in the channel before the song began to vote to replay.
+ !request requestedsong - Adds a request to the list of request for the channel, requires user to be in a Nekobot music streaming channel, only one request per person at a time is possible (example: User1 requests, User1 now has to wait for the song he requested to play before making another request).
  !notnow - How to rekt rin 101.
  !sadhorn (!icri) (!aicrai) (!aicraievritiem) (!aicraievritaim) - When sad things happen.
  !commands (!help) - How you got this to show up. Will still send them in PM if you ask in a channel.
