@@ -37,6 +37,7 @@ namespace Nekobot
         public static Dictionary<string, bool> forceskip = new Dictionary<string, bool>();
         public static Dictionary<string, string> songrequest = new Dictionary<string, string>();
         public static Dictionary<string, List<string>> replay = new Dictionary<string, List<string>>();
+        public static Dictionary<string, bool> encore = new Dictionary<string, bool>();
         public static Dictionary<string, List<Tuple<string, string, string>>> requestedsongs = new Dictionary<string, List<Tuple<string, string, string>>>();
         public static string[] musicexts = { ".wma", ".aac", ".mp3", ".m4a", ".wav", ".flac" };
 
@@ -204,6 +205,14 @@ namespace Nekobot
                 {
                     skipsong.Add(cid, false);
                 }
+                if (encore.ContainsKey(cid))
+                {
+                    encore[cid] = false;
+                }
+                else
+                {
+                    encore.Add(cid, false);
+                }
                 int listeningcount = 0;
                 foreach (Membership m in c.Server.Members)
                 {
@@ -239,7 +248,7 @@ namespace Nekobot
                             foreach (var f in files)
                             {
                                 j++;
-                                if (f.File.Contains(requestedsongs[cid][0].Item2))
+                                if (Path.GetFileNameWithoutExtension(f.File).ToLower().Contains(requestedsongs[cid][0].Item2.ToLower()))
                                 {
                                     mp3 = j;
                                     requestedsongs[cid].RemoveAt(0);
@@ -332,6 +341,7 @@ namespace Nekobot
             replay.Remove(cid);
             requestedsongs.Remove(cid);
             skipsong.Remove(cid);
+            encore.Remove(cid);
             await client.LeaveVoiceServer();
         }
 
@@ -751,7 +761,15 @@ namespace Nekobot
                             if (!replay[id].Contains(e.Message.UserId))
                             {
                                 replay[id].Add(e.Message.UserId);
-                                client.SendMessage(e.Message.Channel, replay[id].Count + "/" + listeningcount + " votes to replay current song. (Needs 50%+ to replay)");
+                                if (replay[id].Count >= Math.Ceiling((decimal)listeningcount / 2))
+                                {
+                                    client.SendMessage(e.Message.Channel, replay[id].Count + "/" + listeningcount + " votes to replay current song. 50%+ achieved, song will be replayed.");
+                                    encore[id] = true;
+                                }
+                                else
+                                {
+                                    client.SendMessage(e.Message.Channel, replay[id].Count + "/" + listeningcount + " votes to replay current song. (Needs 50%+ to replay)");
+                                }
                             }
                         }
                     }
