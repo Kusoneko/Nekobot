@@ -240,7 +240,7 @@ namespace Nekobot
                                 {
                                     break;
                                 }
-                                if (votes[cid].Count >= listeningcount/2)
+                                if (votes[cid].Count >= Math.Ceiling((decimal)listeningcount/2))
                                 {
                                     break;
                                 }
