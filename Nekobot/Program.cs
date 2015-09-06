@@ -35,6 +35,7 @@ namespace Nekobot
         public static Dictionary<string, List<string>> votes = new Dictionary<string, List<string>>();
         public static Dictionary<string, bool> forceskip = new Dictionary<string, bool>();
         public static Dictionary<string, string> songrequest = new Dictionary<string, string>();
+        public static Dictionary<string, List<string>> replay = new Dictionary<string, List<string>>();
 
         public static void AI(MessageEventArgs e) // empty for now, will be the place to insert the AI-fication stuffs
         {
@@ -163,6 +164,8 @@ namespace Nekobot
                 return;
             }
             Random rnd = new Random();
+            string prevsong = null;
+            bool willreplay = false;
             while (streams.Contains(cid))
             {
                 if (votes.ContainsKey(cid))
@@ -172,6 +175,14 @@ namespace Nekobot
                 else
                 {
                     votes.Add(cid, new List<string> { });
+                }
+                if (replay.ContainsKey(cid))
+                {
+                    replay[cid] = new List<string> { };
+                }
+                else
+                {
+                    replay.Add(cid, new List<string> { });
                 }
                 if (forceskip.ContainsKey(cid))
                 {
@@ -191,11 +202,26 @@ namespace Nekobot
                 }
                 var files = from file in Directory.EnumerateFiles(@"D:\Users\Kusoneko\Google Drive\Music", "*.mp3", System.IO.SearchOption.AllDirectories) select new { File = file };
                 int mp3 = rnd.Next(0, Directory.GetFiles(@"D:\Users\Kusoneko\Google Drive\Music", "*.mp3", System.IO.SearchOption.AllDirectories).Length);
+                if (willreplay)
+                {
+                    int j = 0;
+                    foreach (var f in files)
+                    {
+                        if (f.File == prevsong)
+                        {
+                            mp3 = j;
+                            willreplay = false;
+                            break;
+                        }
+                        j++;
+                    }
+                }
                 int i = 0;
                 foreach (var f in files)
                 {
                     if (mp3 == i)
                     {
+                        prevsong = f.File;
                         var outFormat = new WaveFormat(48000, 16, 1);
                         using (var mp3Reader = new Mp3FileReader(f.File))
                         using (var resampler = new MediaFoundationResampler(mp3Reader, outFormat))
@@ -240,9 +266,13 @@ namespace Nekobot
                                 {
                                     break;
                                 }
-                                if (votes[cid].Count >= Math.Ceiling((decimal)listeningcount/2))
+                                if (votes[cid].Count >= Math.Ceiling((decimal)listeningcount / 2))
                                 {
                                     break;
+                                }
+                                if (replay[cid].Count >= Math.Ceiling((decimal)listeningcount / 2))
+                                {
+                                    willreplay = true;
                                 }
                                 if (forceskip[cid])
                                 {
@@ -259,6 +289,7 @@ namespace Nekobot
             }
             votes.Remove(cid);
             forceskip.Remove(cid);
+            replay.Remove(cid);
             await client.LeaveVoiceServer();
         }
 
@@ -586,6 +617,20 @@ namespace Nekobot
                         NotNow(e);
                         break;
 
+                    case "encore":
+                    case "ankouru":
+                    case "replay":
+                        VoteReplay(e);
+                        break;
+
+                    case "aicraievritaim":
+                    case "aicrai":
+                    case "aicraievritiem":
+                    case "icri":
+                    case "sadhorn":
+                        SadHorn(e);
+                        break;
+
                     case "help":
                     case "commands":
                         Commands(e);
@@ -595,6 +640,40 @@ namespace Nekobot
                         break;
                 }
             }
+        }
+
+        private static void VoteReplay(MessageEventArgs e)
+        {
+            foreach (string id in streams)
+            {
+                if (e.Message.Channel.Server.VoiceChannels.Contains(client.GetChannel(id)))
+                {
+                    int listeningcount = 0;
+                    foreach (Membership m in e.Message.Channel.Server.Members)
+                    {
+                        if (m.VoiceChannelId == id && m.UserId != client.User.Id)
+                        {
+                            listeningcount++;
+                        }
+                    }
+                    foreach (Membership m in e.Message.Channel.Server.Members)
+                    {
+                        if (m.VoiceChannelId == id && m.UserId == e.Message.UserId)
+                        {
+                            if (!replay[id].Contains(e.Message.UserId))
+                            {
+                                replay[id].Add(e.Message.UserId);
+                                client.SendMessage(e.Message.Channel, replay[id].Count + "/" + listeningcount + " votes to replay current song. (Needs 50%+ to replay)");
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        private static void SadHorn(MessageEventArgs e)
+        {
+            client.SendMessage(e.Message.Channel, "https://www.youtube.com/watch?v=0JAn8eShOo8");
         }
 
         private static void NotNow(MessageEventArgs e)
@@ -661,7 +740,7 @@ namespace Nekobot
                             if (!votes[id].Contains(e.Message.UserId))
                             {
                                 votes[id].Add(e.Message.UserId);
-                                client.SendMessage(e.Message.Channel, votes[id].Count + "/" + listeningcount + " votes to skip current song.");
+                                client.SendMessage(e.Message.Channel, votes[id].Count + "/" + listeningcount + " votes to skip current song. (Needs 50%+ to skip)");
                             }
                         }
                     }
@@ -2928,7 +3007,9 @@ namespace Nekobot
  !skip - Votes to skip currently playing song, requires user to be in a Nekobot music streaming channel, votes reset at the end of a song. Requires half or more of the amount of people who where in the channel before the song began to vote to skip.
  !forceskip - Force to skip currently playing song, requires user to be in a Nekobot music streaming channel and permission level 1 or higher.
  !song - Returns the ID3 tag title and author if possible, else filename of the currently playing song.
+ !replay (!encore) (!ankouru) - Votes to replay the currently playing song after it's done, requires user to be in a Nekobot music streaming channel, votes reset at the end of a song. Requires half or more of the amount of people who where in the channel before the song began to vote to replay.
  !notnow - How to rekt rin 101.
+ !sadhorn (!icri) (!aicrai) (!aicraievritiem) (!aicraievritaim) - When sad things happen.
  !commands (!help) - How you got this to show up. Will still send them in PM if you ask in a channel.
 That's all for now! Suggest ideas to Kusoneko, might add it at some point.");
 /* removed temporarily due to a random bug
