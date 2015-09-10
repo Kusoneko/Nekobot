@@ -22,7 +22,7 @@ namespace Nekobot
 {
     class Program
     {
-        public static DiscordClient client = new DiscordClient(new DiscordClientConfig { EnableVoice = true, EnableDebug = false });
+        public static DiscordClient client = new DiscordClient(new DiscordClientConfig { EnableVoice = false, EnableDebug = false });
         public static string email = "";
         public static string pass = "";
         public static List<string> sfw = new List<string> { };
@@ -155,12 +155,12 @@ namespace Nekobot
             File.WriteAllLines("streams", streams);
         }
 
-        private static async void StreamMusic(string cid/*, DiscordClient _client*/)
+        private static async void StreamMusic(string cid, DiscordClient _client)
         {
-            Channel c = client.GetChannel(cid);
+            Channel c = _client.GetChannel(cid);
             try
             {
-                await client.JoinVoiceServer(c);
+                await _client.JoinVoiceServer(c);
             }
             catch (Exception e)
             {
@@ -273,7 +273,7 @@ namespace Nekobot
                 {
                     if (mp3 == i)
                     {
-                        Console.WriteLine("Playing song: " + f.File);
+                        Console.WriteLine("Playing song: " + f.File + " on channel " + c.Name);
                         prevsong = f.File;
                         var outFormat = new WaveFormat(48000, 16, 1);
                         using (var musicReader = new MediaFoundationReader(f.File))
@@ -305,7 +305,7 @@ namespace Nekobot
                                             }
                                         }
                                         if (title != "")
-                                            title += "- ";
+                                            title += "**-** ";
                                         title += song.Tag.Title;
                                     }
                                     else
@@ -319,22 +319,23 @@ namespace Nekobot
                                 {
                                     break;
                                 }
-                                if (replay[cid].Count >= Math.Ceiling((decimal)listeningcount / 2))
+                                if (encore[cid])
                                 {
                                     willreplay = true;
+                                    encore[cid] = false;
                                 }
                                 if (forceskip[cid] | skipsong[cid])
                                 {
                                     break;
                                 }
-                                client.SendVoicePCM(buffer, blockSize);
+                                _client.SendVoicePCM(buffer, blockSize);
                             }
                         }
                         break;
                     }
                     i++;
                 }
-                await client.WaitVoice(); //Prevent endless queueing which would eventually eat up all the ram
+                await _client.WaitVoice(); //Prevent endless queueing which would eventually eat up all the ram
             }
             votes.Remove(cid);
             forceskip.Remove(cid);
@@ -342,7 +343,7 @@ namespace Nekobot
             requestedsongs.Remove(cid);
             skipsong.Remove(cid);
             encore.Remove(cid);
-            await client.LeaveVoiceServer();
+            await _client.LeaveVoiceServer();
         }
 
         private static void UpdatePermissionFiles()
@@ -890,11 +891,11 @@ namespace Nekobot
                         {
                             streams.Add(c.Id);
                             UpdateStreamChannels();
-                            /*DiscordClient _client = new DiscordClient(new DiscordClientConfig() { EnableVoice = true });
+                            DiscordClient _client = new DiscordClient(new DiscordClientConfig() { EnableVoice = true, EnableDebug = false });
                             await _client.Connect(email, pass);
                             while (!_client.IsConnected)
-                                await Task.Delay(1000);*/
-                            Thread music = new Thread(() => StreamMusic(c.Id/*, _client*/));
+                                await Task.Delay(1000);
+                            Thread music = new Thread(() => StreamMusic(c.Id, _client));
                             music.Start();
                             await client.SendMessage(e.Message.Channel, "Channel " + c.Name + " added to music streaming channel list.");
                         }
@@ -3184,13 +3185,13 @@ That's all for now! Suggest ideas to Kusoneko, might add it at some point.");
         {
             foreach (string s in streams)
             {
-                //DiscordClient _client = new DiscordClient(new DiscordClientConfig() { EnableVoice = true });
-                //await _client.Connect(email, pass);
+                DiscordClient _client = new DiscordClient(new DiscordClientConfig { EnableVoice = true, EnableDebug = false });
+                await _client.Connect(email, pass);
                 while (!client.IsConnected)
                     await Task.Delay(1000);
                 if (client.GetChannel(s).Type == "voice")
                 {
-                    Thread music = new Thread(() => StreamMusic(s/*, _client*/));
+                    Thread music = new Thread(() => StreamMusic(s, _client));
                     music.Start();
                 }
             }
