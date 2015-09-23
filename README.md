@@ -8,7 +8,6 @@ You'll need a "creds" file with no extension containing a email address for the 
 Server where the bot is being tested: https://discord.gg/0Lv5NLFEoz3P07Aq
 
 Requires the following NuGet Packages (Latest version will do):
-- [Discord.Net](https://www.nuget.org/packages/Discord.Net/)
 - [Microsoft.Bcl](https://www.nuget.org/packages/Microsoft.Bcl)
 - [Microsoft.Bcl.Build](https://www.nuget.org/packages/Microsoft.Bcl.Build)
 - [Microsoft.Net.Http](https://www.nuget.org/packages/Microsoft.Net.Http/)

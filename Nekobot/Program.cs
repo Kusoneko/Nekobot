@@ -22,7 +22,7 @@ namespace Nekobot
 {
     class Program
     {
-        public static DiscordClient client = new DiscordClient(new DiscordClientConfig { EnableVoice = false, EnableDebug = false });
+        public static DiscordClient client = new DiscordClient(new DiscordClientConfig { EnableVoice = false });
         public static string email = "";
         public static string pass = "";
         public static List<string> sfw = new List<string> { };
@@ -130,7 +130,7 @@ namespace Nekobot
                         client.Connect(email, pass);
                         break;
                     case "quit":
-                        if (client.IsConnected)
+                        if (client.State == DiscordClientState.Connected)
                         {
                             client.Disconnect();
                         }
@@ -214,9 +214,9 @@ namespace Nekobot
                     encore.Add(cid, false);
                 }
                 int listeningcount = 0;
-                foreach (Membership m in c.Server.Members)
+                foreach (Member m in c.Server.Members)
                 {
-                    if (m.VoiceChannelId == cid && m.UserId != client.User.Id)
+                    if (m.VoiceChannelId == cid && m.UserId != client.CurrentUserId)
                     {
                         listeningcount++;
                     }
@@ -397,13 +397,13 @@ namespace Nekobot
 
         private static void ClientConnected(object sender, EventArgs e)
         {
-            Console.WriteLine("Connected under the username " + client.User.Name + "!");
-            File.AppendAllLines("Nekobot-" + DateTime.Now.ToString("dd-MM-yyyy") + ".log", new string[] { DateTime.Now.ToString() + " - /!\\ - Connected under the username " + client.User.Name + "!" });
+            Console.WriteLine("Connected under the username " + client.CurrentUser.Name + "!");
+            File.AppendAllLines("Nekobot-" + DateTime.Now.ToString("dd-MM-yyyy") + ".log", new string[] { DateTime.Now.ToString() + " - /!\\ - Connected under the username " + client.CurrentUser.Name + "!" });
         }
 
         private static void ClientMessageCreated(object sender, MessageEventArgs e)
         {
-            if (!e.Message.Text.StartsWith("!") && e.Message.UserId != client.User.Id && e.Message.IsMentioningMe)
+            if (!e.Message.Text.StartsWith("!") && e.Message.UserId != client.CurrentUserId && e.Message.IsMentioningMe)
             {
                 AI(e);
             }
@@ -417,16 +417,18 @@ namespace Nekobot
                 Console.WriteLine(DateTime.Now.ToString() + " - Private Message from {0}: {1}", e.Message.User.Name, e.Message.Text);
                 File.AppendAllLines("Nekobot-" + DateTime.Now.ToString("dd-MM-yyyy") + ".log", new string[] { DateTime.Now.ToString() + " - Private Message from " + e.Message.User.Name + ": " + e.Message.Text });
             }
-            if (e.Message.Text.StartsWith("!") && e.Message.UserId != client.User.Id)
+            if (e.Message.Text.StartsWith("!") && e.Message.UserId != client.CurrentUserId)
             {
                 string mess = e.Message.Text.Substring(1).ToLower();
                 string[] words = mess.Split(' ');
                 switch (words[0])
                 {
+/* Disabled because unneeded complaints from sehteph
                     case "status":
                         Status(e);
                         break;
-
+*/
+/* Disabled because Neko.js
                     case "whereami":
                         WhereAmI(e);
                         break;
@@ -434,11 +436,11 @@ namespace Nekobot
                     case "whois":
                         WhoIs(e);
                         break;
-
+*/
                     case "leave":
                         Leave(e);
                         break;
-
+/* Disabled because Neko.js
                     case "ping":
                         Ping(e);
                         break;
@@ -446,11 +448,11 @@ namespace Nekobot
                     case "quote":
                         Quote(e);
                         break;
-
+*/
                     case "pet":
                         Pet(e);
                         break;
-
+/* Disabled because Neko.js
                     case "nya":
                         Nya(e);
                         break;
@@ -499,7 +501,7 @@ namespace Nekobot
                     case "reverse":
                         Reverse(e);
                         break;
-
+*/
                     case "playerpost":
                         PlayerPost(e);
                         break;
@@ -515,15 +517,15 @@ namespace Nekobot
                     case "playerlongbio":
                         PlayerLongBio(e);
                         break;
-
+/* Disabled because Neko.js
                     case "avatar":
                         Avatar(e);
                         break;
-
+*/
                     case "playeravatar":
                         PlayerAvatar(e);
                         break;
-
+/* Disabled because Neko.js
                     case "owner":
                         Owner(e);
                         break;
@@ -547,7 +549,7 @@ namespace Nekobot
                     case "demod":
                         Demod(e);
                         break;
-
+*/
                     case "die":
                         SelfDestruct(e);
                         break;
@@ -555,10 +557,11 @@ namespace Nekobot
                     case "invite":
                         AcceptInvitation(e);
                         break;
-
+/* Disabled because Neko.js
                     case "say":
                         Say(e);
                         break;
+*/
                     //Killed temporarily because causes a random RuntimeBinderException
 /*
                     case "sidetail":
@@ -584,6 +587,7 @@ namespace Nekobot
                             SfwChannel(e);
                         break;
 */
+/* Disabled because Neko.js
                     case "rule34":
                         if (!sfw.Contains(e.Message.ChannelId))
                             Rule34(e);
@@ -618,11 +622,11 @@ namespace Nekobot
                         else
                             SfwChannel(e);
                         break;
-
+*/
                     case "waifu":
                         Waifu(e);
                         break;
-
+/* Disabled because Neko.js
                     case "kona":
                         if (!sfw.Contains(e.Message.ChannelId))
                             Kona(e);
@@ -640,7 +644,7 @@ namespace Nekobot
                     case "nsfw":
                         Nsfw(e);
                         break;
-
+*/
                     case "music":
                         Music(e);
                         break;
@@ -660,7 +664,7 @@ namespace Nekobot
                     case "song":
                         Song(e);
                         break;
-
+/* Disabled because Neko.js
                     case "kys":
                     case "killyourself":
                         Kys(e);
@@ -669,13 +673,13 @@ namespace Nekobot
                     case "notnow":
                         NotNow(e);
                         break;
-
+*/
                     case "encore":
                     case "ankouru":
                     case "replay":
                         VoteReplay(e);
                         break;
-
+/* Disabled because Neko.js
                     case "aicraievritaim":
                     case "aicrai":
                     case "aicraievritiem":
@@ -683,16 +687,16 @@ namespace Nekobot
                     case "sadhorn":
                         SadHorn(e);
                         break;
-
+*/
                     case "request":
                         Request(e);
                         break;
-
+/* Disabled because Neko.js
                     case "help":
                     case "commands":
                         Commands(e);
                         break;
-
+*/
                     default:
                         break;
                 }
@@ -705,7 +709,7 @@ namespace Nekobot
             {
                 if (e.Message.Channel.Server.VoiceChannels.Contains(client.GetChannel(id)))
                 {
-                    foreach (Membership m in e.Message.Channel.Server.Members)
+                    foreach (Member m in e.Message.Channel.Server.Members)
                     {
                         if (m.VoiceChannelId == id && m.UserId == e.Message.UserId)
                         {
@@ -748,14 +752,14 @@ namespace Nekobot
                 if (e.Message.Channel.Server.VoiceChannels.Contains(client.GetChannel(id)))
                 {
                     int listeningcount = 0;
-                    foreach (Membership m in e.Message.Channel.Server.Members)
+                    foreach (Member m in e.Message.Channel.Server.Members)
                     {
-                        if (m.VoiceChannelId == id && m.UserId != client.User.Id)
+                        if (m.VoiceChannelId == id && m.UserId != client.CurrentUserId)
                         {
                             listeningcount++;
                         }
                     }
-                    foreach (Membership m in e.Message.Channel.Server.Members)
+                    foreach (Member m in e.Message.Channel.Server.Members)
                     {
                         if (m.VoiceChannelId == id && m.UserId == e.Message.UserId)
                         {
@@ -794,7 +798,7 @@ namespace Nekobot
             {
                 if (e.Message.Channel.Server.VoiceChannels.Contains(client.GetChannel(id)))
                 {
-                    foreach (Membership m in e.Message.Channel.Server.Members)
+                    foreach (Member m in e.Message.Channel.Server.Members)
                     {
                         if (m.VoiceChannelId == id && m.UserId == e.Message.UserId)
                         {
@@ -813,7 +817,7 @@ namespace Nekobot
                 {
                     if (e.Message.Channel.Server.VoiceChannels.Contains(client.GetChannel(id)))
                     {
-                        foreach (Membership m in e.Message.Channel.Server.Members)
+                        foreach (Member m in e.Message.Channel.Server.Members)
                         {
                             if (m.VoiceChannelId == id && m.UserId == e.Message.UserId)
                             {
@@ -833,14 +837,14 @@ namespace Nekobot
                 if (e.Message.Channel.Server.VoiceChannels.Contains(client.GetChannel(id)))
                 {
                     int listeningcount = 0;
-                    foreach (Membership m in e.Message.Channel.Server.Members)
+                    foreach (Member m in e.Message.Channel.Server.Members)
                     {
-                        if (m.VoiceChannelId == id && m.UserId != client.User.Id)
+                        if (m.VoiceChannelId == id && m.UserId != client.CurrentUserId)
                         {
                             listeningcount++;
                         }
                     }
-                    foreach (Membership m in e.Message.Channel.Server.Members)
+                    foreach (Member m in e.Message.Channel.Server.Members)
                     {
                         if (m.VoiceChannelId == id && m.UserId == e.Message.UserId)
                         {
@@ -891,9 +895,9 @@ namespace Nekobot
                         {
                             streams.Add(c.Id);
                             UpdateStreamChannels();
-                            DiscordClient _client = new DiscordClient(new DiscordClientConfig() { EnableVoice = true, EnableDebug = false });
+                            DiscordClient _client = new DiscordClient(new DiscordClientConfig() { EnableVoice = true });
                             await _client.Connect(email, pass);
-                            while (!_client.IsConnected)
+                            while (_client.State != DiscordClientState.Connected)
                                 await Task.Delay(1000);
                             Thread music = new Thread(() => StreamMusic(c.Id, _client));
                             music.Start();
@@ -1891,10 +1895,10 @@ namespace Nekobot
                                 permission = 1;
                             else if (permissions[0].Contains(foundMember.Id))
                                 permission = 0;
-                            if (member.UserId != client.User.Id)
+                            if (member.UserId != client.CurrentUserId)
                                 client.SendMessage(e.Message.Channel, string.Format("{0}'s user id is {1} and his/her permission level to me is {2}.", foundMember.Name, foundMember.Id, permission.ToString()));
                             else
-                                client.SendMessage(e.Message.Channel, "My id is " + client.User.Id + ".");
+                                client.SendMessage(e.Message.Channel, "My id is " + client.CurrentUserId + ".");
                             return;
                         }
                     }
@@ -3070,20 +3074,41 @@ namespace Nekobot
 
         public static void Commands(MessageEventArgs e)
         {
-            Discord.Channel channel = client.GetPMChannel(e.Message.UserId).Result;
+            Discord.Channel channel = client.CreatePMChannel(e.Message.UserId).Result;
             if (!e.Message.Channel.IsPrivate)
             {
                 client.SendMessage(e.Message.Channel, "<@" + e.Message.UserId + "> I'm sending you the list of commands in PM!", new string[] { e.Message.UserId });
             }
             client.SendMessage(channel, @"List of all commands (optional command parameters are in square brackets [], aliases are in parenthesis ()):
  !status - Replies with I work if I'm not broken.
- !whereami - Replies with details about the channel and server where you did this command.
- !whois Username - Replies with the unique User ID of the specified user as well as his permission level. Warning: only works in a channel
  !leave - Why would you want to do this? Nekobot will leave the server this is posted in. Only happens if used by permission level 2 or higher.
  !die - Why would you want to do this? Kills the bot for all servers it's in. Only happens if used by permission level 3.
- !ping - Replies with Pong!.
- !quote - Replies with a random quote from https://julxzs.website/quotes
  !pet [@username] [@everyone] - Tells who petted who, if multiple people are mentioned, all of them are petted, if everyone is in, only everyone will be in the reply. Purrs if everyone or mentioned herself or no mentions at all (assumes that you're petting her in that case).
+ !playerpost id - Replies with the content of the post at https://player.me/feed/id
+ !playercomment postid commentid - Replies with the content of the post and the highlighted comment at https://player.me/feed/postid?comment=commentid
+ !playerbio username - Replies with the short bio of the user on player.me
+ !playerlongbio username - Replies with the long bio of the user on player.me
+ !playeravatar username - Returns the avatar of username on player.me
+ !invite invitationcode - Nekobot joins the server that the invite represents. invitationcode corresponds to the 0Lv5NLFEoz3P07Aq part of https://discord.gg/0Lv5NLFEoz3P07Aq Requires permission level 1 or higher.
+ !waifu - Replies with a random waifu from https://julxzs.website/api/random-waifu
+ !music on/off channelid - Enables or disables music streaming in a particular voice channel. Requires permission level 3 for now because doesn't seem to be able to stream to more than one channel at once. Will require permission level 1 or higher if it ever becomes possible to send voice data to more than one server at once.
+ !cid channelname - Gets the ID of all channel with the same name.
+ !skip - Votes to skip currently playing song, requires user to be in a Nekobot music streaming channel, votes reset at the end of a song. Requires half or more of the amount of people who where in the channel before the song began to vote to skip.
+ !forceskip - Force to skip currently playing song, requires user to be in a Nekobot music streaming channel and permission level 1 or higher.
+ !song - Returns the ID3 tag title and author if possible, else filename of the currently playing song.
+ !replay (!encore) (!ankouru) - Votes to replay the currently playing song after it's done, requires user to be in a Nekobot music streaming channel, votes reset at the end of a song. Requires half or more of the amount of people who where in the channel before the song began to vote to replay.
+ !request requestedsong - Adds a request to the list of request for the channel, requires user to be in a Nekobot music streaming channel, only one request per person at a time is possible (example: User1 requests, User1 now has to wait for the song he requested to play before making another request).
+ !commands (!help) - How you got this to show up. Will still send them in PM if you ask in a channel.
+That's all for now! Suggest ideas to Kusoneko, might add it at some point.");
+/* removed temporarily due to a random bug
+ !sidetail - Grabs a random sidetail image from https://danbooru.donmai.us/posts?tags=sidetail Warning: can return a nsfw image
+ !futanari (!futa) - Grabs a random futa image from http://danbooru.donmai.us/posts?tags=futanari Warning: can return a nsfw image
+ !wincest (!incest) - Grabs a random incest image from https://danbooru.donmai.us/posts?tags=incest Warning: can return a nsfw image
+*/
+/* removed because Neko.js has it, and nekobot will change to neko.js
+ !whereami - Replies with details about the channel and server where you did this command.
+ !whois Username - Replies with the unique User ID of the specified user as well as his permission level. Warning: only works in a channel
+ !ping - Replies with Pong!.
  !nya - Replies with Nyaaa~.
  !poi - Replies with Poi!.
  !rand [x] [y] - Generates a random number between x and y, both are optional: x defaults to 1 and y defaults to 100, if only 1 parameter is given, that parameter is y
@@ -3095,19 +3120,14 @@ namespace Nekobot
  !kys (!killyourself) - Another good advice.
  !roll [y] [x] [z] - Roll x y-faced dices z times. x and z are optional and both default to 1, y is also optional and default to 6 (for a 6-faced dice)
  !reverse - Replies with everything that follows the command reversed
- !playerpost id - Replies with the content of the post at https://player.me/feed/id
- !playercomment postid commentid - Replies with the content of the post and the highlighted comment at https://player.me/feed/postid?comment=commentid
- !playerbio username - Replies with the short bio of the user on player.me
- !playerlongbio username - Replies with the long bio of the user on player.me
+ !quote - Replies with a random quote from https://julxzs.website/quotes
  !avatar @username - Returns the user's discord avatar
- !playeravatar username - Returns the avatar of username on player.me
  !owner @username - Gives permission level 3 to a user with permission level 2 or lower. Requires permission level 3.
  !deowner @username - Removes any permission levels from a user and gets him/her to permission level 0. Requires permission level 3.
  !admin @username - Gives permission level 2 to a user with permission level 1 or lower. Requires permission level 3.
  !deadmin @username - Removes permission level 2 from a user and gets him/her to permission level 0. Requires permission level 3.
  !mod @username - Gives permission level 1 to a user with permission level 0. Requires permission level 2 or higher.
  !demod @username - Removes permission level 1 from a user and gets him/her to permission level 0. Requires permission level 2 or higher.
- !invite invitationcode - Nekobot joins the server that the invite represents. invitationcode corresponds to the 0Lv5NLFEoz3P07Aq part of https://discord.gg/0Lv5NLFEoz3P07Aq Requires permission level 1 or higher.
  !say - Replies with everything that follows the command.
  !kona tags - Grabs a random image fitting the tags from http://konachan.com/ Warning: can return a nsfw image, if nothing is returned, the tag is incorrect or doesn't have a minimum of 100 pictures
  !rule34 tags - Grabs a random image from http://rule34.xxx/ Warning: can return a nsfw image, if nothing is returned, tag is incorrect or doesn't have a minimum of 100 pictures
@@ -3115,23 +3135,9 @@ namespace Nekobot
  !cosplay - Grabs a random cosplay image from Salvy's folder - doesn't update, contains 157 images.
  !pitur - Grabs a random lewd image from Pitur's collection - doesn't update, contains 4396 images.
  !gold - Grabs a random kancolle image from Au-chan's collection - updates, though not in real time.
- !waifu - Replies with a random waifu from https://julxzs.website/api/random-waifu
  !nsfw on/off/status - (on/off)Enables or disables the use of nsfw commands in a particular channel. Requires permission level 1 or higher. (status)Tells whether the channel allows the use of nsfw commands. Doesn't require any permission level.
- !music on/off channelid - Enables or disables music streaming in a particular voice channel. Requires permission level 3 for now because doesn't seem to be able to stream to more than one channel at once. Will require permission level 1 or higher if it ever becomes possible to send voice data to more than one server at once.
- !cid channelname - Gets the ID of all channel with the same name.
- !skip - Votes to skip currently playing song, requires user to be in a Nekobot music streaming channel, votes reset at the end of a song. Requires half or more of the amount of people who where in the channel before the song began to vote to skip.
- !forceskip - Force to skip currently playing song, requires user to be in a Nekobot music streaming channel and permission level 1 or higher.
- !song - Returns the ID3 tag title and author if possible, else filename of the currently playing song.
- !replay (!encore) (!ankouru) - Votes to replay the currently playing song after it's done, requires user to be in a Nekobot music streaming channel, votes reset at the end of a song. Requires half or more of the amount of people who where in the channel before the song began to vote to replay.
- !request requestedsong - Adds a request to the list of request for the channel, requires user to be in a Nekobot music streaming channel, only one request per person at a time is possible (example: User1 requests, User1 now has to wait for the song he requested to play before making another request).
  !notnow - How to rekt rin 101.
  !sadhorn (!icri) (!aicrai) (!aicraievritiem) (!aicraievritaim) - When sad things happen.
- !commands (!help) - How you got this to show up. Will still send them in PM if you ask in a channel.
-That's all for now! Suggest ideas to Kusoneko, might add it at some point.");
-/* removed temporarily due to a random bug
- !sidetail - Grabs a random sidetail image from https://danbooru.donmai.us/posts?tags=sidetail Warning: can return a nsfw image
- !futanari (!futa) - Grabs a random futa image from http://danbooru.donmai.us/posts?tags=futanari Warning: can return a nsfw image
- !wincest (!incest) - Grabs a random incest image from https://danbooru.donmai.us/posts?tags=incest Warning: can return a nsfw image
 */
         }
 
@@ -3178,16 +3184,16 @@ That's all for now! Suggest ideas to Kusoneko, might add it at some point.");
             client.Connected += ClientConnected;
             client.Disconnected += ClientDisconnected;
             client.MessageCreated += ClientMessageCreated;
-            client.DebugMessage += ClientDebugMessage;
+            client.LogMessage += ClientDebugMessage;
         }
 
         private static async void StartMusicThreads()
         {
             foreach (string s in streams)
             {
-                DiscordClient _client = new DiscordClient(new DiscordClientConfig { EnableVoice = true, EnableDebug = false });
+                DiscordClient _client = new DiscordClient(new DiscordClientConfig { EnableVoice = true });
                 await _client.Connect(email, pass);
-                while (!client.IsConnected)
+                while (client.State != DiscordClientState.Connected)
                     await Task.Delay(1000);
                 if (client.GetChannel(s).Type == "voice")
                 {

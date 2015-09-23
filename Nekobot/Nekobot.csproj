@@ -55,10 +55,6 @@
     <Prefer32Bit>true</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Discord.Net, Version=0.6.1.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\Discord.Net.0.6.1-beta2\lib\net45\Discord.Net.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
     <Reference Include="NAudio, Version=1.7.3.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\NAudio.1.7.3\lib\net35\NAudio.dll</HintPath>
       <Private>True</Private>
@@ -101,6 +97,15 @@
   <ItemGroup>
     <None Include="App.config" />
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <WCFMetadata Include="Service References\" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\Discord.Net\src\Discord.Net.Net45\Discord.Net.csproj">
+      <Project>{8d71a857-879a-4a10-859e-5ff824ed6688}</Project>
+      <Name>Discord.Net</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="..\packages\Microsoft.Bcl.Build.1.0.21\build\Microsoft.Bcl.Build.targets" Condition="Exists('..\packages\Microsoft.Bcl.Build.1.0.21\build\Microsoft.Bcl.Build.targets')" />
