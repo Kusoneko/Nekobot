@@ -22,7 +22,7 @@ namespace Nekobot
 {
     class Program
     {
-        public static DiscordClient client = new DiscordClient(new DiscordClientConfig { EnableVoice = false });
+        public static DiscordClient client = new DiscordClient(new DiscordClientConfig { EnableVoice = false, LogLevel = LogMessageSeverity.Debug });
         public static string email = "";
         public static string pass = "";
         public static List<string> sfw = new List<string> { };
@@ -35,10 +35,10 @@ namespace Nekobot
         public static Dictionary<string, List<string>> votes = new Dictionary<string, List<string>>();
         public static Dictionary<string, bool> skipsong = new Dictionary<string, bool>();
         public static Dictionary<string, bool> forceskip = new Dictionary<string, bool>();
-        public static Dictionary<string, string> songrequest = new Dictionary<string, string>();
         public static Dictionary<string, List<string>> replay = new Dictionary<string, List<string>>();
         public static Dictionary<string, bool> encore = new Dictionary<string, bool>();
-        public static Dictionary<string, List<Tuple<string, string, string>>> requestedsongs = new Dictionary<string, List<Tuple<string, string, string>>>();
+        public static Dictionary<string, List<Tuple<string, string, string>>> playlist = new Dictionary<string, List<Tuple<string, string, string>>>();
+        public static Dictionary<string, string> playing = new Dictionary<string, string>();
         public static string[] musicexts = { ".wma", ".aac", ".mp3", ".m4a", ".wav", ".flac" };
 
         public static void AI(MessageEventArgs e) // empty for now, will be the place to insert the AI-fication stuffs
@@ -155,7 +155,7 @@ namespace Nekobot
             File.WriteAllLines("streams", streams);
         }
 
-        private static async void StreamMusic(string cid, DiscordClient _client)
+        private static async Task StreamMusic(string cid, DiscordClient _client)
         {
             Channel c = _client.GetChannel(cid);
             try
@@ -169,8 +169,8 @@ namespace Nekobot
             }
             Random rnd = new Random();
             string prevsong = null;
-            bool willreplay = false;
-            requestedsongs.Add(cid, new List<Tuple<string,string,string>>());
+            playing.Add(cid, "");
+            playlist.Add(cid, new List<Tuple<string, string, string>>());
             while (streams.Contains(cid))
             {
                 if (votes.ContainsKey(cid))
@@ -221,49 +221,48 @@ namespace Nekobot
                         listeningcount++;
                     }
                 }
-                var files = from file in Directory.EnumerateFiles(@"E:\Sync\Music", "*.*", System.IO.SearchOption.AllDirectories).Where(s => musicexts.Contains(Path.GetExtension(s))) select new { File = file };
+                var files = from file in Directory.EnumerateFiles(@"E:\Sync\Music", "*.*").Where(s => musicexts.Contains(Path.GetExtension(s))) select new { File = file };
                 int mp3 = rnd.Next(0, files.Count());
-                if (willreplay)
+                if (playlist[cid].Count < 11)
                 {
-                    int j = 0;
-                    foreach (var f in files)
+                    while (playlist[cid].Count <= 11)
                     {
-                        if (f.File == prevsong)
+                        int x = 0;
+                        mp3 = rnd.Next(0, files.Count());
+                        foreach (var f in files)
                         {
-                            mp3 = j;
-                            willreplay = false;
-                            break;
+                            if (mp3 == x)
+                            {
+                                bool isAlreadyInPlaylist = false;
+                                for (int z = 0; z < playlist[cid].Count; z++)
+                                {
+                                    if (playlist[cid][z].Item1 == Path.GetFileNameWithoutExtension(f.File))
+                                        isAlreadyInPlaylist = true;
+                                }
+                                if (isAlreadyInPlaylist)
+                                    break;
+                                playlist[cid].Add(Tuple.Create(Path.GetFileNameWithoutExtension(f.File), "Playlist", "null"));
+                                break;
+                            }
+                            x++;
                         }
-                        j++;
                     }
                 }
-                else
+                if (playlist[cid].Any()) //Only look for stuff in the playlist if at least one exists.
                 {
-                    if (requestedsongs[cid].Any()) //Only look for requests if at least one exists.
+                    bool requestfound = false;
+                    while (!requestfound)
                     {
-                        bool requestfound = false;
-                        while (!requestfound)
+                        int j = -1;
+                        foreach (var f in files)
                         {
-                            int j = -1;
-                            foreach (var f in files)
+                            j++;
+                            if (Path.GetFileNameWithoutExtension(f.File).ToLower().Contains(playlist[cid][0].Item1.ToLower()))
                             {
-                                j++;
-                                if (Path.GetFileNameWithoutExtension(f.File).ToLower().Contains(requestedsongs[cid][0].Item2.ToLower()))
-                                {
-                                    mp3 = j;
-                                    requestedsongs[cid].RemoveAt(0);
-                                    requestfound = true;
-                                    break;
-                                }
-                            }
-                            if (!requestfound)
-                            {
-                                client.SendMessage(requestedsongs[cid][0].Item3, "<@" + requestedsongs[cid][0].Item1 + "> Your request was not found. Skipping request.", new string[] { requestedsongs[cid][0].Item1 });
-                                requestedsongs[cid].RemoveAt(0);
-                            }
-                            if (!requestedsongs[cid].Any()) //If no requests left, no reason to continue searching for requests
-                            {
+                                mp3 = j;
+                                playlist[cid].RemoveAt(0);
                                 requestfound = true;
+                                break;
                             }
                         }
                     }
@@ -275,62 +274,43 @@ namespace Nekobot
                     {
                         Console.WriteLine("Playing song: " + f.File + " on channel " + c.Name);
                         prevsong = f.File;
-                        var outFormat = new WaveFormat(48000, 16, 1);
-                        using (var musicReader = new MediaFoundationReader(f.File))
-                        using (var resampler = new MediaFoundationResampler(musicReader, outFormat))
+                        playing[cid] = f.File;
+                        await Task.Run(async () =>
                         {
-                            resampler.ResamplerQuality = 60;
-                            int blockSize = outFormat.AverageBytesPerSecond / 50; //20 ms
-                            byte[] buffer = new byte[blockSize];
-                            int byteCount;
-                            while ((byteCount = resampler.Read(buffer, 0, blockSize)) > 0)
+                            try
                             {
-                                if (byteCount < blockSize)
+                                var outFormat = new WaveFormat(48000, 16, 1);
+                                int blockSize = outFormat.AverageBytesPerSecond; //1 second
+                                byte[] buffer = new byte[blockSize];
+                                using (var musicReader = new MediaFoundationReader(f.File))
+                                using (var resampler = new MediaFoundationResampler(musicReader, outFormat) { ResamplerQuality = 60 })
                                 {
-                                    //Incomplete frame (end of audio?), wipe the end of the buffer
-                                    for (int j = byteCount; j < blockSize; j++)
-                                        buffer[j] = 0;
-                                }
-                                if (songrequest.ContainsKey(cid))
-                                {
-                                    string title = "";
-                                    TagLib.File song = TagLib.File.Create(f.File);
-                                    if (song.Tag.Title != null && song.Tag.Title != "")
+                                    int byteCount;
+                                    while ((byteCount = resampler.Read(buffer, 0, blockSize)) > 0)
                                     {
-                                        if (song.Tag.Performers != null)
+                                        if (!streams.Contains(cid))
                                         {
-                                            foreach (string p in song.Tag.Performers)
-                                            {
-                                                title += p + " ";
-                                            }
+                                            _client.ClearVoicePCM();
+                                            await Task.Delay(1000);
+                                            break;
                                         }
-                                        if (title != "")
-                                            title += "**-** ";
-                                        title += song.Tag.Title;
+                                        if (encore[cid])
+                                        {
+                                            playlist[cid].Insert(0, Tuple.Create(Path.GetFileNameWithoutExtension(f.File), "Encore", "null" ));
+                                            encore[cid] = false;
+                                        }
+                                        if (forceskip[cid] | skipsong[cid])
+                                        {
+                                            _client.ClearVoicePCM();
+                                            await Task.Delay(1000);
+                                            break;
+                                        }
+                                        _client.SendVoicePCM(buffer, blockSize);
                                     }
-                                    else
-                                    {
-                                        title = Path.GetFileNameWithoutExtension(song.Name);
-                                    }
-                                    client.SendMessage(songrequest[cid],"Song: " + title);
-                                    songrequest.Remove(cid);
                                 }
-                                if (!streams.Contains(cid))
-                                {
-                                    break;
-                                }
-                                if (encore[cid])
-                                {
-                                    willreplay = true;
-                                    encore[cid] = false;
-                                }
-                                if (forceskip[cid] | skipsong[cid])
-                                {
-                                    break;
-                                }
-                                _client.SendVoicePCM(buffer, blockSize);
                             }
-                        }
+                            catch (OperationCanceledException err) { Console.WriteLine(err.Message); }
+                        });
                         break;
                     }
                     i++;
@@ -340,7 +320,7 @@ namespace Nekobot
             votes.Remove(cid);
             forceskip.Remove(cid);
             replay.Remove(cid);
-            requestedsongs.Remove(cid);
+            playlist.Remove(cid);
             skipsong.Remove(cid);
             encore.Remove(cid);
             await _client.LeaveVoiceServer();
@@ -448,11 +428,11 @@ namespace Nekobot
                     case "quote":
                         Quote(e);
                         break;
-*/
+
                     case "pet":
                         Pet(e);
                         break;
-/* Disabled because Neko.js
+
                     case "nya":
                         Nya(e);
                         break;
@@ -622,11 +602,11 @@ namespace Nekobot
                         else
                             SfwChannel(e);
                         break;
-*/
+
                     case "waifu":
                         Waifu(e);
                         break;
-/* Disabled because Neko.js
+
                     case "kona":
                         if (!sfw.Contains(e.Message.ChannelId))
                             Kona(e);
@@ -691,6 +671,10 @@ namespace Nekobot
                     case "request":
                         Request(e);
                         break;
+
+                    case "playlist":
+                        Playlist(e);
+                        break;
 /* Disabled because Neko.js
                     case "help":
                     case "commands":
@@ -699,6 +683,37 @@ namespace Nekobot
 */
                     default:
                         break;
+                }
+            }
+        }
+
+        private static void Playlist(MessageEventArgs e)
+        {
+            foreach (string id in streams)
+            {
+                if (e.Message.Channel.Server.VoiceChannels.Contains(client.GetChannel(id)))
+                {
+                    foreach (Member m in e.Message.Channel.Server.Members)
+                    {
+                        if (m.VoiceChannelId == id && m.UserId == e.Message.UserId)
+                        {
+                            string list = "Now Playing: " + Path.GetFileNameWithoutExtension(playing[id]) + System.Environment.NewLine + "Next songs:";
+                            for (int i = 0; i < playlist[id].Count; i++)
+                            {
+                                if (playlist[id][i].Item2 == "Request")
+                                {
+                                    list += System.Environment.NewLine + (i + 1).ToString() + ". **[" + playlist[id][i].Item2 + " by <@" + playlist[id][i].Item3 + ">]** " + playlist[id][i].Item1;
+                                }
+                                else
+                                {
+                                    list += System.Environment.NewLine + (i + 1).ToString() + ". **[" + playlist[id][i].Item2 + "]** " + playlist[id][i].Item1;
+                                }
+                                if (i == 9)
+                                    break;
+                            }
+                            client.SendMessage(e.Message.Channel, list);
+                        }
+                    }
                 }
             }
         }
@@ -713,31 +728,53 @@ namespace Nekobot
                     {
                         if (m.VoiceChannelId == id && m.UserId == e.Message.UserId)
                         {
-                            bool hasrequested = false;
-                            for (int i = 0; i < requestedsongs[id].Count; i++)
+                            try
                             {
-                                if (requestedsongs[id][i].Item1 == e.Message.UserId)
+                                bool requestfound = false;
+                                var files = from file in Directory.EnumerateFiles(@"E:\Sync\Music", "*.*").Where(s => musicexts.Contains(Path.GetExtension(s))) select new { File = file };
+                                foreach (var f in files)
                                 {
-                                    hasrequested = true;
+                                    if (Path.GetFileNameWithoutExtension(f.File).ToLower().Contains(e.Message.Text.Substring(9).ToLower()))
+                                    {
+                                        int index = 0;
+                                        for (int i = 0; i < playlist[id].Count; i++)
+                                        {
+                                            if (playlist[id][i].Item2 == "Encore" || playlist[id][i].Item2 == "Request")
+                                            {
+                                                index++;
+                                            }
+                                        }
+                                        bool isAlreadyInPlaylist = false;
+                                        int songindex = 0;
+                                        for (int z = 0; z < playlist[id].Count; z++)
+                                        {
+                                            if (playlist[id][z].Item1 == Path.GetFileNameWithoutExtension(f.File))
+                                            {
+                                                isAlreadyInPlaylist = true;
+                                                songindex = z;
+                                            }
+                                        }
+                                        if (isAlreadyInPlaylist)
+                                        {
+                                            client.SendMessage(e.Message.Channel, "<@" + e.Message.UserId + "> Your request is already in the playlist at position " + (songindex+1).ToString() + ".", new string[] { e.Message.UserId });
+                                            return;
+                                        }
+                                        playlist[id].Insert(index, Tuple.Create(Path.GetFileNameWithoutExtension(f.File), "Request", e.Message.UserId));
+                                        client.SendMessage(e.Message.Channel, "<@" + e.Message.UserId + "> Your request has been added to the list.", new string[] { e.Message.UserId });
+                                        requestfound = true;
+                                        break;
+                                    }
+                                }
+                                if (!requestfound)
+                                {
+                                    client.SendMessage(e.Message.Channel, "<@" + e.Message.UserId + "> Your request was not found.", new string[] { e.Message.UserId });
                                 }
                             }
-                            if (hasrequested)
+                            catch (Exception ex)
                             {
-                                client.SendMessage(e.Message.Channel, "<@" + e.Message.UserId + "> You have already made a request, please wait for it to play before making another.", new string[] { e.Message.UserId });
-                            }
-                            else
-                            {
-                                try
-                                {
-                                    requestedsongs[id].Add(Tuple.Create(e.Message.UserId, e.Message.Text.Substring(9), e.Message.ChannelId));
-                                    client.SendMessage(e.Message.Channel, "<@" + e.Message.UserId + "> Your request has been added to the list.", new string[] { e.Message.UserId });
-                                }
-                                catch (Exception ex)
-                                {
-                                    Console.WriteLine(ex.Message);
-                                    client.SendMessage(e.Message.Channel, "<@" + e.Message.UserId + "> Your request wasn't added because it was invalid.", new string[] { e.Message.UserId });
-                                    return;
-                                }
+                                Console.WriteLine(ex.Message);
+                                client.SendMessage(e.Message.Channel, "<@" + e.Message.UserId + "> Your request wasn't added because it was invalid.", new string[] { e.Message.UserId });
+                                return;
                             }
                         }
                     }
@@ -802,7 +839,26 @@ namespace Nekobot
                     {
                         if (m.VoiceChannelId == id && m.UserId == e.Message.UserId)
                         {
-                            songrequest.Add(id, e.Message.ChannelId);
+                            string title = "";
+                            TagLib.File song = TagLib.File.Create(playing[id]);
+                            if (song.Tag.Title != null && song.Tag.Title != "")
+                            {
+                                if (song.Tag.Performers != null)
+                                {
+                                    foreach (string p in song.Tag.Performers)
+                                    {
+                                        title += p + " ";
+                                    }
+                                }
+                                if (title != "")
+                                    title += "**-** ";
+                                title += song.Tag.Title;
+                            }
+                            else
+                            {
+                                title = Path.GetFileNameWithoutExtension(song.Name);
+                            }
+                            client.SendMessage(e.Message.Channel , "Song: " + title);
                         }
                     }
                 }
@@ -895,12 +951,10 @@ namespace Nekobot
                         {
                             streams.Add(c.Id);
                             UpdateStreamChannels();
-                            DiscordClient _client = new DiscordClient(new DiscordClientConfig() { EnableVoice = true });
+                            DiscordClient _client = new DiscordClient(new DiscordClientConfig() { EnableVoice = true, LogLevel = LogMessageSeverity.Debug });
+                            _client.LogMessage += (ss, ee) => System.Diagnostics.Debug.WriteLine($"[{ee.Severity}] ({ee.Source}) {ee.Message}");
                             await _client.Connect(email, pass);
-                            while (_client.State != DiscordClientState.Connected)
-                                await Task.Delay(1000);
-                            Thread music = new Thread(() => StreamMusic(c.Id, _client));
-                            music.Start();
+                            Task.Run(() => StreamMusic(c.Id, _client));
                             await client.SendMessage(e.Message.Channel, "Channel " + c.Name + " added to music streaming channel list.");
                         }
                     }
@@ -3184,21 +3238,22 @@ That's all for now! Suggest ideas to Kusoneko, might add it at some point.");
             client.Connected += ClientConnected;
             client.Disconnected += ClientDisconnected;
             client.MessageCreated += ClientMessageCreated;
-            client.LogMessage += ClientDebugMessage;
+            //client.LogMessage += (s, e) => System.Diagnostics.Debug.WriteLine($"[{e.Severity}] ({e.Source}) {e.Message}");
         }
 
         private static async void StartMusicThreads()
         {
             foreach (string s in streams)
             {
-                DiscordClient _client = new DiscordClient(new DiscordClientConfig { EnableVoice = true });
-                await _client.Connect(email, pass);
-                while (client.State != DiscordClientState.Connected)
-                    await Task.Delay(1000);
-                if (client.GetChannel(s).Type == "voice")
+                DiscordClient _client = new DiscordClient(new DiscordClientConfig { EnableVoice = true, LogLevel = LogMessageSeverity.Debug });
+                if (streams[0] == s)
                 {
-                    Thread music = new Thread(() => StreamMusic(s, _client));
-                    music.Start();
+                    _client.LogMessage += (ss, e) => System.Diagnostics.Debug.WriteLine($"[{e.Severity}] ({e.Source}) {e.Message}");
+                }
+                await _client.Connect(email, pass);
+                if (_client.GetChannel(s).Type == "voice")
+                {
+                    Task.Run(() => StreamMusic(s, _client));
                 }
             }
         }
