@@ -22,7 +22,7 @@ namespace Nekobot
 {
     class Program
     {
-        public static DiscordClient client = new DiscordClient(new DiscordClientConfig { EnableVoice = false, LogLevel = LogMessageSeverity.Debug });
+        public static DiscordClient client = new DiscordClient(new DiscordClientConfig { VoiceMode = DiscordVoiceMode.Outgoing, EnableVoiceMultiserver = true, LogLevel = LogMessageSeverity.Debug });
         public static string email = "";
         public static string pass = "";
         public static List<string> sfw = new List<string> { };
@@ -155,12 +155,13 @@ namespace Nekobot
             File.WriteAllLines("streams", streams);
         }
 
-        private static async Task StreamMusic(string cid, DiscordClient _client)
+        private static async Task StreamMusic(string cid)
         {
-            Channel c = _client.GetChannel(cid);
+            Channel c = client.GetChannel(cid);
+            IDiscordVoiceClient _client = null;
             try
             {
-                await _client.JoinVoiceServer(c);
+                _client = await client.JoinVoiceServer(c);
             }
             catch (Exception e)
             {
@@ -168,7 +169,6 @@ namespace Nekobot
                 return;
             }
             Random rnd = new Random();
-            string prevsong = null;
             playing.Add(cid, "");
             playlist.Add(cid, new List<Tuple<string, string, string>>());
             while (streams.Contains(cid))
@@ -212,14 +212,6 @@ namespace Nekobot
                 else
                 {
                     encore.Add(cid, false);
-                }
-                int listeningcount = 0;
-                foreach (Member m in c.Server.Members)
-                {
-                    if (m.VoiceChannelId == cid && m.UserId != client.CurrentUserId)
-                    {
-                        listeningcount++;
-                    }
                 }
                 var files = from file in Directory.EnumerateFiles(@"E:\Sync\Music", "*.*").Where(s => musicexts.Contains(Path.GetExtension(s))) select new { File = file };
                 int mp3 = rnd.Next(0, files.Count());
@@ -273,7 +265,6 @@ namespace Nekobot
                     if (mp3 == i)
                     {
                         Console.WriteLine("Playing song: " + f.File + " on channel " + c.Name);
-                        prevsong = f.File;
                         playing[cid] = f.File;
                         await Task.Run(async () =>
                         {
@@ -323,7 +314,7 @@ namespace Nekobot
             playlist.Remove(cid);
             skipsong.Remove(cid);
             encore.Remove(cid);
-            await _client.LeaveVoiceServer();
+            await client.LeaveVoiceServer(c.Server);
         }
 
         private static void UpdatePermissionFiles()
@@ -951,10 +942,7 @@ namespace Nekobot
                         {
                             streams.Add(c.Id);
                             UpdateStreamChannels();
-                            DiscordClient _client = new DiscordClient(new DiscordClientConfig() { EnableVoice = true, LogLevel = LogMessageSeverity.Debug });
-                            _client.LogMessage += (ss, ee) => System.Diagnostics.Debug.WriteLine($"[{ee.Severity}] ({ee.Source}) {ee.Message}");
-                            await _client.Connect(email, pass);
-                            Task.Run(() => StreamMusic(c.Id, _client));
+                            Task.Run(() => StreamMusic(c.Id));
                             await client.SendMessage(e.Message.Channel, "Channel " + c.Name + " added to music streaming channel list.");
                         }
                     }
@@ -3217,45 +3205,42 @@ That's all for now! Suggest ideas to Kusoneko, might add it at some point.");
             Console.WriteLine("Loading streaming channels...");
             LoadStreamChannels();
             Console.WriteLine("Connecting...");
-            try
-            {
-                client.Connect(email, pass);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("Could not connect: " + e.Message);
-            }
-
-            //Allows the ability to type in the console window while the bot runs, thus allowing to have some console commands and a bot running at the same time.
-            Thread input = new Thread(InputThread);
-            input.Start();
-
-            //Start music streaming
-            StartMusicThreads();
-
             //Bot events below
-
             client.Connected += ClientConnected;
             client.Disconnected += ClientDisconnected;
             client.MessageCreated += ClientMessageCreated;
-            //client.LogMessage += (s, e) => System.Diagnostics.Debug.WriteLine($"[{e.Severity}] ({e.Source}) {e.Message}");
+            client.LogMessage += (s, e) => System.Diagnostics.Debug.WriteLine($"[{e.Severity}] ({e.Source}) {e.Message}");
+            //Allows the ability to type in the console window while the bot runs, thus allowing to have some console commands and a bot running at the same time.
+            Thread input = new Thread(InputThread);
+            input.Start();
+            //Connection time
+            try
+            {
+                client.Run(async () =>
+                {
+                    await client.Connect(email, pass);
+                    //Start music streaming
+                    await StartMusicThreads();
+                });
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Error: " + e.Message);
+            }
         }
 
-        private static async void StartMusicThreads()
+        private static Task StartMusicThreads()
         {
-            foreach (string s in streams)
-            {
-                DiscordClient _client = new DiscordClient(new DiscordClientConfig { EnableVoice = true, LogLevel = LogMessageSeverity.Debug });
-                if (streams[0] == s)
-                {
-                    _client.LogMessage += (ss, e) => System.Diagnostics.Debug.WriteLine($"[{e.Severity}] ({e.Source}) {e.Message}");
-                }
-                await _client.Connect(email, pass);
-                if (_client.GetChannel(s).Type == "voice")
-                {
-                    Task.Run(() => StreamMusic(s, _client));
-                }
-            }
+            return Task.WhenAll(
+              streams.Select(s =>
+              {
+                  if (client.GetChannel(s).Type == "voice")
+                      return Task.Run(() => StreamMusic(s));
+                  else
+                      return null;
+              })
+              .Where(t => t != null)
+              .ToArray());
         }
 
         private static bool AlwaysGoodCertificate(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
