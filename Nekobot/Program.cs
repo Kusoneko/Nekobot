@@ -672,8 +672,34 @@ namespace Nekobot
                         Commands(e);
                         break;
 */
+
+                    case "color":
+                        Color(e);
+                        break;
+
                     default:
                         break;
+                }
+            }
+        }
+
+        private static async void Color(MessageEventArgs e)
+        {
+            if (permissions[2].Contains(e.Message.UserId) || permissions[3].Contains(e.Message.UserId))
+            {
+                Role role = client.FindRoles(e.Server, e.Message.Text.Split(' ')[1]).FirstOrDefault();
+                PackedColor color = new PackedColor(0);
+                color.Red = Convert.ToByte(e.Message.Text.Split(' ')[2]);
+                color.Green = Convert.ToByte(e.Message.Text.Split(' ')[3]);
+                color.Blue = Convert.ToByte(e.Message.Text.Split(' ')[4]);
+                try
+                {
+                    await client.EditRole(role, color: color);
+                    await client.SendMessage(e.Channel, "Role " + role.Name + "'s color has been changed.");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.Message);
                 }
             }
         }
