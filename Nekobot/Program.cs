@@ -683,6 +683,29 @@ namespace Nekobot
             }
         }
 
+        private static async void RainbowThread()
+        {
+            while (client.State != DiscordClientState.Connected)
+            {
+                await Task.Delay(500);
+            }
+            Server server = client.GetServer("63296437932273664");
+            Role role = client.FindRoles(server, "@nekobot").FirstOrDefault();
+            Random random = new Random();
+            PackedColor color = new PackedColor(0);
+            byte[] bytes = new byte[3];
+            while (client.State == DiscordClientState.Connected)
+            {
+                random.NextBytes(bytes);
+                color.Red = bytes[0];
+                color.Green = bytes[1];
+                color.Blue = bytes[2];
+
+                await client.EditRole(role, color: color);
+                await Task.Delay(100);
+            }
+        }
+
         private static async void Color(MessageEventArgs e)
         {
             if (permissions[2].Contains(e.Message.UserId) || permissions[3].Contains(e.Message.UserId))
@@ -3239,6 +3262,8 @@ That's all for now! Suggest ideas to Kusoneko, might add it at some point.");
             //Allows the ability to type in the console window while the bot runs, thus allowing to have some console commands and a bot running at the same time.
             Thread input = new Thread(InputThread);
             input.Start();
+            //Thread rainbow = new Thread(RainbowThread);
+            //rainbow.Start();
             //Connection time
             try
             {
