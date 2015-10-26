@@ -42,19 +42,6 @@ Network Trash Folder
 Temporary Items
 .apdisk
 
-# Special files (They're mostly going to get added on their own when needed)
-creds
-admins
-owner
-chans
-mods
-normal
-streams
-
-# Image folders
-pitur/
-cosplay/
-
 # Logs
 *.log
 
