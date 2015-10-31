@@ -860,46 +860,30 @@ Next songs:";
                 });
 
             group.CreateCommand("say")
-                .NoArgs()
+                .AnyArgs()
                 .Description("I'll repeat what you said.")
                 .Syntax($"{commands.CommandChar}say [text...]")
                 .Do(async e =>
                 {
-                    await client.SendMessage(e.Channel, e.ArgText);
+                    await client.SendMessage(e.Channel, e.Message.RawText.Substring(5));
                 });
 
             group.CreateCommand("forward")
-                .NoArgs()
+                .AnyArgs()
                 .Description("I'll repeat what you said.")
                 .Syntax($"{commands.CommandChar}forward [text...]")
                 .Do(async e =>
                 {
-                    await client.SendMessage(e.Channel, e.ArgText);
+                    await client.SendMessage(e.Channel, e.Message.RawText.Substring(9));
                 });
 
             group.CreateCommand("reverse")
-                .NoArgs()
+                .AnyArgs()
                 .Description("I'll repeat what you said, in reverse!")
                 .Syntax($"{commands.CommandChar}reverse [text...]")
                 .Do(async e =>
                 {
                     string message = e.ArgText;
-                    MatchCollection matches = Regex.Matches(message, "<@(\\d{17})>");
-                    if (matches.Count > 0)
-                    {
-                        foreach (Match m in matches)
-                        {
-                            message = message.Replace("<@" + m.Groups[1].Value + ">", "@" + client.GetUser(e.Server, m.Groups[1].Value).Name);
-                        }
-                    }
-                    matches = Regex.Matches(message, "<#(\\d{17})>");
-                    if (matches.Count > 0)
-                    {
-                        foreach (Match m in matches)
-                        {
-                            message = message.Replace("<#" + m.Groups[1].Value + ">", client.GetChannel(m.Groups[1].Value).Name);
-                        }
-                    }
                     char[] chars = message.ToArray();
                     char[] result = new char[chars.Length];
                     for (int i = 0, j = message.Length - 1; i < message.Length; i++, j--)
@@ -2484,7 +2468,7 @@ on {booru}. Please try something else.";
                 error = "You don't have the permissions to use this command. (Permissions needed: " + e.Command.MinPerms.ToString() + " / Current permissions: " + e.Permissions.Value.ToString() + ")";
             }
             client.SendMessage(e.Channel, error);
-            Console.WriteLine($"Command Error {e.Exception.GetBaseException().StackTrace} : {e.Exception.GetBaseException().Message}");
+            //Console.WriteLine($"Command Error {e.Exception.GetBaseException().StackTrace} : {e.Exception.GetBaseException().Message}");
         }
 
         private static void LoadStreams()

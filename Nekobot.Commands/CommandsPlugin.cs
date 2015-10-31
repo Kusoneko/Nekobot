@@ -42,8 +42,10 @@ namespace Nekobot.Commands
                     return;
 
                 //Ignore messages from ourselves
-                if (e.Message.User == client.CurrentUser)
+                if (e.Message.User.Id == client.CurrentUser.Id)
+                {
                     return;
+                }
 
                 //Check for the command character
                 string msg = e.Message.Text;
