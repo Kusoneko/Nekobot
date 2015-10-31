@@ -5,11 +5,11 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("Nekobot")]
+[assembly: AssemblyTitle("Nekobot.Commands")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("Nekobot")]
+[assembly: AssemblyProduct("Nekobot.Commands")]
 [assembly: AssemblyCopyright("Copyright ©  2015")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
@@ -20,7 +20,7 @@ using System.Runtime.InteropServices;
 [assembly: ComVisible(false)]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
-[assembly: Guid("e2cb1ab4-c221-4948-b1b8-2bf684502b5f")]
+[assembly: Guid("4c109e0e-5837-4a2e-8ab4-ab1f5ceaac2d")]
 
 // Version information for an assembly consists of the following four values:
 //

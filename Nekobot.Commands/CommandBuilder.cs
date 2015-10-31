@@ -1,0 +1,158 @@
+﻿using System;
+using System.Threading.Tasks;
+using Discord;
+using System.Collections.Generic;
+
+namespace Nekobot.Commands
+{
+    public sealed class CommandBuilder
+    {
+        private readonly Command _command;
+        public CommandBuilder(Command command)
+        {
+            _command = command;
+        }
+
+        public CommandBuilder ArgsEqual(int argCount)
+        {
+            _command.MinArgs = argCount;
+            _command.MaxArgs = argCount;
+            return this;
+        }
+        public CommandBuilder ArgsAtLeast(int minArgCount)
+        {
+            _command.MinArgs = minArgCount;
+            _command.MaxArgs = null;
+            return this;
+        }
+        public CommandBuilder ArgsAtMost(int maxArgCount)
+        {
+            _command.MinArgs = null;
+            _command.MaxArgs = maxArgCount;
+            return this;
+        }
+        public CommandBuilder ArgsBetween(int minArgCount, int maxArgCount)
+        {
+            _command.MinArgs = minArgCount;
+            _command.MaxArgs = maxArgCount;
+            return this;
+        }
+        public CommandBuilder NoArgs()
+        {
+            _command.MinArgs = 0;
+            _command.MaxArgs = 0;
+            return this;
+        }
+        public CommandBuilder AnyArgs()
+        {
+            _command.MinArgs = null;
+            _command.MaxArgs = null;
+            return this;
+        }
+
+        public CommandBuilder MinPermissions(int level)
+        {
+            _command.MinPerms = level;
+            return this;
+        }
+
+        public CommandBuilder FlagNsfw(bool isNsfw)
+        {
+            _command.NsfwFlag = isNsfw;
+            return this;
+        }
+
+        public CommandBuilder FlagMusic(bool isMusicRelated)
+        {
+            _command.MusicFlag = isMusicRelated;
+            return this;
+        }
+
+        public CommandBuilder Description(string desc)
+        {
+            _command.Description = desc;
+            return this;
+        }
+
+        public CommandBuilder Syntax(string syntax)
+        {
+            _command.Syntax = syntax;
+            return this;
+        }
+
+        public CommandBuilder Do(Func<CommandEventArgs, Task> func)
+        {
+            _command.Handler = func;
+            return this;
+        }
+        public CommandBuilder Do(Action<CommandEventArgs> func)
+        {
+            _command.Handler = e => { func(e); return TaskHelper.CompletedTask; };
+            return this;
+        }
+    }
+    public sealed class CommandGroupBuilder
+    {
+        private readonly CommandsPlugin _plugin;
+        private readonly string _prefix;
+        private int _defaultMinPermissions;
+        private bool _defaultNsfwFlag;
+        private bool _defaultMusicFlag;
+
+        internal CommandGroupBuilder(CommandsPlugin plugin, string prefix, int defaultMinPermissions, bool defaultNsfwFlag, bool defaultMusicFlag)
+        {
+            _plugin = plugin;
+            _prefix = prefix;
+            _defaultMinPermissions = defaultMinPermissions;
+            _defaultNsfwFlag = defaultNsfwFlag;
+            _defaultMusicFlag = defaultMusicFlag;
+        }
+
+        public void DefaultMinPermissions(int level)
+        {
+            _defaultMinPermissions = level;
+        }
+
+        public void DefaultNsfwFlag(bool isNsfw)
+        {
+            _defaultNsfwFlag = isNsfw;
+        }
+
+        public void DefaultMusicFlag(bool isMusicRelated)
+        {
+            _defaultMusicFlag = isMusicRelated;
+        }
+
+        public CommandGroupBuilder CreateCommandGroup(string cmd, Action<CommandGroupBuilder> config = null)
+        {
+            config(new CommandGroupBuilder(_plugin, _prefix + ' ' + cmd, _defaultMinPermissions, _defaultNsfwFlag, _defaultMusicFlag));
+            return this;
+        }
+        public CommandBuilder CreateCommand()
+            => CreateCommand("");
+        public CommandBuilder CreateCommand(string cmd)
+        {
+            string text;
+            if (cmd != "")
+            {
+                if (_prefix != "")
+                    text = _prefix + ' ' + cmd;
+                else
+                    text = cmd;
+            }
+            else
+            {
+                if (_prefix != "")
+                    text = _prefix;
+                else
+                    throw new ArgumentOutOfRangeException(nameof(cmd));
+            }
+            var command = new Command(text);
+            command.MinPerms = _defaultMinPermissions;
+            command.NsfwFlag = _defaultNsfwFlag;
+            command.MusicFlag = _defaultMusicFlag;
+            _plugin.AddCommand(command);
+            return new CommandBuilder(command);
+        }
+    }
+}

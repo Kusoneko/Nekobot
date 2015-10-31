@@ -1,159 +1,2087 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Net;
 using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading;
 using System.Threading.Tasks;
-using System.Xml;
+using Discord;
+using Nekobot.Commands;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using Discord;
-using Discord.Helpers;
-using System.Xml.Linq;
-using System.Net.Http;
-using System.Net.Security;
-using System.Security.Cryptography.X509Certificates;
+using RestSharp;
+using TagLib;
+using System.Data.SQLite;
 using NAudio.Wave;
+using Discord.Audio;
+using VideoLibrary;
+using System.Text.RegularExpressions;
+using System.Threading;
+using System.Xml;
 
 namespace Nekobot
 {
     class Program
     {
-        public static DiscordClient client = new DiscordClient(new DiscordClientConfig { VoiceMode = DiscordVoiceMode.Outgoing, EnableVoiceMultiserver = true, LogLevel = LogMessageSeverity.Debug });
-        public static string email = "";
-        public static string pass = "";
-        public static List<string> sfw = new List<string> { };
-        public static List<string> streams = new List<string> { };
-        public static List<string> owner = new List<string> { };
-        public static List<string> admins = new List<string> { };
-        public static List<string> mods = new List<string> { };
-        public static List<string> normal = new List<string> { };
-        public static List<List<string>> permissions = new List<List<string>> { normal, mods, admins, owner };
-        public static Dictionary<string, List<string>> votes = new Dictionary<string, List<string>>();
-        public static Dictionary<string, bool> skipsong = new Dictionary<string, bool>();
-        public static Dictionary<string, bool> forceskip = new Dictionary<string, bool>();
-        public static Dictionary<string, List<string>> replay = new Dictionary<string, List<string>>();
-        public static Dictionary<string, bool> encore = new Dictionary<string, bool>();
-        public static Dictionary<string, List<Tuple<string, string, string>>> playlist = new Dictionary<string, List<Tuple<string, string, string>>>();
-        public static Dictionary<string, string> playing = new Dictionary<string, string>();
-        public static string[] musicexts = { ".wma", ".aac", ".mp3", ".m4a", ".wav", ".flac" };
-
-        public static void AI(MessageEventArgs e) // empty for now, will be the place to insert the AI-fication stuffs
+        // Commands first to help with adding new commands
+        static void GenerateCommands(CommandGroupBuilder group)
         {
+            group.DefaultMinPermissions(0);
+            group.DefaultMusicFlag(false);
+            group.DefaultNsfwFlag(false);
 
-        }
-
-        static void InputThread()
-        {
-            bool accept = true;
-            while (accept)
-            {
-                string input = Console.ReadLine();
-                switch (input)
+            // User commands
+            group.CreateCommand("ping")
+                .NoArgs()
+                .Description("I'll reply with 'Pong!'")
+                .Syntax($"{commands.CommandChar}ping")
+                .Do(async e =>
                 {
-                    case "addpermission":
-                        Console.Write("Username: ");
-                        string username = Console.ReadLine();
-                        Console.Write("Permission level: ");
-                        int permission;
-                        if (!int.TryParse(Console.ReadLine(), out permission))
+                    await client.SendMessage(e.Channel, $"<@{e.User.Id}>, Pong!");
+                });
+
+            group.CreateCommand("whois")
+                .AnyArgs()
+                .Description("I'll give you information about the mentioned user(s).")
+                .Syntax($"{commands.CommandChar}whois [@User1] [@User2] [@UserN]")
+                .Do(async e =>
+                {
+                    string reply = "";
+                    if (e.Message.Mentions.Count() > 0)
+                    {
+                        foreach (User u in e.Message.Mentions)
                         {
-                            Console.WriteLine("Permission needs to be a number from 0 to 3.");
+                            if (u.Id == "63296013791666176" && e.User.Id == "63299786798796800")
+                            {
+                                reply += $@"
+<@{u.Id}> is your onii-chan <3 and his id is {u.Id} and his permission level is {GetPermissions(u).ToString()}.
+";
+                            }
+                            else
+                            {
+                                reply += $@"
+<@{u.Id}>'s id is {u.Id} and their permission level is {GetPermissions(u).ToString()}.
+";
+                            }
+                        }
+                    }
+                    else
+                    {
+                        reply += $"<@{e.User.Id}>, please mention the user(s) you want to get the info of.";
+                    }
+                    await client.SendMessage(e.Channel, reply);
+                });
+
+            group.CreateCommand("getinfo")
+                .AnyArgs()
+                .Description("I'll give you information about the mentioned user(s).")
+                .Syntax($"{commands.CommandChar}getinfo [@User1] [@User2] [@UserN]")
+                .Do(async e =>
+                {
+                    string reply = "";
+                    if (e.Message.Mentions.Count() > 0)
+                    {
+                        foreach (User u in e.Message.Mentions)
+                        {
+                            if (u.Id == "63296013791666176" && e.User.Id == "63299786798796800")
+                            {
+                                reply += $@"
+<@{u.Id}> is your onii-chan <3 and his id is {u.Id} and his permission level is {GetPermissions(u).ToString()}.
+";
+                            }
+                            else
+                            {
+                                reply += $@"
+<@{u.Id}>'s id is {u.Id} and their permission level is {GetPermissions(u).ToString()}.
+";
+                            }
+                        }
+                    }
+                    else
+                    {
+                        reply += $"<@{e.User.Id}>, please mention the user(s) you want to get the info of.";
+                    }
+                    await client.SendMessage(e.Channel, reply);
+                });
+
+            group.CreateCommand("playlist")
+                .NoArgs()
+                .Description("I'll give you the list of songs in the playlist.")
+                .Syntax($"{commands.CommandChar}playlist")
+                .FlagMusic(true)
+                .Do(async e =>
+                {
+                    string reply = "";
+                    if (playlist[e.User.VoiceChannel.Id][0].Item2 == "Youtube")
+                        reply = $@"Currently playing: {playlist[e.User.VoiceChannel.Id][0].Item4}.
+Next songs:";
+                    else
+                    {
+                        TagLib.File song = File.Create(playlist[e.User.VoiceChannel.Id][0].Item1);
+                        string title = "";
+                        if (song.Tag.Title != null && song.Tag.Title != "")
+                        {
+                            if (song.Tag.Performers != null)
+                            {
+                                foreach (string p in song.Tag.Performers)
+                                {
+                                    title += $", {p}";
+                                }
+                            }
+                            if (title != "")
+                                title += " **-** ";
+                            title += song.Tag.Title;
+                            title = title.Substring(2);
+                            reply = $@"Currently playing: {title}.
+Next songs:";
+                        }
+                        else
+                        {
+                            reply = $@"Currently playing: {System.IO.Path.GetFileNameWithoutExtension(playlist[e.User.VoiceChannel.Id][0].Item1)}.
+Next songs:";
+                        }
+                    }
+                    for(int i = 1; i < 11; i++)
+                    {
+                        if (playlist[e.User.VoiceChannel.Id][i].Item2 == "Request")
+                        {
+                            TagLib.File songfile = File.Create(playlist[e.User.VoiceChannel.Id][i].Item1);
+                            string title = "";
+                            if (songfile.Tag.Title != null && songfile.Tag.Title != "")
+                            {
+                                if (songfile.Tag.Performers != null)
+                                {
+                                    foreach (string p in songfile.Tag.Performers)
+                                    {
+                                        title += $", {p}";
+                                    }
+                                }
+                                if (title != "")
+                                    title += " **-** ";
+                                title += songfile.Tag.Title;
+                                title = title.Substring(2);
+                                reply += $@"
+{i.ToString()} - **[{playlist[e.User.VoiceChannel.Id][i].Item2} by <@{playlist[e.User.VoiceChannel.Id][i].Item3}>]** {title}";
+                            }
+                            else
+                            {
+                                reply += $@"
+{i.ToString()} - **[{playlist[e.User.VoiceChannel.Id][i].Item2} by <@{playlist[e.User.VoiceChannel.Id][i].Item3}>]** {System.IO.Path.GetFileNameWithoutExtension(playlist[e.User.VoiceChannel.Id][i].Item1)}";
+                            }
+                        }
+                        else if (playlist[e.User.VoiceChannel.Id][i].Item2 == "Youtube")
+                        {
+                            reply += $@"
+{i.ToString()} - **[{playlist[e.User.VoiceChannel.Id][i].Item2} request by <@{playlist[e.User.VoiceChannel.Id][i].Item3}>]** {playlist[e.User.VoiceChannel.Id][i].Item4}";
+                        }
+                        else
+                        {
+                            TagLib.File songfile = File.Create(playlist[e.User.VoiceChannel.Id][i].Item1);
+                            string title = "";
+                            if (songfile.Tag.Title != null && songfile.Tag.Title != "")
+                            {
+                                if (songfile.Tag.Performers != null)
+                                {
+                                    foreach (string p in songfile.Tag.Performers)
+                                    {
+                                        title += $", {p}";
+                                    }
+                                }
+                                if (title != "")
+                                    title += " **-** ";
+                                title += songfile.Tag.Title;
+                                title = title.Substring(2);
+                                reply += $@"
+{i.ToString()} - **[{playlist[e.User.VoiceChannel.Id][i].Item2}]** {title}";
+                            }
+                            else
+                            {
+                                reply += $@"
+{i.ToString()} - **[{playlist[e.User.VoiceChannel.Id][i].Item2}]** {System.IO.Path.GetFileNameWithoutExtension(playlist[e.User.VoiceChannel.Id][i].Item1)}";
+                            }
+                        }
+                    }
+                    await client.SendMessage(e.Channel, reply);
+                });
+
+            group.CreateCommand("song")
+                .NoArgs()
+                .Description("I'll tell you the song I'm currently playing.")
+                .Syntax($"{commands.CommandChar}song")
+                .FlagMusic(true)
+                .Do(async e =>
+                {
+                    string reply = "";
+                    if (playlist[e.User.VoiceChannel.Id][0].Item2 == "Youtube")
+                    {
+                        reply = $@"Currently playing: {playlist[e.User.VoiceChannel.Id][0].Item4}.";
+                    }
+                    else
+                    {
+                        TagLib.File song = File.Create(playlist[e.User.VoiceChannel.Id][0].Item1);
+                        string title = "";
+                        if (song.Tag.Title != null && song.Tag.Title != "")
+                        {
+                            if (song.Tag.Performers != null)
+                            {
+                                foreach (string p in song.Tag.Performers)
+                                {
+                                    title += $", {p}";
+                                }
+                            }
+                            if (title != "")
+                                title += " **-** ";
+                            title += song.Tag.Title;
+                            title = title.Substring(2);
+                            reply = $@"Currently playing: {title}.";
+                        }
+                        else
+                        {
+                            reply = $@"Currently playing: {System.IO.Path.GetFileNameWithoutExtension(playlist[e.User.VoiceChannel.Id][0].Item1)}.";
+                        }
+                    }
+                    await client.SendMessage(e.Channel, reply);
+                });
+
+            group.CreateCommand("ytrequest")
+                .ArgsEqual(1)
+                .Description("I'll add a youtube video to the playlist")
+                .Syntax($"{commands.CommandChar}ytrequest [youtube video link]")
+                .FlagMusic(true)
+                .Do(async e =>
+                {
+                    Regex re = new Regex(@"(?:https?:\/\/)?(?:youtu\.be\/|(?:www\.)?youtube\.com\/watch(?:\.php)?\?.*v=)([a-zA-Z0-9\-_]+)");
+                    if (re.IsMatch(e.Args[0]))
+                    {
+                        var youtube = YouTube.Default;
+                        var video = await youtube.GetVideoAsync(e.Args[0]);
+                        //if (video.FileExtension != ".webm")
+                        //{
+                            int index = 1;
+                            for (int i = 1; i < playlist[e.User.VoiceChannel.Id].Count; i++)
+                            {
+                                if (playlist[e.User.VoiceChannel.Id][i].Item2 == "Encore" || playlist[e.User.VoiceChannel.Id][i].Item2 == "Request" || playlist[e.User.VoiceChannel.Id][i].Item2 == "Youtube")
+                                {
+                                    index++;
+                                }
+                            }
+                            bool isAlreadyInPlaylist = false;
+                            int songindex = 1;
+                            for (int z = 1; z < playlist[e.User.VoiceChannel.Id].Count; z++)
+                            {
+                                if (playlist[e.User.VoiceChannel.Id][z].Item1 == video.Uri)
+                                {
+                                    isAlreadyInPlaylist = true;
+                                    songindex = z;
+                                }
+                            }
+                            if (isAlreadyInPlaylist)
+                            {
+                                await client.SendMessage(e.Channel, $"<@{e.User.Id}> Your request is already in the playlist at position {(songindex).ToString()}.");
+                                return;
+                            }
+                            playlist[e.User.VoiceChannel.Id].Insert(index, Tuple.Create<string, string, string, string>(video.Uri, "Youtube", e.User.Id, e.Args[0]));
+                            await client.SendMessage(e.Channel, $"{video.Title} added to the playlist.");
+                        //}
+                        //else
+                        //{
+                        //    await client.SendMessage(e.Channel, $"{video.Title} couldn't be added to the playlist because of unsupported fileformat: {video.FileExtension}.");
+                        //}
+                    }
+                    else
+                    {
+                        await client.SendMessage(e.Channel, $"{e.Args[0]} couldn't be added to playlist because it's not a valid youtube link.");
+                    }
+                });
+
+            group.CreateCommand("request")
+                .AnyArgs()
+                .Description("I'll try to add your request to the playlist!")
+                .Syntax($"{commands.CommandChar}request [song to find]")
+                .FlagMusic(true)
+                .Do(async e =>
+                {
+                    bool requestfound = false;
+                    var files = from file in System.IO.Directory.EnumerateFiles($"{musicFolder}", "*.*").Where(s => musicexts.Contains(System.IO.Path.GetExtension(s))) select new { File = file };
+                    for (int j = 0; j < files.Count(); j++)
+                    {
+                        if (System.IO.Path.GetFileNameWithoutExtension(files.ElementAt(j).File).ToLower().Contains(e.ArgText.ToLower()))
+                        {
+                            int index = 1;
+                            for (int i = 1; i < playlist[e.User.VoiceChannel.Id].Count; i++)
+                            {
+                                if (playlist[e.User.VoiceChannel.Id][i].Item2 == "Encore" || playlist[e.User.VoiceChannel.Id][i].Item2 == "Request" || playlist[e.User.VoiceChannel.Id][i].Item2 == "Youtube")
+                                {
+                                    index++;
+                                }
+                            }
+                            bool isAlreadyInPlaylist = false;
+                            int songindex = 1;
+                            for (int z = 1; z < playlist[e.User.VoiceChannel.Id].Count; z++)
+                            {
+                                if (playlist[e.User.VoiceChannel.Id][z].Item1 == files.ElementAt(j).File)
+                                {
+                                    isAlreadyInPlaylist = true;
+                                    songindex = z;
+                                }
+                            }
+                            if (isAlreadyInPlaylist)
+                            {
+                                await client.SendMessage(e.Channel, $"<@{e.User.Id}> Your request is already in the playlist at position {(songindex).ToString()}.");
+                                return;
+                            }
+                            playlist[e.User.VoiceChannel.Id].Insert(index, Tuple.Create<string, string, string, string>(files.ElementAt(j).File, "Request", e.User.Id, null));
+                            await client.SendMessage(e.Channel, $"<@{e.User.Id}> Your request has been added to the list.");
+                            requestfound = true;
                             break;
                         }
-                        if (permission < 0 || permission > 3)
+                    }
+                    if (!requestfound)
+                    {
+                        await client.SendMessage(e.Channel, $"<@{e.User.Id}> Your request was not found.");
+                    }
+                });
+
+            group.CreateCommand("skip")
+                .NoArgs()
+                .Description("Vote to skip the current song. (Will skip at 50% or more)")
+                .Syntax($"{commands.CommandChar}skip")
+                .FlagMusic(true)
+                .Do(async e =>
+                {
+                    if (!voteskip[e.User.VoiceChannel.Id].Contains(e.User.Id))
+                    {
+                        voteskip[e.User.VoiceChannel.Id].Add(e.User.Id);
+                        if (voteskip[e.User.VoiceChannel.Id].Count >= Math.Ceiling((decimal)CountVoiceChannelMembers(e.User.VoiceChannel) / 2))
                         {
-                            Console.WriteLine("Permission needs to be a number from 0 to 3.");
+                            await client.SendMessage(e.Channel, $"{voteskip[e.User.VoiceChannel.Id].Count}/{CountVoiceChannelMembers(e.User.VoiceChannel)} votes to skip current song. 50%+ achieved, skipping song...");
+                            skip[e.User.VoiceChannel.Id] = true;
+                        }
+                        else
+                        {
+                            await client.SendMessage(e.Channel, $"{voteskip[e.User.VoiceChannel.Id].Count}/{CountVoiceChannelMembers(e.User.VoiceChannel)} votes to skip current song. (Needs 50% or more to skip)");
+                        }
+                    }
+                });
+
+            group.CreateCommand("reset")
+                .NoArgs()
+                .Description("Vote to reset the stream. (Will reset at 50% or more)")
+                .Syntax($"{commands.CommandChar}reset")
+                .FlagMusic(true)
+                .Do(async e =>
+                {
+                    if (!votereset[e.User.VoiceChannel.Id].Contains(e.User.Id))
+                    {
+                        votereset[e.User.VoiceChannel.Id].Add(e.User.Id);
+                        if (votereset[e.User.VoiceChannel.Id].Count >= Math.Ceiling((decimal)CountVoiceChannelMembers(e.User.VoiceChannel) / 2))
+                        {
+                            await client.SendMessage(e.Channel, $"{votereset[e.User.VoiceChannel.Id].Count}/{CountVoiceChannelMembers(e.User.VoiceChannel)} votes to reset the stream. 50%+ achieved, resetting stream...");
+                            reset[e.User.VoiceChannel.Id] = true;
+                            await Task.Delay(5000);
+                            await StreamMusic(e.User.VoiceChannel.Id);
+                        }
+                        else
+                        {
+                            await client.SendMessage(e.Channel, $"{votereset[e.User.VoiceChannel.Id].Count}/{CountVoiceChannelMembers(e.User.VoiceChannel)} votes to reset the stream. (Needs 50% or more to reset)");
+                        }
+                    }
+                });
+
+            group.CreateCommand("encore")
+                .NoArgs()
+                .Description("Vote to replay the current song. (Will replay at 50% or more)")
+                .Syntax($"{commands.CommandChar}encore")
+                .FlagMusic(true)
+                .Do(async e =>
+                {
+                    if (!voteencore[e.User.VoiceChannel.Id].Contains(e.User.Id))
+                    {
+                        voteencore[e.User.VoiceChannel.Id].Add(e.User.Id);
+                        if (voteencore[e.User.VoiceChannel.Id].Count >= Math.Ceiling((decimal)CountVoiceChannelMembers(e.User.VoiceChannel) / 2))
+                        {
+                            await client.SendMessage(e.Channel, $"{voteencore[e.User.VoiceChannel.Id].Count}/{CountVoiceChannelMembers(e.User.VoiceChannel)} votes to replay current song. 50%+ achieved, song will be replayed...");
+                            playlist[e.User.VoiceChannel.Id].Insert(1, Tuple.Create(playlist[e.User.VoiceChannel.Id][0].Item1, "Encore", playlist[e.User.VoiceChannel.Id][0].Item3, playlist[e.User.VoiceChannel.Id][0].Item4));
+                        }
+                        else
+                        {
+                            await client.SendMessage(e.Channel, $"{voteencore[e.User.VoiceChannel.Id].Count}/{CountVoiceChannelMembers(e.User.VoiceChannel)} votes to replay current song. (Needs 50% or more to replay)");
+                        }
+                    }
+                });
+
+            group.CreateCommand("replay")
+                .NoArgs()
+                .Description("Vote to replay the current song. (Will replay at 50% or more)")
+                .Syntax($"{commands.CommandChar}encore")
+                .FlagMusic(true)
+                .Do(async e =>
+                {
+                    if (!voteencore[e.User.VoiceChannel.Id].Contains(e.User.Id))
+                    {
+                        voteencore[e.User.VoiceChannel.Id].Add(e.User.Id);
+                        if (voteencore[e.User.VoiceChannel.Id].Count >= Math.Ceiling((decimal)CountVoiceChannelMembers(e.User.VoiceChannel) / 2))
+                        {
+                            await client.SendMessage(e.Channel, $"{voteencore[e.User.VoiceChannel.Id].Count}/{CountVoiceChannelMembers(e.User.VoiceChannel)} votes to replay current song. 50%+ achieved, song will be replayed...");
+                            playlist[e.User.VoiceChannel.Id].Insert(1, Tuple.Create(playlist[e.User.VoiceChannel.Id][0].Item1, "Encore", playlist[e.User.VoiceChannel.Id][0].Item3, playlist[e.User.VoiceChannel.Id][0].Item4));
+                        }
+                        else
+                        {
+                            await client.SendMessage(e.Channel, $"{voteencore[e.User.VoiceChannel.Id].Count}/{CountVoiceChannelMembers(e.User.VoiceChannel)} votes to replay current song. (Needs 50% or more to replay)");
+                        }
+                    }
+                });
+
+            group.CreateCommand("ankoru")
+                .NoArgs()
+                .Description("Vote to replay the current song. (Will replay at 50% or more)")
+                .Syntax($"{commands.CommandChar}encore")
+                .FlagMusic(true)
+                .Do(async e =>
+                {
+                    if (!voteencore[e.User.VoiceChannel.Id].Contains(e.User.Id))
+                    {
+                        voteencore[e.User.VoiceChannel.Id].Add(e.User.Id);
+                        if (voteencore[e.User.VoiceChannel.Id].Count >= Math.Ceiling((decimal)CountVoiceChannelMembers(e.User.VoiceChannel) / 2))
+                        {
+                            await client.SendMessage(e.Channel, $"{voteencore[e.User.VoiceChannel.Id].Count}/{CountVoiceChannelMembers(e.User.VoiceChannel)} votes to replay current song. 50%+ achieved, song will be replayed...");
+                            playlist[e.User.VoiceChannel.Id].Insert(1, Tuple.Create(playlist[e.User.VoiceChannel.Id][0].Item1, "Encore", playlist[e.User.VoiceChannel.Id][0].Item3, playlist[e.User.VoiceChannel.Id][0].Item4));
+                        }
+                        else
+                        {
+                            await client.SendMessage(e.Channel, $"{voteencore[e.User.VoiceChannel.Id].Count}/{CountVoiceChannelMembers(e.User.VoiceChannel)} votes to replay current song. (Needs 50% or more to replay)");
+                        }
+                    }
+                });
+
+            group.CreateCommand("nsfw status")
+                .NoArgs()
+                .Description("I'll tell you if this channel allows nsfw commands.")
+                .Syntax($"{commands.CommandChar}nsfw status")
+                .Do(async e =>
+                {
+                    bool nsfw = GetNsfwFlag(e.Channel);
+                    if (nsfw)
+                        await client.SendMessage(e.Channel, "This channel allows nsfw commands.");
+                    else
+                        await client.SendMessage(e.Channel, "This channel doesn't allow nsfw commands.");
+                });
+
+            group.CreateCommand("canlewd status")
+                .NoArgs()
+                .Description("I'll tell you if this channel allows nsfw commands.")
+                .Syntax($"{commands.CommandChar}canlewd status")
+                .Do(async e =>
+                {
+                    bool nsfw = GetNsfwFlag(e.Channel);
+                    if (nsfw)
+                        await client.SendMessage(e.Channel, "This channel allows nsfw commands.");
+                    else
+                        await client.SendMessage(e.Channel, "This channel doesn't allow nsfw commands.");
+                });
+
+            group.CreateCommand("quote")
+                .NoArgs()
+                .Description("I'll give you a random quote from https://inspiration.julxzs.website/quotes")
+                .Syntax($"{commands.CommandChar}quote")
+                .Do(async e =>
+                {
+                    rclient.BaseUrl = new Uri("https://inspiration.julxzs.website");
+                    var request = new RestRequest("api/quote", Method.GET);
+                    JObject result = JObject.Parse(rclient.Execute<JObject>(request).Content);
+                    string quote = result["quote"]["quote"].ToString();
+                    string author = result["quote"]["author"].ToString();
+                    string date = result["quote"]["date"].ToString();
+                    await client.SendMessage(e.Channel, $"\"{quote}\" - {author} {date}");
+                });
+
+            group.CreateCommand("version")
+                .NoArgs()
+                .Description("I'll tell you the current version and check if a newer version is available.")
+                .Syntax($"{commands.CommandChar}version")
+                .Do(async e =>
+                {
+                    string[] versions = version.Split('.');
+                    rclient.BaseUrl = new Uri("https://raw.githubusercontent.com");
+                    var request = new RestRequest("Kusoneko/Nekobot/master/version.json", Method.GET);
+                    JObject result = JObject.Parse(rclient.Execute<JObject>(request).Content);
+                    string remoteversion = result["version"].ToString();
+                    string[] remoteversions = remoteversion.Split('.');
+                    if (int.Parse(versions[0]) < int.Parse(remoteversions[0]))
+                    {
+                        await client.SendMessage(e.Channel, $"I'm currently {(int.Parse(remoteversions[0]) - int.Parse(versions[0])).ToString()} major version(s) behind. (Current version: {version}, latest version: {remoteversion})");
+                    }
+                    else if (int.Parse(versions[0]) > int.Parse(remoteversions[0]))
+                    {
+                        await client.SendMessage(e.Channel, $"I'm currently {(int.Parse(versions[0]) - int.Parse(remoteversions[0])).ToString()} major version(s) ahead. (Current version: {version}, latest released version: {remoteversion})");
+                    }
+                    else
+                    {
+                        if (int.Parse(versions[1]) < int.Parse(remoteversions[1]))
+                        {
+                            await client.SendMessage(e.Channel, $"I'm currently {(int.Parse(remoteversions[1]) - int.Parse(versions[1])).ToString()} minor version(s) behind. (Current version: {version}, latest version: {remoteversion})");
+                        }
+                        else if (int.Parse(versions[1]) > int.Parse(remoteversions[1]))
+                        {
+                            await client.SendMessage(e.Channel, $"I'm currently {(int.Parse(versions[1]) - int.Parse(remoteversions[1])).ToString()} minor version(s) ahead. (Current version: {version}, latest released version: {remoteversion})");
+                        }
+                        else
+                        {
+                            if (int.Parse(versions[2]) < int.Parse(remoteversions[2]))
+                            {
+                                await client.SendMessage(e.Channel, $"I'm currently {(int.Parse(remoteversions[2]) - int.Parse(versions[2])).ToString()} patch(es) behind. (Current version: {version}, latest version: {remoteversion})");
+                            }
+                            else if (int.Parse(versions[2]) > int.Parse(remoteversions[2]))
+                            {
+                                await client.SendMessage(e.Channel, $"I'm currently {(int.Parse(versions[2]) - int.Parse(remoteversions[2])).ToString()} patch(es) ahead. (Current version: {version}, latest released version: {remoteversion})");
+                            }
+                            else
+                            {
+                                await client.SendMessage(e.Channel, $"I'm up to date! (Current version: {version})");
+                            }
+                        }
+                    }
+                });
+
+            group.CreateCommand("neko")
+                .NoArgs()
+                .FlagNsfw(true)
+                .Description("I'll give you a random image from https://lewdchan.com/neko/")
+                .Syntax($"{commands.CommandChar}neko")
+                .Do(async e =>
+                {
+                    await client.SendMessage(e.Channel, LewdSX("neko"));
+                });
+
+            group.CreateCommand("qt")
+                .NoArgs()
+                .FlagNsfw(true)
+                .Description("I'll give you a random image from https://lewdchan.com/qt/")
+                .Syntax($"{commands.CommandChar}qt")
+                .Do(async e =>
+                {
+                    await client.SendMessage(e.Channel, LewdSX("qt"));
+                });
+
+            group.CreateCommand("kitsune")
+                .NoArgs()
+                .FlagNsfw(true)
+                .Description("I'll give you a random image from https://lewdchan.com/kitsune/")
+                .Syntax($"{commands.CommandChar}kitsune")
+                .Do(async e =>
+                {
+                    await client.SendMessage(e.Channel, LewdSX("kitsune"));
+                });
+
+            group.CreateCommand("lewd")
+                .NoArgs()
+                .FlagNsfw(true)
+                .Description("I'll give you a random image from https://lewdchan.com/lewd/")
+                .Syntax($"{commands.CommandChar}lewd")
+                .Do(async e =>
+                {
+                    await client.SendMessage(e.Channel, LewdSX("lewd"));
+                });
+
+            group.CreateCommand("pitur")
+                .NoArgs()
+                .FlagNsfw(true)
+                .Description("I'll give you a random lewd image from pitur's hentai collection")
+                .Syntax($"{commands.CommandChar}pitur")
+                .Do(async e =>
+                {
+                    await client.SendFile(e.Channel, ImageFolders(pitur));
+                });
+
+            group.CreateCommand("gold")
+                .NoArgs()
+                .FlagNsfw(true)
+                .Description("I'll give you a random kancolle image from gold's collection")
+                .Syntax($"{commands.CommandChar}gold")
+                .Do(async e =>
+                {
+                    await client.SendFile(e.Channel, ImageFolders(gold));
+                });
+
+            group.CreateCommand("cosplay")
+                .NoArgs()
+                .FlagNsfw(true)
+                .Description("I'll give you a random cosplay image from Salvy's collection")
+                .Syntax($"{commands.CommandChar}cosplay")
+                .Do(async e =>
+                {
+                    await client.SendFile(e.Channel, ImageFolders(cosplay));
+                });
+
+            group.CreateCommand("safebooru")
+                .AnyArgs()
+                .FlagNsfw(true)
+                .Description("I'll give you a random image of the tags you entered from safebooru.")
+                .Syntax($"{commands.CommandChar}safebooru [[+/-]tag1] [[+/-]tag2] [[+/-]tagn]")
+                .Do(async e =>
+                {
+                    await client.SendMessage(e.Channel, ImageBooru("safebooru", e.ArgText));
+                });
+
+            group.CreateCommand("gelbooru")
+                .AnyArgs()
+                .FlagNsfw(true)
+                .MinPermissions(11) // Disabled with this outrageous permission because of them disabling their API
+                .Description("I'll give you a random image of the tags you entered from gelbooru.")
+                .Syntax($"{commands.CommandChar}gelbooru [[+/-]tag1] [[+/-]tag2] [[+/-]tagn]")
+                .Do(async e =>
+                {
+                    await client.SendMessage(e.Channel, ImageBooru("gelbooru", e.ArgText));
+                });
+
+            group.CreateCommand("rule34")
+                .AnyArgs()
+                .FlagNsfw(true)
+                .Description("I'll give you a random image of the tags you entered from rule34.")
+                .Syntax($"{commands.CommandChar}rule34 [[+/-]tag1] [[+/-]tag2] [[+/-]tagn]")
+                .Do(async e =>
+                {
+                    await client.SendMessage(e.Channel, ImageBooru("rule34", e.ArgText));
+                });
+
+            group.CreateCommand("konachan")
+                .AnyArgs()
+                .FlagNsfw(true)
+                .Description("I'll give you a random image of the tags you entered from konachan.")
+                .Syntax($"{commands.CommandChar}konachan [[+/-]tag1] [[+/-]tag2] [[+/-]tagn]")
+                .Do(async e =>
+                {
+                    await client.SendMessage(e.Channel, ImageBooru("konachan", e.ArgText));
+                });
+
+            group.CreateCommand("kona")
+                .AnyArgs()
+                .FlagNsfw(true)
+                .Description("I'll give you a random image of the tags you entered from konachan.")
+                .Syntax($"{commands.CommandChar}kona [[+/-]tag1] [[+/-]tag2] [[+/-]tagn]")
+                .Do(async e =>
+                {
+                    await client.SendMessage(e.Channel, ImageBooru("konachan", e.ArgText));
+                });
+
+            group.CreateCommand("yandere")
+                .AnyArgs()
+                .FlagNsfw(true)
+                .Description("I'll give you a random image of the tags you entered from yandere.")
+                .Syntax($"{commands.CommandChar}yandere [[+/-]tag1] [[+/-]tag2] [[+/-]tagn]")
+                .Do(async e =>
+                {
+                    await client.SendMessage(e.Channel, ImageBooru("yandere", e.ArgText));
+                });
+
+            group.CreateCommand("lolibooru")
+                .AnyArgs()
+                .FlagNsfw(true)
+                .Description("I'll give you a random image of the tags you entered from lolibooru.")
+                .Syntax($"{commands.CommandChar}lolibooru [[+/-]tag1] [[+/-]tag2] [[+/-]tagn]")
+                .Do(async e =>
+                {
+                    await client.SendMessage(e.Channel, ImageBooru("lolibooru", e.ArgText));
+                });
+
+            group.CreateCommand("fortune")
+                .NoArgs()
+                .Description("I'll give you a fortune!")
+                .Syntax($"{commands.CommandChar}fortune")
+                .Do(async e =>
+                {
+                    string[] fortunes = new string[] { "Don't sleep for too long, or you'll miss naptime!", "Before crying over spilt milk, remember it can still be delicious without a bowl.", "A bird in the paw is worth nom nom nom...", "Let no surface, no matter how high or cluttered, go unexplored.", "Neko never catches the laser if neko never tries.", "Our greatest glory is not in never falling, but in making sure master doesn't find the mess.", "A mouse shared halves the food but doubles the happiness.", "There exists nary a toy as pertinent as the box from whence that toy came.", "Neko will never be fed if neko does not meow all day!", "Ignore physics, and physics will ignore you.", "Never bite the hand that feeds you!", "Before finding the red dot, you must first find yourself.", "Some see the glass half emtpy. Some see the glass half full. Neko sees the glass and knocks it over.", "Make purrs not war.", "Give a neko fish and you feed them for a day; Teach a neko to fish and... mmmm fish.", "Wheresoever you go, go with all of master's things.", "Live your dreams every day! Why do you think neko naps so much?", "The hardest thing of all is to find a black cat in a dark room, especially if there is no cat.", "Meow meow meow meow, meow meow. Meow meow meow." };
+                    Random rnd = new Random();
+                    await client.SendMessage(e.Channel, fortunes[rnd.Next(0, fortunes.Count())]);
+                });
+
+            group.CreateCommand("playeravatar")
+                .AnyArgs()
+                .Description("I'll get you the avatar of each Player.me username provided.")
+                .Syntax($"{commands.CommandChar}playeravatar [username1] [username2] [usernamen]")
+                .Do(async e =>
+                {
+                    rclient.BaseUrl = new System.Uri("https://player.me/api/v1/auth");
+                    var request = new RestRequest("pre-login", Method.POST);
+                    foreach (string s in e.Args)
+                    {
+                        request.AddQueryParameter("login", s);
+                        JObject result = JObject.Parse(rclient.Execute(request).Content);
+                        if (Convert.ToBoolean(result["success"]) == false)
+                            await client.SendMessage(e.Channel, $"{s} was not found.");
+                        else
+                        {
+                            string avatar = result["results"]["avatar"]["original"].ToString();
+                            await client.SendMessage(e.Channel, $"{s}'s avatar: https:{avatar}");
+                        }
+                    }
+                });
+
+            group.CreateCommand("nya")
+                .NoArgs()
+                .Description("I'll say 'Nyaa~'")
+                .Syntax($"{commands.CommandChar}nya")
+                .Do(async e =>
+                {
+                    await client.SendMessage(e.Channel, "Nyaa~");
+                });
+
+            group.CreateCommand("poi")
+                .NoArgs()
+                .Description("I'll say 'Poi!'")
+                .Syntax($"{commands.CommandChar}poi")
+                .Do(async e =>
+                {
+                    await client.SendMessage(e.Channel, "Poi!");
+                });
+
+            group.CreateCommand("aicrai")
+                .NoArgs()
+                .Description("When sad things happen...")
+                .Syntax($"{commands.CommandChar}aicrai")
+                .Do(async e =>
+                {
+                    await client.SendMessage(e.Channel, "https://www.youtube.com/watch?v=0JAn8eShOo8");
+                });
+
+            group.CreateCommand("aicraievritiem")
+                .NoArgs()
+                .Description("When sad things happen...")
+                .Syntax($"{commands.CommandChar}aicraievritiem")
+                .Do(async e =>
+                {
+                    await client.SendMessage(e.Channel, "https://www.youtube.com/watch?v=0JAn8eShOo8");
+                });
+
+            group.CreateCommand("aicraievritaim")
+                .NoArgs()
+                .Description("When sad things happen...")
+                .Syntax($"{commands.CommandChar}aicraievritaim")
+                .Do(async e =>
+                {
+                    await client.SendMessage(e.Channel, "https://www.youtube.com/watch?v=0JAn8eShOo8");
+                });
+
+            group.CreateCommand("sadhorn")
+                .NoArgs()
+                .Description("When sad things happen...")
+                .Syntax($"{commands.CommandChar}sadhorn")
+                .Do(async e =>
+                {
+                    await client.SendMessage(e.Channel, "https://www.youtube.com/watch?v=0JAn8eShOo8");
+                });
+
+            group.CreateCommand("icri")
+                .NoArgs()
+                .Description("When sad things happen...")
+                .Syntax($"{commands.CommandChar}icri")
+                .Do(async e =>
+                {
+                    await client.SendMessage(e.Channel, "https://www.youtube.com/watch?v=0JAn8eShOo8");
+                });
+
+            group.CreateCommand("notnow")
+                .NoArgs()
+                .Description("How to Rekt: Rin 101")
+                .Syntax($"{commands.CommandChar}notnow")
+                .Do(async e =>
+                {
+                    await client.SendMessage(e.Channel, "https://www.youtube.com/watch?v=2BZUzJfKFwM");
+                });
+
+            group.CreateCommand("rinpls")
+                .NoArgs()
+                .Description("How to Rekt: Rin 101")
+                .Syntax($"{commands.CommandChar}rinpls")
+                .Do(async e =>
+                {
+                    await client.SendMessage(e.Channel, "https://www.youtube.com/watch?v=2BZUzJfKFwM");
+                });
+
+            group.CreateCommand("uninstall")
+                .NoArgs()
+                .Description("A great advice in any situation.")
+                .Syntax($"{commands.CommandChar}uninstall")
+                .Do(async e =>
+                {
+                    await client.SendMessage(e.Channel, "https://www.youtube.com/watch?v=iNCXiMt1bR4");
+                });
+
+            group.CreateCommand("killyourself")
+                .NoArgs()
+                .Description("Another great advice.")
+                .Syntax($"{commands.CommandChar}killyourself")
+                .Do(async e =>
+                {
+                    await client.SendMessage(e.Channel, "https://www.youtube.com/watch?v=2dbR2JZmlWo");
+                });
+
+            group.CreateCommand("kys")
+                .NoArgs()
+                .Description("Another great advice.")
+                .Syntax($"{commands.CommandChar}kys")
+                .Do(async e =>
+                {
+                    await client.SendMessage(e.Channel, "https://www.youtube.com/watch?v=2dbR2JZmlWo");
+                });
+
+            group.CreateCommand("congratulations")
+                .NoArgs()
+                .Description("Congratulate someone for whatever reason.")
+                .Syntax($"{commands.CommandChar}congratulations")
+                .Do(async e =>
+                {
+                    await client.SendMessage(e.Channel, "https://www.youtube.com/watch?v=oyFQVZ2h0V8");
+                });
+
+            group.CreateCommand("congrats")
+                .NoArgs()
+                .Description("Congratulate someone for whatever reason.")
+                .Syntax($"{commands.CommandChar}congrats")
+                .Do(async e =>
+                {
+                    await client.SendMessage(e.Channel, "https://www.youtube.com/watch?v=oyFQVZ2h0V8");
+                });
+
+            group.CreateCommand("grats")
+                .NoArgs()
+                .Description("Congratulate someone for whatever reason.")
+                .Syntax($"{commands.CommandChar}grats")
+                .Do(async e =>
+                {
+                    await client.SendMessage(e.Channel, "https://www.youtube.com/watch?v=oyFQVZ2h0V8");
+                });
+
+            group.CreateCommand("say")
+                .NoArgs()
+                .Description("I'll repeat what you said.")
+                .Syntax($"{commands.CommandChar}say [text...]")
+                .Do(async e =>
+                {
+                    await client.SendMessage(e.Channel, e.ArgText);
+                });
+
+            group.CreateCommand("forward")
+                .NoArgs()
+                .Description("I'll repeat what you said.")
+                .Syntax($"{commands.CommandChar}forward [text...]")
+                .Do(async e =>
+                {
+                    await client.SendMessage(e.Channel, e.ArgText);
+                });
+
+            group.CreateCommand("reverse")
+                .NoArgs()
+                .Description("I'll repeat what you said, in reverse!")
+                .Syntax($"{commands.CommandChar}reverse [text...]")
+                .Do(async e =>
+                {
+                    string message = e.ArgText;
+                    MatchCollection matches = Regex.Matches(message, "<@(\\d{17})>");
+                    if (matches.Count > 0)
+                    {
+                        foreach (Match m in matches)
+                        {
+                            message = message.Replace("<@" + m.Groups[1].Value + ">", "@" + client.GetUser(e.Server, m.Groups[1].Value).Name);
+                        }
+                    }
+                    matches = Regex.Matches(message, "<#(\\d{17})>");
+                    if (matches.Count > 0)
+                    {
+                        foreach (Match m in matches)
+                        {
+                            message = message.Replace("<#" + m.Groups[1].Value + ">", client.GetChannel(m.Groups[1].Value).Name);
+                        }
+                    }
+                    char[] chars = message.ToArray();
+                    char[] result = new char[chars.Length];
+                    for (int i = 0, j = message.Length - 1; i < message.Length; i++, j--)
+                    {
+                        result[i] = chars[j];
+                    }
+                    await client.SendMessage(e.Channel, new string(result));
+                });
+
+            group.CreateCommand("whereami")
+                .NoArgs()
+                .Description("I'll tell you information about the channel and server you're asking me this from.")
+                .Syntax($"{commands.CommandChar}whereami")
+                .Do(async e =>
+                {
+                    if (e.Channel.IsPrivate)
+                        await client.SendMessage(e.Channel, "You're in a private message with me, baka.");
+                    else
+                    {
+                        string message = $@"You are currently in {e.Channel.Name} (id: {e.Channel.Id})
+on server **{e.Server.Name}** (id: {e.Server.Id}) (region: {e.Server.Region})
+owned by {e.Server.Owner.Name} (id {e.Server.Owner.Id}).";
+                        if (e.Channel.Topic != "" || e.Channel.Topic != null)
+                            message = message + $@"
+The current topic is: {e.Channel.Topic}";
+                        await client.SendMessage(e.Channel, message);
+                    }
+                });
+
+            group.CreateCommand("channelinfo")
+                .NoArgs()
+                .Description("I'll tell you information about the channel and server you're asking me this from.")
+                .Syntax($"{commands.CommandChar}channelinfo")
+                .Do(async e =>
+                {
+                    if (e.Channel.IsPrivate)
+                        await client.SendMessage(e.Channel, "You're in a private message with me, baka.");
+                    else
+                    {
+                        string message = $@"You are currently in {e.Channel.Name} (id: {e.Channel.Id})
+on server **{e.Server.Name}** (id: {e.Server.Id}) (region: {e.Server.Region})
+owned by {e.Server.Owner.Name} (id {e.Server.Owner.Id}).";
+                        if (e.Channel.Topic != "" || e.Channel.Topic != null)
+                            message = message + $@"
+The current topic is: {e.Channel.Topic}";
+                        await client.SendMessage(e.Channel, message);
+                    }
+                });
+
+            group.CreateCommand("location")
+                .NoArgs()
+                .Description("I'll tell you information about the channel and server you're asking me this from.")
+                .Syntax($"{commands.CommandChar}location")
+                .Do(async e =>
+                {
+                    if (e.Channel.IsPrivate)
+                        await client.SendMessage(e.Channel, "You're in a private message with me, baka.");
+                    else
+                    {
+                        string message = $@"You are currently in {e.Channel.Name} (id: {e.Channel.Id})
+on server **{e.Server.Name}** (id: {e.Server.Id}) (region: {e.Server.Region})
+owned by {e.Server.Owner.Name} (id {e.Server.Owner.Id}).";
+                        if (e.Channel.Topic != "" || e.Channel.Topic != null)
+                            message = message + $@"
+The current topic is: {e.Channel.Topic}";
+                        await client.SendMessage(e.Channel, message);
+                    }
+                });
+
+            group.CreateCommand("avatar")
+                .AnyArgs()
+                .Description("I'll give you the avatars of every mentioned users.")
+                .Syntax($"{commands.CommandChar}avatar [@User1] [@User2] [@UserN]")
+                .Do(async e =>
+                {
+                    if (e.Message.Mentions.Count() > 0)
+                    {
+                        foreach (User u in e.Message.Mentions)
+                        {
+                            if (u.AvatarUrl == null)
+                                await client.SendMessage(e.Channel, $"<@{u.Id}> has no avatar.");
+                            else
+                                await client.SendMessage(e.Channel, $"<@{u.Id}>'s avatar is: {u.AvatarUrl}");
+                        }
+                    }
+                    else
+                    {
+                        await client.SendMessage(e.Channel, "You need to mention at least one person!");
+                    }
+                });
+
+            group.CreateCommand("rand")
+                .ArgsAtMost(2)
+                .Description("I'll give you a random number between *min* and *max*. Both are optional. If only one is given, it's *max*. (defaults: 1-100)")
+                .Syntax($"{commands.CommandChar}rand [min] [max] // {commands.CommandChar}rand [max] // {commands.CommandChar}rand")
+                .Do(async e =>
+                {
+                    int min = 1;
+                    int max = 101;
+                    Random rnd = new Random();
+                    string message = "";
+                    if (e.Args.Count() == 2)
+                    {
+                        bool valid = true;
+                        foreach (string s in e.Args)
+                        {
+                            int dummy = 0;
+                            if (!int.TryParse(s, out dummy))
+                            {
+                                valid = false;
+                                message = $"{s} is not a number!";
+                                break;
+                            }
+                        }
+                        if (valid)
+                        {
+                            min = int.Parse(e.Args[0]);
+                            max = int.Parse(e.Args[1]);
+                            if (min > max)
+                            {
+                                int z = min;
+                                min = max;
+                                max = z;
+                            }
+                            if (min == max)
+                                message = $"You're joking right? It's {min}.";
+                            else
+                            {
+                                message = $"Your number is **{rnd.Next(min, max + 1).ToString()}**.";
+                            }
+                        }
+                    }
+                    else if (e.Args.Count() == 1)
+                    {
+                        bool valid = true;
+                        int dummy = 0;
+                        if (!int.TryParse(e.Args[0], out dummy))
+                        {
+                            valid = false;
+                            message = $"{e.Args[0]} is not a number!";
+                        }
+                        if (valid)
+                        {
+                            max = int.Parse(e.Args[1]);
+                            if (min > max) // in case the nup set a lower number than the default min for max
+                            {
+                                int z = min;
+                                min = max;
+                                max = z;
+                            }
+                            if (min == max)
+                                message = $"You're joking right? It's {min}.";
+                            else
+                            {
+                                message = $"Your number is **{rnd.Next(min, max + 1).ToString()}**.";
+                            }
+                        }
+                    }
+                    else
+                    {
+                        message = $"Your number is **{rnd.Next(min,max)}**.";
+                    }
+                    await client.SendMessage(e.Channel, message);
+                });
+
+            group.CreateCommand("roll")
+                .ArgsAtMost(3)
+                .Description("I'll roll a few sided dice for a given number of times. All params are optional. (defaults: 1 *dice*, 6 *sides*, 1 *times*)")
+                .Syntax($"{commands.CommandChar}roll [dice] [sides] [times] // {commands.CommandChar}roll [dice] [sides] // {commands.CommandChar}roll [dice] // {commands.CommandChar}roll")
+                .Do(async e =>
+                {
+                    bool rick = false;
+                    bool valid = true;
+                    foreach (string s in e.Args)
+                    {
+                        int dummy = 0;
+                        if (!int.TryParse(s, out dummy))
+                            valid = false;
+                        if (s == "rick")
+                            rick = true;
+                        if (rick || !valid)
                             break;
-                        }
-                        User user = client.GetUser(username); // Will need fixing when findusers happens
-                        if (user == null)
+                    }
+                    if (!rick)
+                    {
+                        if (valid)
                         {
-                            Console.WriteLine(username + " doesn't exist.");
-                            break;
+                            int dice = 1;
+                            int sides = 6;
+                            int times = 1;
+                            if (e.Args.Count() == 3)
+                            {
+                                dice = int.Parse(e.Args[0]);
+                                sides = int.Parse(e.Args[1]);
+                                times = int.Parse(e.Args[2]);
+                            }
+                            else if (e.Args.Count() == 2)
+                            {
+                                dice = int.Parse(e.Args[0]);
+                                sides = int.Parse(e.Args[1]);
+                            }
+                            else if (e.Args.Count() == 1)
+                            {
+                                dice = int.Parse(e.Args[0]);
+                            }
+                            int roll = 0;
+                            Random rnd = new Random();
+                            for (int i = times; i > 0; i--)
+                            {
+                                for (int j = dice; j > 0; j--)
+                                {
+                                    roll += rnd.Next(1, sides + 1);
+                                }
+                            }
+                            await client.SendMessage(e.Channel, $"You rolled {dice.ToString()} different {sides.ToString()}-sided dice {times.ToString()} times... Result: **{roll}**");
                         }
-                        if (permissions[0].Contains(user.Id))
-                            permissions[0].Remove(user.Id);
-                        if (permissions[1].Contains(user.Id))
-                            permissions[1].Remove(user.Id);
-                        if (permissions[2].Contains(user.Id))
-                            permissions[2].Remove(user.Id);
-                        if (permissions[3].Contains(user.Id))
-                            permissions[3].Remove(user.Id);
-                        permissions[permission].Add(user.Id);
-                        UpdatePermissionFiles();
-                        break;
-                    case "showpermissions":
-                        Console.WriteLine("Owners:");
-                        foreach (string owners in owner)
-                            Console.WriteLine(owners);
-                        Console.WriteLine("Admins:");
-                        foreach (string admin in admins)
-                            Console.WriteLine(admin);
-                        Console.WriteLine("Mods:");
-                        foreach (string mod in mods)
-                            Console.WriteLine(mod);
-                        Console.WriteLine("Normal:");
-                        foreach (string normals in normal)
-                            Console.WriteLine(normals);
-                        break;
-                    case "showpermfiles":
-                        List<string> a = File.ReadAllLines("owner").ToList();
-                        List<string> b = File.ReadAllLines("admins").ToList();
-                        List<string> c = File.ReadAllLines("mods").ToList();
-                        List<string> d = File.ReadAllLines("normal").ToList();
-                        Console.WriteLine("Owners:");
-                        foreach (string owners in a)
-                            Console.WriteLine(owners);
-                        Console.WriteLine("Admins:");
-                        foreach (string admin in b)
-                            Console.WriteLine(admin);
-                        Console.WriteLine("Mods:");
-                        foreach (string mod in c)
-                            Console.WriteLine(mod);
-                        Console.WriteLine("Normal:");
-                        foreach (string normals in d)
-                            Console.WriteLine(normals);
-                        break;
-                    case "connect":
-                        client.Connect(email, pass);
-                        Console.WriteLine("Attempting to connect...");
-                        break;
-                    case "disconnect":
-                        client.Disconnect();
-                        break;
-                    case "reconnect":
-                        client.Disconnect();
-                        client.Connect(email, pass);
-                        break;
-                    case "quit":
-                        if (client.State == DiscordClientState.Connected)
+                        else
+                            await client.SendMessage(e.Channel, $"Arguments are not all numbers!");
+                    }
+                    else
+                        await client.SendMessage(e.Channel, $"https://www.youtube.com/watch?v=dQw4w9WgXcQ");
+                });
+
+            group.CreateCommand("lotto")
+                .NoArgs()
+                .Description("I'll give you a set of 6 lucky numbers!")
+                .Syntax($"{commands.CommandChar}lotto")
+                .Do(async e =>
+                {
+                    List<int> lotto = new List<int>();
+                    Random rnd = new Random();
+                    while (lotto.Count() < 6)
+                    {
+                        int number = rnd.Next(1, 60);
+                        for (int i = 0; i < lotto.Count(); i++)
                         {
-                            client.Disconnect();
+                            if (lotto[i] == number)
+                            {
+                                lotto.Remove(number);
+                                break;
+                            }
                         }
-                        Environment.Exit(0);
-                        break;
-                    default:
-                        break;
-                }
-            }
+                        lotto.Add(number);
+                    }
+                    await client.SendMessage(e.Channel, $"Your lucky numbers are **{lotto[0].ToString()}, {lotto[1].ToString()}, {lotto[2].ToString()}, {lotto[3].ToString()}, {lotto[4].ToString()}, {lotto[5].ToString()}**.");
+                });
+
+            group.CreateCommand("pet")
+                .AnyArgs()
+                .Description("Everyone loves being pet, right!?! Pets each *@user*. Leave emtpy (or mention me too) to pet me!")
+                .Syntax($"{commands.CommandChar}pet [@User1] [@User2] [@UserN] // {commands.CommandChar}pet @everyone")
+                .Do(async e =>
+                {
+                    string message = $"<@{e.User.Id}> pets ";
+                    if (e.Message.Mentions.Count() == 0 && !e.Message.IsMentioningEveryone)
+                        message = "*purrs*";
+                    else if (e.Message.IsMentioningEveryone)
+                        message = message + $"{Mention.Everyone()} *purrs*";
+                    else
+                    {
+                        foreach (User u in e.Message.Mentions)
+                        {
+                            message = message + $"<@{u.Id}> ";
+                        }
+                        if (e.Message.IsMentioningMe)
+                        {
+                            message = message + "*purrs*";
+                        }
+                    }
+                    await client.SendMessage(e.Channel, message);
+                });
+
+            group.CreateCommand("pets")
+                .AnyArgs()
+                .Description("Everyone loves being pet, right!?! Pets each *@user*. Leave emtpy (or mention me too) to pet me!")
+                .Syntax($"{commands.CommandChar}pet [@User1] [@User2] [@UserN] // {commands.CommandChar}pet @everyone")
+                .Do(async e =>
+                {
+                    string message = $"<@{e.User.Id}> pets ";
+                    if (e.Message.Mentions.Count() == 0 && !e.Message.IsMentioningEveryone)
+                        message = "*purrs*";
+                    else if (e.Message.IsMentioningEveryone)
+                        message = message + $"{Mention.Everyone()} *purrs*";
+                    else
+                    {
+                        foreach (User u in e.Message.Mentions)
+                        {
+                            message = message + $"<@{u.Id}> ";
+                        }
+                        if (e.Message.IsMentioningMe)
+                        {
+                            message = message + "*purrs*";
+                        }
+                    }
+                    await client.SendMessage(e.Channel, message);
+                });
+
+            group.CreateCommand("trash")
+                .NoArgs()
+                .Description("I'll upload an image of 'worst girl'. (WARNING: May cause nausea!)")
+                .Syntax($"{commands.CommandChar}trash")
+                .Do(async e =>
+                {
+                    await client.SendFile(e.Channel, "images/trash.png");
+                });
+
+            group.CreateCommand("worstgirl")
+                .NoArgs()
+                .Description("I'll upload an image of 'worst girl'. (WARNING: May cause nausea!)")
+                .Syntax($"{commands.CommandChar}worstgirl")
+                .Do(async e =>
+                {
+                    await client.SendFile(e.Channel, "images/trash.png");
+                });
+
+            group.CreateCommand("onodera")
+                .NoArgs()
+                .Description("I'll upload an image of 'worst girl'. (WARNING: May cause nausea!)")
+                .Syntax($"{commands.CommandChar}onodera")
+                .Do(async e =>
+                {
+                    await client.SendFile(e.Channel, "images/trash.png");
+                });
+
+            group.CreateCommand("doit")
+                .NoArgs()
+                .Description("DON'T LET YOUR DREAMS JUST BE DREAMS!")
+                .Syntax($"{commands.CommandChar}doit")
+                .Do(async e =>
+                {
+                    await client.SendFile(e.Channel, "images/shia.jpg");
+                });
+
+            group.CreateCommand("justdoit")
+                .NoArgs()
+                .Description("DON'T LET YOUR DREAMS JUST BE DREAMS!")
+                .Syntax($"{commands.CommandChar}justdoit")
+                .Do(async e =>
+                {
+                    await client.SendFile(e.Channel, "images/shia.jpg");
+                });
+
+            group.CreateCommand("shia")
+                .NoArgs()
+                .Description("DON'T LET YOUR DREAMS JUST BE DREAMS!")
+                .Syntax($"{commands.CommandChar}shia")
+                .Do(async e =>
+                {
+                    await client.SendFile(e.Channel, "images/shia.jpg");
+                });
+
+            group.CreateCommand("bulli")
+                .NoArgs()
+                .Description("DON'T BULLY!")
+                .Syntax($"{commands.CommandChar}bulli")
+                .Do(async e =>
+                {
+                    await client.SendFile(e.Channel, "images/bulli.jpg");
+                });
+
+            group.CreateCommand("bully")
+                .NoArgs()
+                .Description("DON'T BULLY!")
+                .Syntax($"{commands.CommandChar}bully")
+                .Do(async e =>
+                {
+                    await client.SendFile(e.Channel, "images/bulli.jpg");
+                });
+
+            group.CreateCommand("dunbulli")
+                .NoArgs()
+                .Description("DON'T BULLY!")
+                .Syntax($"{commands.CommandChar}dunbulli")
+                .Do(async e =>
+                {
+                    await client.SendFile(e.Channel, "images/bulli.jpg");
+                });
+
+            group.CreateCommand("dontbully")
+                .NoArgs()
+                .Description("DON'T BULLY!")
+                .Syntax($"{commands.CommandChar}dontbully")
+                .Do(async e =>
+                {
+                    await client.SendFile(e.Channel, "images/bulli.jpg");
+                });
+
+            group.CreateCommand("8ball")
+                .AnyArgs()
+                .Description("The magic eightball can answer any question!")
+                .Syntax($"{commands.CommandChar}8ball [question]?")
+                .Do(async e =>
+                {
+                    string[] eightball = new string[] { "It is certain.", "It is decidedly so.", "Without a doubt.", "Yes, definitely.", "You may rely on it.", "As I see it, yes.", "Most likely.", "Outlook good.", "Yes.", "Signs point to yes.", "Reply hazy try again...", "Ask again later...", "Better not tell you now...", "Cannot predict now...", "Concentrate and ask again...", "Don't count on it.", "My reply is no.", "My sources say no.", "Outlook not so good.", "Very doubtful.", "Nyas.", "Why not?", "zzzzz...", "No."};
+                    Random rnd = new Random();
+                    if (e.ArgText[e.ArgText.Length - 1] != '?')
+                        await client.SendMessage(e.Channel, "You must ask a proper question!");
+                    else
+                        await client.SendMessage(e.Channel, $"*{eightball[rnd.Next(eightball.Length)]}*");
+                });
+
+            group.CreateCommand("img")
+                .ArgsAtLeast(1)
+                .Description("I'll get a random image from Google!")
+                .Syntax($"{commands.CommandChar}img [search query]")
+                .Do(async e =>
+                {
+                    Random rnd = new Random();
+                    rclient.BaseUrl = new Uri("https://ajax.googleapis.com/ajax/services/search");
+                    var request = new RestRequest($"images?v=1.0&q={e.ArgText}&rsz=8&start={rnd.Next(1, 12).ToString()}&safe=active", Method.GET);
+                    JObject result = JObject.Parse(rclient.Execute(request).Content);
+                    List<string> images = new List<string>();
+                    foreach (var element in result["responseData"]["results"])
+                    {
+                        var image = element["unescapedUrl"];
+                        images.Add(image.ToString());
+                    }
+                    var imageURL = images[rnd.Next(images.Count())].ToString();
+                    await client.SendMessage(e.Channel, imageURL);
+                });
+
+            group.CreateCommand("hbavatar")
+                .ArgsAtLeast(1)
+                .Description("I'll give you the hummingbird avatar of the usernames provided.")
+                .Syntax($"{commands.CommandChar}hbavatar [Username1] [Username2] [UsernameN]")
+                .Do(async e =>
+                {
+                    rclient.BaseUrl = new Uri("http://hummingbird.me/api/v1/users");
+                    string message = "";
+                    foreach (string s in e.Args)
+                    {
+                        var request = new RestRequest($"{s}", Method.GET);
+                        if (rclient.Execute(request).Content[0] == '<')
+                        {
+                            message += $@"
+{s} doesn't exist.";
+                        }
+                        else
+                        {
+                            JObject result = JObject.Parse(rclient.Execute(request).Content);
+                            string username = result["name"].ToString();
+                            string avatar = result["avatar"].ToString();
+                            message += $@"
+{username}'s avatar: {avatar}";
+                        }
+                    }
+                    await client.SendMessage(e.Channel, message);
+                });
+
+            group.CreateCommand("hb")
+                .ArgsAtLeast(1)
+                .Description("I'll give you information on the hummingbird accounts of the usernames provided.")
+                .Syntax($"{commands.CommandChar}hb [Username1] [Username2] [UsernameN]")
+                .Do(async e =>
+                {
+                    rclient.BaseUrl = new Uri("http://hummingbird.me/api/v1/users");
+                    foreach (string s in e.Args)
+                    {
+                        string message = "";
+                        var request = new RestRequest($"{s}", Method.GET);
+                        if (rclient.Execute(request).Content[0] == '<')
+                        {
+                            message += $@"{s} doesn't exist.";
+                        }
+                        else
+                        {
+                            JObject result = JObject.Parse(rclient.Execute(request).Content);
+                            var username = result["name"].ToString();
+                            var avatar = result["avatar"].ToString();
+                            var userurl = $"http://hummingbird.me/users/{username}";
+                            var waifu = result["waifu"].ToString();
+                            var waifu_prefix = result["waifu_or_husbando"].ToString();
+                            var bio = result["bio"].ToString();
+                            var location = result["location"].ToString();
+                            var website = result["website"].ToString();
+                            var life_spent_on_anime = int.Parse(result["life_spent_on_anime"].ToString());
+
+                            string lifeAnime = CalculateTime(life_spent_on_anime);
+
+                            message += $@"
+**User**: {username}
+**Avatar**: {avatar} 
+**{waifu_prefix}**: {waifu}
+**Bio**: {bio}
+**Time wasted on Anime**: {lifeAnime}";
+                            if (String.IsNullOrWhiteSpace(location))
+                                message += $@"
+**Location**: {location}";
+                            if (String.IsNullOrWhiteSpace(website))
+                                message += $@"
+**Website**: {website}";
+                            message += $@"
+**Hummingbird page**: {userurl}";
+                        }
+                        await client.SendMessage(e.Channel, message);
+                    }
+                });
+
+            group.CreateCommand("player")
+                .AnyArgs()
+                .Description("I'll give you information on the Player.me of each usernames provided.")
+                .Syntax($"{commands.CommandChar}player [username1] [username2] [usernamen]")
+                .Do(async e =>
+                {
+                    rclient.BaseUrl = new System.Uri("https://player.me/api/v1/auth");
+                    var request = new RestRequest("pre-login", Method.POST);
+                    foreach (string s in e.Args)
+                    {
+                        request.AddQueryParameter("login", s);
+                        JObject result = JObject.Parse(rclient.Execute(request).Content);
+                        if (Convert.ToBoolean(result["success"]) == false)
+                            await client.SendMessage(e.Channel, $"{s} was not found.");
+                        else
+                        {
+                            string username = result["results"]["username"].ToString();
+                            string avatar = "https:" + result["results"]["avatar"]["original"].ToString();
+                            string bio = result["results"]["short_description"].ToString();
+                            DateTime date = DateTime.Parse(result["results"]["created_at"].ToString());
+                            string joined = date.ToString("yyyy-MM-dd");
+                            int followers = Convert.ToInt32(result["results"]["followers_count"]);
+                            int following = Convert.ToInt32(result["results"]["following_count"]);
+                            await client.SendMessage(e.Channel, $@"
+**User**: {username}
+**Avatar**: {avatar}
+**Bio**: {bio}
+**Joined on**: {joined}
+**Followers**: {followers}
+**Following**: {following}");
+                        }
+                    }
+                });
+
+            // Moderator commands
+
+            group.CreateCommand("forceskip")
+                .NoArgs()
+                .MinPermissions(1)
+                .FlagMusic(true)
+                .Description("I'll skip the currently playing song.")
+                .Syntax($"{commands.CommandChar}forceskip")
+                .Do(async e =>
+                {
+                    skip[e.User.VoiceChannel.Id] = true;
+                    await client.SendMessage(e.Channel, "Forcefully skipping song...");
+                });
+
+            group.CreateCommand("forcereset")
+                .NoArgs()
+                .MinPermissions(1)
+                .FlagMusic(true)
+                .Description("I'll reset the stream in case of bugs, while keeping the playlist intact.")
+                .Syntax($"{commands.CommandChar}forcereset")
+                .Do(async e =>
+                {
+                    reset[e.User.VoiceChannel.Id] = true;
+                    await client.SendMessage(e.Channel, "Reseting stream...");
+                    await Task.Delay(5000);
+                    await StreamMusic(e.User.VoiceChannel.Id);
+                });
+
+            group.CreateCommand("nsfw")
+                .ArgsEqual(1)
+                .MinPermissions(1)
+                .Description("I'll set a channel's nsfw flag to on or off.")
+                .Syntax($"{commands.CommandChar}nsfw [on/off]")
+                .Do(async e =>
+                {
+                    if (e.Args[0] == "on")
+                    {
+                        if (!GetNsfwFlag(e.Channel))
+                        {
+                            sql = $"select count(channel) from flags where channel='{e.Channel.Id}'";
+                            query = new SQLiteCommand(sql, connection);
+                            if (Convert.ToInt32(query.ExecuteScalar()) > 0)
+                            {
+                                sql = $"update flags set nsfw=1 where channel='{e.Channel.Id}'";
+                                query = new SQLiteCommand(sql, connection);
+                                await query.ExecuteNonQueryAsync();
+                            }
+                            else
+                            {
+                                sql = $"insert into flags values ('{e.Channel.Id}', 1, 0, 0)";
+                                query = new SQLiteCommand(sql, connection);
+                                await query.ExecuteNonQueryAsync();
+                            }
+                            await client.SendMessage(e.Channel, "I've set this channel to allow nsfw commands.");
+                        }
+                        else
+                        {
+                            await client.SendMessage(e.Channel, $"<@{e.User.Id}>, this channel is already allowing nsfw commands.");
+                        }
+                    }
+                    else if (e.Args[0] == "off")
+                    {
+                        if (GetNsfwFlag(e.Channel))
+                        {
+                            sql = $"update flags set nsfw=0 where channel='{e.Channel.Id}'";
+                            query = new SQLiteCommand(sql, connection);
+                            await query.ExecuteNonQueryAsync();
+                            await client.SendMessage(e.Channel, "I've set this channel to disallow nsfw commands.");
+                        }
+                        else
+                        {
+                            await client.SendMessage(e.Channel, $"<@{e.User.Id}>, this channel is already disallowing nsfw commands.");
+                        }
+                    }
+                    else
+                    {
+                        await client.SendMessage(e.Channel, $"<@{e.User.Id}>, '{e.ArgText}' isn't a valid argument. Please use on or off instead.");
+                    }
+                });
+
+            group.CreateCommand("canlewd")
+                .ArgsEqual(1)
+                .MinPermissions(1)
+                .Description("I'll set a channel's nsfw flag to on or off.")
+                .Syntax($"{commands.CommandChar}canlewd [on/off]")
+                .Do(async e =>
+                {
+                    if (e.Args[0] == "on")
+                    {
+                        if (!GetNsfwFlag(e.Channel))
+                        {
+                            sql = $"select count(channel) from flags where channel='{e.Channel.Id}'";
+                            query = new SQLiteCommand(sql, connection);
+                            if (Convert.ToInt32(query.ExecuteScalar()) > 0)
+                            {
+                                sql = $"update flags set nsfw=1 where channel='{e.Channel.Id}'";
+                                query = new SQLiteCommand(sql, connection);
+                                await query.ExecuteNonQueryAsync();
+                            }
+                            else
+                            {
+                                sql = $"insert into flags values ('{e.Channel.Id}', 1, 0, 0)";
+                                query = new SQLiteCommand(sql, connection);
+                                await query.ExecuteNonQueryAsync();
+                            }
+                            await client.SendMessage(e.Channel, "I've set this channel to allow nsfw commands.");
+                        }
+                        else
+                        {
+                            await client.SendMessage(e.Channel, $"<@{e.User.Id}>, this channel is already allowing nsfw commands.");
+                        }
+                    }
+                    else if (e.Args[0] == "off")
+                    {
+                        if (GetNsfwFlag(e.Channel))
+                        {
+                            sql = $"update flags set nsfw=0 where channel='{e.Channel.Id}'";
+                            query = new SQLiteCommand(sql, connection);
+                            await query.ExecuteNonQueryAsync();
+                            await client.SendMessage(e.Channel, "I've set this channel to disallow nsfw commands.");
+                        }
+                        else
+                        {
+                            await client.SendMessage(e.Channel, $"<@{e.User.Id}>, this channel is already disallowing nsfw commands.");
+                        }
+                    }
+                    else
+                    {
+                        await client.SendMessage(e.Channel, $"<@{e.User.Id}>, '{e.ArgText}' isn't a valid argument. Please use on or off instead.");
+                    }
+                });
+
+            group.CreateCommand("invite")
+                .ArgsEqual(1)
+                .MinPermissions(1)
+                .Description("I'll join a new server using the provided invite code or link.")
+                .Syntax($"{commands.CommandChar}invite [invite code or link]")
+                .Do(async e =>
+                {
+                    await client.AcceptInvite(client.GetInvite(e.Args[0]).Result);
+                });
+
+            // Administrator commands
+
+            group.CreateCommand("music")
+                .ArgsEqual(1)
+                .Description("I'll start or end a stream in a particular voice channel, which you need to be in.")
+                .MinPermissions(2)
+                .Syntax($"{commands.CommandChar}music [on/off]")
+                .Do(async e =>
+                {
+                    if (e.User.VoiceChannel.Id == null || e.User.VoiceChannel.Id == "")
+                    {
+                        await client.SendMessage(e.Channel, $"<@{e.User.Id}>, you need to be in a voice channel to use this.");
+                    }
+                    else
+                    {
+                        if (e.Args[0] == "on")
+                        {
+                            if (!streams.Contains(e.User.VoiceChannel.Id))
+                            {
+                                streams.Add(e.User.VoiceChannel.Id);
+                                sql = $"select count(channel) from flags where channel = '{e.User.VoiceChannel.Id}'";
+                                query = new SQLiteCommand(sql, connection);
+                                if (Convert.ToInt32(query.ExecuteScalar()) > 0)
+                                {
+                                    sql = $"update flags set music=1 where channel='{e.User.VoiceChannel.Id}'";
+                                    query = new SQLiteCommand(sql, connection);
+                                    query.ExecuteNonQuery();
+                                }
+                                else
+                                {
+                                    sql = $"insert into flags values ('{e.User.VoiceChannel.Id}', 0, 1, 0)";
+                                    query = new SQLiteCommand(sql, connection);
+                                    query.ExecuteNonQuery();
+                                }
+                                await client.SendMessage(e.Channel, $"<@{e.User.Id}>, I'm starting the stream!");
+                                await StreamMusic(e.User.VoiceChannel.Id);
+                            }
+                            else
+                            {
+                                await client.SendMessage(e.Channel, $"<@{e.User.Id}>, I can't start streaming in a channel that I'm already streaming in! Did you mean to !reset or !forcereset the stream?");
+                            }
+                        }
+                        else if (e.Args[0] == "off")
+                        {
+                            if (streams.Contains(e.User.VoiceChannel.Id))
+                            {
+                                streams.Remove(e.User.VoiceChannel.Id);
+                                sql = $"update flags set music=0 where channel='{e.User.VoiceChannel.Id}'";
+                                query = new SQLiteCommand(sql, connection);
+                                query.ExecuteNonQuery();
+                                await client.SendMessage(e.Channel, $"<@{e.User.Id}>, I'm stopping the stream!");
+                            }
+                            else
+                            {
+                                await client.SendMessage(e.Channel, $"<@{e.User.Id}>, I can't stop streaming in a channel that I'm already not streaming in!");
+                            }
+                        }
+                        else
+                        {
+                            await client.SendMessage(e.Channel, $"<@{e.User.Id}>, the argument needs to be either on or off.");
+                        }
+                    }
+                });
+
+            group.CreateCommand("setpermissions")
+                .ArgsAtLeast(2)
+                .MinPermissions(2)
+                .Description("I'll set the permission level of the mentioned people to the level mentioned (cannot be higher than or equal to yours).")
+                .Syntax($"{commands.CommandChar}setpermissions [newPermissionLevel] [@User1] [@User2] [@UserN]")
+                .Do(async e =>
+                {
+                    int newPermLevel = 0;
+                    if (e.Args.Count() < 2 || e.Message.Mentions.Count() < 1)
+                        await client.SendMessage(e.Channel, "You need to at least specify a permission level and mention one user.");
+                    else if (!int.TryParse(e.Args[0], out newPermLevel))
+                        await client.SendMessage(e.Channel, "The first argument needs to be the new permission level.");
+                    else if (newPermLevel >= e.Permissions)
+                        await client.SendMessage(e.Channel, "You cannot give someone a permission level higher than or equal to yourself.");
+                    else
+                    {
+                        string reply = "";
+                        foreach (User u in e.Message.Mentions)
+                        {
+                            if (GetPermissions(u) != newPermLevel)
+                            {
+                                sql = $"select count(user) from users where user='{u.Id}'";
+                                query = new SQLiteCommand(sql, connection);
+                                if (Convert.ToInt32(query.ExecuteScalar()) > 0)
+                                {
+                                    sql = $"update users set perms={newPermLevel} where user='{u.Id}'";
+                                    query = new SQLiteCommand(sql, connection);
+                                    await query.ExecuteNonQueryAsync();
+                                    if (reply == "")
+                                        reply = reply + $@"<@{u.Id}>'s permission level is now {newPermLevel}.";
+                                    else
+                                        reply = reply + $@"
+<@{u.Id}>'s permission level is now {newPermLevel}.";
+                                }
+                                else
+                                {
+                                    sql = $"insert into users values ('{u.Id}', {newPermLevel}, 0)";
+                                    query = new SQLiteCommand(sql, connection);
+                                    await query.ExecuteNonQueryAsync();
+                                    if (reply == "")
+                                        reply = reply + $@"<@{u.Id}>'s permission level is now {newPermLevel}.";
+                                    else
+                                        reply = reply + $@"
+<@{u.Id}>'s permission level is now {newPermLevel}.";
+                                }
+                            }
+                            else
+                            {
+                                if (reply == "")
+                                    reply = reply + $@"<@{u.Id}>'s permission level is already at {newPermLevel}.";
+                                else
+                                    reply = reply + $@"
+<@{u.Id}>'s permission level is already at {newPermLevel}.";
+                            }
+                        }
+                        await client.SendMessage(e.Channel, reply);
+                    }
+                });
+
+            group.CreateCommand("setperms")
+                .ArgsAtLeast(2)
+                .MinPermissions(2)
+                .Description("I'll set the permission level of the mentioned people to the level mentioned (cannot be higher than or equal to yours).")
+                .Syntax($"{commands.CommandChar}setperms [newPermissionLevel] [@User1] [@User2] [@UserN]")
+                .Do(async e =>
+                {
+                    int newPermLevel = 0;
+                    if (e.Args.Count() < 2 || e.Message.Mentions.Count() < 1)
+                        await client.SendMessage(e.Channel, "You need to at least specify a permission level and mention one user.");
+                    else if (!int.TryParse(e.Args[0], out newPermLevel))
+                        await client.SendMessage(e.Channel, "The first argument needs to be the new permission level.");
+                    else if (newPermLevel >= e.Permissions)
+                        await client.SendMessage(e.Channel, "You cannot give someone a permission level higher than or equal to yourself.");
+                    else
+                    {
+                        string reply = "";
+                        foreach (User u in e.Message.Mentions)
+                        {
+                            if (GetPermissions(u) != newPermLevel)
+                            {
+                                sql = $"select count(user) from users where user='{u.Id}'";
+                                query = new SQLiteCommand(sql, connection);
+                                if (Convert.ToInt32(query.ExecuteScalar()) > 0)
+                                {
+                                    sql = $"update users set perms={newPermLevel} where user='{u.Id}'";
+                                    query = new SQLiteCommand(sql, connection);
+                                    await query.ExecuteNonQueryAsync();
+                                    if (reply == "")
+                                        reply = reply + $@"<@{u.Id}>'s permission level is now {newPermLevel}.";
+                                    else
+                                        reply = reply + $@"
+<@{u.Id}>'s permission level is now {newPermLevel}.";
+                                }
+                                else
+                                {
+                                    sql = $"insert into users values ('{u.Id}', {newPermLevel}, 0)";
+                                    query = new SQLiteCommand(sql, connection);
+                                    await query.ExecuteNonQueryAsync();
+                                    if (reply == "")
+                                        reply = reply + $@"<@{u.Id}>'s permission level is now {newPermLevel}.";
+                                    else
+                                        reply = reply + $@"
+<@{u.Id}>'s permission level is now {newPermLevel}.";
+                                }
+                            }
+                            else
+                            {
+                                if (reply == "")
+                                    reply = reply + $@"<@{u.Id}>'s permission level is already at {newPermLevel}.";
+                                else
+                                    reply = reply + $@"
+<@{u.Id}>'s permission level is already at {newPermLevel}.";
+                            }
+                        }
+                        await client.SendMessage(e.Channel, reply);
+                    }
+                });
+
+            group.CreateCommand("setauth")
+                .ArgsAtLeast(2)
+                .MinPermissions(2)
+                .Description("I'll set the permission level of the mentioned people to the level mentioned (cannot be higher than or equal to yours).")
+                .Syntax($"{commands.CommandChar}setauth [newPermissionLevel] [@User1] [@User2] [@UserN]")
+                .Do(async e =>
+                {
+                    int newPermLevel = 0;
+                    if (e.Args.Count() < 2 || e.Message.Mentions.Count() < 1)
+                        await client.SendMessage(e.Channel, "You need to at least specify a permission level and mention one user.");
+                    else if (!int.TryParse(e.Args[0], out newPermLevel))
+                        await client.SendMessage(e.Channel, "The first argument needs to be the new permission level.");
+                    else if (newPermLevel >= e.Permissions)
+                        await client.SendMessage(e.Channel, "You cannot give someone a permission level higher than or equal to yourself.");
+                    else
+                    {
+                        string reply = "";
+                        foreach (User u in e.Message.Mentions)
+                        {
+                            if (GetPermissions(u) != newPermLevel)
+                            {
+                                sql = $"select count(user) from users where user='{u.Id}'";
+                                query = new SQLiteCommand(sql, connection);
+                                if (Convert.ToInt32(query.ExecuteScalar()) > 0)
+                                {
+                                    sql = $"update users set perms={newPermLevel} where user='{u.Id}'";
+                                    query = new SQLiteCommand(sql, connection);
+                                    await query.ExecuteNonQueryAsync();
+                                    if (reply == "")
+                                        reply = reply + $@"<@{u.Id}>'s permission level is now {newPermLevel}.";
+                                    else
+                                        reply = reply + $@"
+<@{u.Id}>'s permission level is now {newPermLevel}.";
+                                }
+                                else
+                                {
+                                    sql = $"insert into users values ('{u.Id}', {newPermLevel}, 0)";
+                                    query = new SQLiteCommand(sql, connection);
+                                    await query.ExecuteNonQueryAsync();
+                                    if (reply == "")
+                                        reply = reply + $@"<@{u.Id}>'s permission level is now {newPermLevel}.";
+                                    else
+                                        reply = reply + $@"
+<@{u.Id}>'s permission level is now {newPermLevel}.";
+                                }
+                            }
+                            else
+                            {
+                                if (reply == "")
+                                    reply = reply + $@"<@{u.Id}>'s permission level is already at {newPermLevel}.";
+                                else
+                                    reply = reply + $@"
+<@{u.Id}>'s permission level is already at {newPermLevel}.";
+                            }
+                        }
+                        await client.SendMessage(e.Channel, reply);
+                    }
+                });
+
+            // Owner commands
+
+            group.CreateCommand("leave")
+                .NoArgs()
+                .MinPermissions(3)
+                .Description("I'll leave the server this command was used in.")
+                .Syntax($"{commands.CommandChar}leave")
+                .Do(async e =>
+                {
+                    await client.SendMessage(e.Channel, "Bye bye!");
+                    await client.LeaveServer(e.Server);
+                });
+
+            group.CreateCommand("color")
+                .ArgsBetween(2, 4)
+                .MinPermissions(3)
+                .Description("I'll set a role's color to the hex or rgb color value provided.")
+                .Syntax($"{commands.CommandChar}color [Rolename] [000000-FFFFFF] // {commands.CommandChar}color [Rolename] [0-255] [0-255] [0-255]")
+                .Do(async e =>
+                {
+                    if (e.Args.Count() == 2)
+                    {
+                        // assume hex code was provided
+                        string r = e.Args[1].Substring(0, 2);
+                        string g = e.Args[1].Substring(2, 2);
+                        string b = e.Args[1].Substring(4, 2);
+                        int red = Convert.ToInt32(r, 16);
+                        int green = Convert.ToInt32(g, 16);
+                        int blue = Convert.ToInt32(b, 16);
+                        Role role = client.FindRoles(e.Server, e.Args[0]).FirstOrDefault();
+                        Discord.Color color = new Color(0);
+                        color.R = Convert.ToByte(red);
+                        color.B = Convert.ToByte(blue);
+                        color.G = Convert.ToByte(green);
+                        await client.EditRole(role, color: color);
+                        await client.SendMessage(e.Channel, $"Role {role.Name}'s color has been changed.");
+                    }
+                    else if (e.Args.Count() == 4)
+                    {
+                        // assume it's rgb color codes
+                        int red = int.Parse(e.Args[1]);
+                        int green = int.Parse(e.Args[2]);
+                        int blue = int.Parse(e.Args[3]);
+                        Role role = client.FindRoles(e.Server, e.Args[0]).FirstOrDefault();
+                        Discord.Color color = new Color(0);
+                        color.R = Convert.ToByte(red);
+                        color.B = Convert.ToByte(blue);
+                        color.G = Convert.ToByte(green);
+                        await client.EditRole(role, color: color);
+                        await client.SendMessage(e.Channel, $"Role {role.Name}'s color has been changed.");
+                    }
+                    else
+                        await client.SendMessage(e.Channel, "The parameters are invalid.");
+                });
+
+            group.CreateCommand("ignore")
+                .ArgsAtLeast(1)
+                .MinPermissions(3)
+                .Description("I'll ignore commands coming from a particular channel or user")
+                .Syntax($"{commands.CommandChar}ignore [@User1 or #Channel1] [@UserN or #ChannelN]")
+                .Do(async e =>
+                {
+                    Regex re = new Regex(@"<#([0-9]+?)>");
+                    if (re.Matches(e.Message.RawText).Count > 0 || e.Message.Mentions.Count() > 0)
+                    {
+                        string reply = "";
+                        if (re.Matches(e.Message.RawText).Count > 0)
+                        {
+                            // At least one channel was mentioned
+                            foreach (Match m in re.Matches(e.Message.RawText))
+                            {
+                                Channel c = client.GetChannel(m.Groups[1].Value);
+                                sql = $"select count(channel) from flags where channel='{c.Id}'";
+                                query = new SQLiteCommand(sql, connection);
+                                if (Convert.ToInt32(query.ExecuteScalar()) > 0)
+                                {
+                                    bool isIgnored = GetIgnoredFlag(c);
+                                    sql = $"update flags set ignored={Convert.ToInt32(!isIgnored)} where channel='{c.Id}'";
+                                    query = new SQLiteCommand(sql, connection);
+                                    await query.ExecuteNonQueryAsync();
+                                    if (!isIgnored)
+                                    {
+                                        if (reply == "")
+                                            reply = reply + $@"<#{c.Id}> is now ignored.";
+                                        else
+                                            reply = reply + $@"
+<#{c.Id}> is now ignored.";
+                                    }
+                                    else
+                                    {
+                                        if (reply == "")
+                                            reply = reply + $@"<#{c.Id}> is no longer ignored.";
+                                        else
+                                            reply = reply + $@"
+<#{c.Id}> is no longer ignored.";
+                                    }
+                                }
+                                else
+                                {
+                                    sql = $"insert into falgs values ('{c.Id}', 0, 0, 1)";
+                                    query = new SQLiteCommand(sql, connection);
+                                    await query.ExecuteNonQueryAsync();
+                                    if (reply == "")
+                                        reply = reply + $@"<#{c.Id}> is now ignored.";
+                                    else
+                                        reply = reply + $@"
+<#{c.Id}> is now ignored.";
+                                }
+                            }
+                        }
+                        if (e.Message.Mentions.Count() > 0)
+                        {
+                            // At least one user is mentioned
+                            foreach (User u in e.Message.Mentions)
+                            {
+                                sql = $"select count(user) from users where user='{u.Id}'";
+                                query = new SQLiteCommand(sql, connection);
+                                if (Convert.ToInt32(query.ExecuteScalar()) > 0)
+                                {
+                                    bool isIgnored = GetIgnoredFlag(u);
+                                    sql = $"update users set ignored={Convert.ToInt32(!isIgnored)} where user='{u.Id}'";
+                                    query = new SQLiteCommand(sql, connection);
+                                    await query.ExecuteNonQueryAsync();
+                                    if (!isIgnored)
+                                    {
+                                        if (reply == "")
+                                            reply = reply + $@"<@{u.Id}> is now ignored.";
+                                        else
+                                            reply = reply + $@"
+<@{u.Id}> is now ignored.";
+                                    }
+                                    else
+                                    {
+                                        if (reply == "")
+                                            reply = reply + $@"<@{u.Id}> is no longer ignored.";
+                                        else
+                                            reply = reply + $@"
+<@{u.Id}> is no longer ignored.";
+                                    }
+                                }
+                                else
+                                {
+                                    sql = $"insert into users values ('{u.Id}', 0, 1)";
+                                    query = new SQLiteCommand(sql, connection);
+                                    await query.ExecuteNonQueryAsync();
+                                    if (reply == "")
+                                        reply = reply + $@"<@{u.Id}> is now ignored.";
+                                    else
+                                        reply = reply + $@"
+<@{u.Id}> is now ignored.";
+                                }
+                            }
+                        }
+                        await client.SendMessage(e.Channel, reply);
+                    }
+                    else
+                    {
+                        await client.SendMessage(e.Channel, "You need to mention at least one user or channel!");
+                    }
+                });
+
+            // Help command
+            group.CreateCommand("help")
+                .AnyArgs()
+                .Description("I'll give you a list of all available commands or help on specific commands.")
+                .Syntax($"{commands.CommandChar}help // {commands.CommandChar}help [command1] [command2] [commandn]")
+                .Do(async e =>
+                {
+                    string reply = "";
+                    bool list = true;
+                    if (e.Args.Count() > 0)
+                    {
+                        // There is at least 1 provided argument, therefore assume that it's asking for specific help on one or more commands.
+                        foreach (string arg in e.Args)
+                        {
+                            foreach (Command c in commands.Commands)
+                            {
+                                if (c.Text == arg)
+                                {
+                                    if (GetPermissions(e.User) >= c.MinPerms)
+                                    {
+                                        reply = reply + $@"
+**Command**: {c.Text}
+**Description**: {c.Description}
+**Syntax**: {c.Syntax}
+**Permission Level**: {c.MinPerms.ToString()}
+**Nsfw**: {c.NsfwFlag.ToString()}
+**Music**: {c.MusicFlag.ToString()}
+";
+                                        list = false;
+                                    }
+                                    else
+                                    {
+                                        reply = reply + $@"
+You do not have permissions to access help on the command {c.Text}. (Current permissions: {GetPermissions(e.User).ToString()} / Needed permissions: {c.MinPerms.ToString()})
+";
+                                        list = false;
+                                    }
+                                }
+                            }
+                        }
+                        if (reply == "")
+                        {
+                            // If reply is still empty, then the arguments weren't commands, therefore acts as if there was no arguments
+                            list = true;
+                            foreach (Command c in commands.Commands)
+                            {
+                                if (c.MinPerms <= GetPermissions(e.User))
+                                {
+                                    reply = reply + $@", {c.Text}";
+                                }
+                            }
+                            reply = reply.Substring(0, reply.Length - 2);
+                            reply = $@"**List of all currently available commands:**
+
+{reply}
+
+Type '**{commands.CommandChar}help [command]**' for more specific help on a particular command. For suggestions, contact <@63296013791666176> (Kusoneko) or create an issue on the github page: https://github.com/Kusoneko/Nekobot";
+                        }
+                    }
+                    else
+                    {
+                        // There is no arguments, therefore list all commands
+                        list = true;
+                        foreach (Command c in commands.Commands)
+                        {
+                            if (c.MinPerms <= GetPermissions(e.User))
+                            {
+                                reply = reply + $@"{c.Text}, ";
+                            }
+                        }
+                        reply = reply.Substring(0, reply.Length-2);
+                        reply = $@"**List of all currently available commands:**
+
+{reply}
+
+Type '**{commands.CommandChar}help [command]**' for more specific help on a particular command. For suggestions, contact <@63296013791666176> (Kusoneko) or create an issue on the github page: https://github.com/Kusoneko/Nekobot";
+                    }
+                    if (!e.Channel.IsPrivate && list)
+                    {
+                        await client.SendMessage(e.Channel, $"<@{e.User.Id}>, I'm sending you the list of commands in PM. (I don't want to spam.)");
+                        await client.SendPrivateMessage(e.User, reply);
+                    }
+                    else
+                    {
+                        await client.SendMessage(e.Channel, reply);
+                    }
+                });
         }
 
-        private static void LoadStreamChannels()
-        {
-            if (File.Exists("streams"))
-            {
-                streams = File.ReadAllLines("streams").ToList();
-            }
-        }
-
-        private static void UpdateStreamChannels()
-        {
-            File.WriteAllLines("streams", streams);
-        }
+        // Variables
+        static DiscordClient client = new DiscordClient(new DiscordClientConfig { AckMessages = true, EnableVoiceMultiserver = true, VoiceMode = DiscordVoiceMode.Outgoing/*, LogLevel = LogMessageSeverity.Debug*/ });
+        static CommandsPlugin commands = new CommandsPlugin(client, GetPermissions, GetNsfwFlag, GetMusicFlag, GetIgnoredFlag);
+        static RestClient rclient = new RestClient();
+        static SQLiteConnection connection;
+        static SQLiteCommand query;
+        static JObject config;
+        static JObject versionfile;
+        static string sql;
+        static string masterId;
+        static string email;
+        static string password;
+        static string musicFolder;
+        static string pitur;
+        static string gold;
+        static string cosplay;
+        static string version;
+        // Music-related variables
+        static List<string> streams = new List<string>();
+        public static Dictionary<string, List<Tuple<string, string, string, string>>> playlist = new Dictionary<string, List<Tuple<string, string, string, string>>>();
+        public static Dictionary<string, bool> skip = new Dictionary<string, bool>();
+        public static Dictionary<string, bool> reset = new Dictionary<string, bool>();
+        public static Dictionary<string, List<string>> voteskip = new Dictionary<string, List<string>>();
+        public static Dictionary<string, List<string>> votereset = new Dictionary<string, List<string>>();
+        public static Dictionary<string, List<string>> voteencore = new Dictionary<string, List<string>>();
+        public static string[] musicexts = { ".wma", ".aac", ".mp3", ".m4a", ".wav", ".flac" };
 
         private static async Task StreamMusic(string cid)
         {
@@ -169,3118 +2097,291 @@ namespace Nekobot
                 return;
             }
             Random rnd = new Random();
-            playing.Add(cid, "");
-            playlist.Add(cid, new List<Tuple<string, string, string>>());
+            if (!playlist.ContainsKey(cid))
+            {
+                playlist.Add(cid, new List<Tuple<string, string, string, string>>());
+            }
+            if (!skip.ContainsKey(cid))
+            {
+                skip.Add(cid, false);
+            }
+            if (!reset.ContainsKey(cid))
+            {
+                reset.Add(cid, false);
+            }
             while (streams.Contains(cid))
             {
-                if (votes.ContainsKey(cid))
+                voteskip[cid] = new List<string>();
+                votereset[cid] = new List<string>();
+                voteencore[cid] = new List<string>();
+                var files = from file in System.IO.Directory.EnumerateFiles($@"E:\Sync\Music", "*.*").Where(s => musicexts.Contains(System.IO.Path.GetExtension(s))) select new { File = file };
+                int mp3 = 0;
+                while (playlist[cid].Count() < 11)
                 {
-                    votes[cid] = new List<string> { };
-                }
-                else
-                {
-                    votes.Add(cid, new List<string> { });
-                }
-                if (replay.ContainsKey(cid))
-                {
-                    replay[cid] = new List<string> { };
-                }
-                else
-                {
-                    replay.Add(cid, new List<string> { });
-                }
-                if (forceskip.ContainsKey(cid))
-                {
-                    forceskip[cid] = false;
-                }
-                else
-                {
-                    forceskip.Add(cid, false);
-                }
-                if (skipsong.ContainsKey(cid))
-                {
-                    skipsong[cid] = false;
-                }
-                else
-                {
-                    skipsong.Add(cid, false);
-                }
-                if (encore.ContainsKey(cid))
-                {
-                    encore[cid] = false;
-                }
-                else
-                {
-                    encore.Add(cid, false);
-                }
-                var files = from file in Directory.EnumerateFiles(@"E:\Sync\Music", "*.*").Where(s => musicexts.Contains(Path.GetExtension(s))) select new { File = file };
-                int mp3 = rnd.Next(0, files.Count());
-                if (playlist[cid].Count < 11)
-                {
-                    while (playlist[cid].Count <= 11)
+                    mp3 = rnd.Next(0, files.Count());
+                    bool isAlreadyInPlaylist = false;
+                    for (int i = 0; i < playlist[cid].Count; i++)
                     {
-                        int x = 0;
-                        mp3 = rnd.Next(0, files.Count());
-                        foreach (var f in files)
-                        {
-                            if (mp3 == x)
-                            {
-                                bool isAlreadyInPlaylist = false;
-                                for (int z = 0; z < playlist[cid].Count; z++)
-                                {
-                                    if (playlist[cid][z].Item1 == Path.GetFileNameWithoutExtension(f.File))
-                                        isAlreadyInPlaylist = true;
-                                }
-                                if (isAlreadyInPlaylist)
-                                    break;
-                                playlist[cid].Add(Tuple.Create(Path.GetFileNameWithoutExtension(f.File), "Playlist", "null"));
-                                break;
-                            }
-                            x++;
-                        }
+                        if (playlist[cid][i].Item1 == files.ElementAt(mp3).File)
+                            isAlreadyInPlaylist = true;
                     }
-                }
-                if (playlist[cid].Any()) //Only look for stuff in the playlist if at least one exists.
-                {
-                    bool requestfound = false;
-                    while (!requestfound)
-                    {
-                        int j = -1;
-                        foreach (var f in files)
-                        {
-                            j++;
-                            if (Path.GetFileNameWithoutExtension(f.File).ToLower().Contains(playlist[cid][0].Item1.ToLower()))
-                            {
-                                mp3 = j;
-                                playlist[cid].RemoveAt(0);
-                                requestfound = true;
-                                break;
-                            }
-                        }
-                    }
-                }
-                int i = 0;
-                foreach (var f in files)
-                {
-                    if (mp3 == i)
-                    {
-                        Console.WriteLine("Playing song: " + f.File + " on channel " + c.Name);
-                        playing[cid] = f.File;
-                        await Task.Run(async () =>
-                        {
-                            try
-                            {
-                                var outFormat = new WaveFormat(48000, 16, 1);
-                                int blockSize = outFormat.AverageBytesPerSecond; //1 second
-                                byte[] buffer = new byte[blockSize];
-                                using (var musicReader = new MediaFoundationReader(f.File))
-                                using (var resampler = new MediaFoundationResampler(musicReader, outFormat) { ResamplerQuality = 60 })
-                                {
-                                    int byteCount;
-                                    while ((byteCount = resampler.Read(buffer, 0, blockSize)) > 0)
-                                    {
-                                        if (!streams.Contains(cid))
-                                        {
-                                            _client.ClearVoicePCM();
-                                            await Task.Delay(1000);
-                                            break;
-                                        }
-                                        if (encore[cid])
-                                        {
-                                            playlist[cid].Insert(0, Tuple.Create(Path.GetFileNameWithoutExtension(f.File), "Encore", "null" ));
-                                            encore[cid] = false;
-                                        }
-                                        if (forceskip[cid] | skipsong[cid])
-                                        {
-                                            _client.ClearVoicePCM();
-                                            await Task.Delay(1000);
-                                            break;
-                                        }
-                                        _client.SendVoicePCM(buffer, blockSize);
-                                    }
-                                }
-                            }
-                            catch (OperationCanceledException err) { Console.WriteLine(err.Message); }
-                        });
+                    if (isAlreadyInPlaylist)
                         break;
-                    }
-                    i++;
+                    playlist[cid].Add(Tuple.Create<string, string, string, string>(files.ElementAt(mp3).File, "Playlist", null, null));
                 }
-                await _client.WaitVoice(); //Prevent endless queueing which would eventually eat up all the ram
+                await Task.Run(async () =>
+                {
+                    try
+                    {
+                        var outFormat = new WaveFormat(48000, 16, 1);
+                        int blockSize = outFormat.AverageBytesPerSecond; // 1 second
+                        byte[] buffer = new byte[blockSize];
+                        using (var musicReader = new MediaFoundationReader(playlist[cid][0].Item1))
+                        using (var resampler = new MediaFoundationResampler(musicReader, outFormat) { ResamplerQuality = 60 })
+                        {
+                            int byteCount;
+                            while ((byteCount = resampler.Read(buffer, 0, blockSize)) > 0)
+                            {
+                                if (!streams.Contains(cid) || skip[cid] || reset[cid])
+                                {
+                                    _client.ClearVoicePCM();
+                                    await Task.Delay(1000);
+                                    break;
+                                }
+                                _client.SendVoicePCM(buffer, blockSize);
+                            }
+                        }
+                    }
+                    catch (OperationCanceledException err) { Console.WriteLine(err.Message); }
+                });
+                await _client.WaitVoice(); // Prevent endless queueing which would eventually eat up all the ram
+                skip[cid] = false;
+                if (reset[cid])
+                {
+                    reset[cid] = false;
+                    break;
+                }
+                playlist[cid].RemoveAt(0);
             }
-            votes.Remove(cid);
-            forceskip.Remove(cid);
-            replay.Remove(cid);
-            playlist.Remove(cid);
-            skipsong.Remove(cid);
-            encore.Remove(cid);
             await client.LeaveVoiceServer(c.Server);
         }
 
-        private static void UpdatePermissionFiles()
-        {
-            File.WriteAllLines("owner", owner);
-            File.WriteAllLines("admins", admins);
-            File.WriteAllLines("mods", mods);
-            File.WriteAllLines("normal", normal);
-        }
-
-        private static void LoadPermissionFiles()
-        {
-            if (File.Exists("owner"))
-                owner = File.ReadAllLines("owner").ToList<string>();
-            if (File.Exists("admins"))
-                admins = File.ReadAllLines("admins").ToList<string>();
-            if (File.Exists("mods"))
-                mods = File.ReadAllLines("mods").ToList<string>();
-            if (File.Exists("normal"))
-                normal = File.ReadAllLines("normal").ToList<string>();
-        }
-
-        private static void LoadCredentials()
-        {
-            if (File.Exists("creds"))
-            {
-                List<string> file = File.ReadAllLines("creds").ToList();
-                email = file[0];
-                pass = file[1];
-            }
-        }
-
-        private static void LoadChannels()
-        {
-            if (File.Exists("chans"))
-            {
-                sfw = File.ReadAllLines("chans").ToList();
-            }
-        }
-
-        private static void UpdateChannels()
-        {
-            File.WriteAllLines("chans", sfw);
-        }
-
-        private static void ClientDisconnected(object sender, EventArgs e)
-        {
-            Console.WriteLine("Disconnected.");
-            File.AppendAllLines("Nekobot-" + DateTime.Now.ToString("dd-MM-yyyy") + ".log", new string[] { DateTime.Now.ToString() + " - /!\\ - Disconnected." });
-        }
-
-        private static void ClientConnected(object sender, EventArgs e)
-        {
-            Console.WriteLine("Connected under the username " + client.CurrentUser.Name + "!");
-            File.AppendAllLines("Nekobot-" + DateTime.Now.ToString("dd-MM-yyyy") + ".log", new string[] { DateTime.Now.ToString() + " - /!\\ - Connected under the username " + client.CurrentUser.Name + "!" });
-        }
-
-        private static void ClientMessageCreated(object sender, MessageEventArgs e)
-        {
-            if (!e.Message.Text.StartsWith("!") && e.Message.UserId != client.CurrentUserId && e.Message.IsMentioningMe)
-            {
-                AI(e);
-            }
-            if (!e.Message.Channel.IsPrivate)
-            {
-                Console.WriteLine(DateTime.Now.ToString() + " - Message from {0} in {1} on {2}: {3}", e.Message.User.Name, e.Message.Channel.Name, e.Message.Channel.Server.Name, e.Message.Text);
-                File.AppendAllLines("Nekobot-" + DateTime.Now.ToString("dd-MM-yyyy") + ".log", new string[] { DateTime.Now.ToString() + " - Message from " + e.Message.User.Name + " in " + e.Message.Channel.Name + " on " + e.Message.Channel.Server.Name + ": " + e.Message.Text });
-            }
-            else
-            {
-                Console.WriteLine(DateTime.Now.ToString() + " - Private Message from {0}: {1}", e.Message.User.Name, e.Message.Text);
-                File.AppendAllLines("Nekobot-" + DateTime.Now.ToString("dd-MM-yyyy") + ".log", new string[] { DateTime.Now.ToString() + " - Private Message from " + e.Message.User.Name + ": " + e.Message.Text });
-            }
-            if (e.Message.Text.StartsWith("!") && e.Message.UserId != client.CurrentUserId)
-            {
-                string mess = e.Message.Text.Substring(1).ToLower();
-                string[] words = mess.Split(' ');
-                switch (words[0])
-                {
-/* Disabled because unneeded complaints from sehteph
-                    case "status":
-                        Status(e);
-                        break;
-*/
-/* Disabled because Neko.js
-                    case "whereami":
-                        WhereAmI(e);
-                        break;
-
-                    case "whois":
-                        WhoIs(e);
-                        break;
-*/
-                    case "leave":
-                        Leave(e);
-                        break;
-/* Disabled because Neko.js
-                    case "ping":
-                        Ping(e);
-                        break;
-
-                    case "quote":
-                        Quote(e);
-                        break;
-
-                    case "pet":
-                        Pet(e);
-                        break;
-
-                    case "nya":
-                        Nya(e);
-                        break;
-
-                    case "poi":
-                        Poi(e);
-                        break;
-
-                    case "rand":
-                        Rand(e);
-                        break;
-
-                    case "neko":
-                        if (!sfw.Contains(e.Message.ChannelId))
-                            Neko(e);
-                        else
-                            SfwChannel(e);
-                        break;
-
-                    case "kitsune":
-                        if (!sfw.Contains(e.Message.ChannelId))
-                            Kitsune(e);
-                        else
-                            SfwChannel(e);
-                        break;
-
-                    case "lewd":
-                        if (!sfw.Contains(e.Message.ChannelId))
-                            Lewd(e);
-                        else
-                            SfwChannel(e);
-                        break;
-
-                    case "qt":
-                        Qt(e);
-                        break;
-
-                    case "uninstall":
-                        Uninstall(e);
-                        break;
-
-                    case "roll":
-                        Roll(e);
-                        break;
-
-                    case "reverse":
-                        Reverse(e);
-                        break;
-*/
-                    case "playerpost":
-                        PlayerPost(e);
-                        break;
-
-                    case "playercomment":
-                        PlayerComment(e);
-                        break;
-
-                    case "playerbio":
-                        PlayerBio(e);
-                        break;
-
-                    case "playerlongbio":
-                        PlayerLongBio(e);
-                        break;
-/* Disabled because Neko.js
-                    case "avatar":
-                        Avatar(e);
-                        break;
-*/
-                    case "playeravatar":
-                        PlayerAvatar(e);
-                        break;
-/* Disabled because Neko.js
-                    case "owner":
-                        Owner(e);
-                        break;
-
-                    case "deowner":
-                        Deowner(e);
-                        break;
-
-                    case "admin":
-                        Admin(e);
-                        break;
-
-                    case "deadmin":
-                        Deadmin(e);
-                        break;
-
-                    case "mod":
-                        Mod(e);
-                        break;
-
-                    case "demod":
-                        Demod(e);
-                        break;
-*/
-                    case "die":
-                        SelfDestruct(e);
-                        break;
-
-                    case "invite":
-                        AcceptInvitation(e);
-                        break;
-/* Disabled because Neko.js
-                    case "say":
-                        Say(e);
-                        break;
-*/
-                    //Killed temporarily because causes a random RuntimeBinderException
-/*
-                    case "sidetail":
-                        if (!sfw.Contains(e.Message.ChannelId))
-                            Danbooru(e, "sidetail", 480);
-                        else
-                            SfwChannel(e);
-                        break;
-
-                    case "futa":
-                    case "futanari":
-                        if (!sfw.Contains(e.Message.ChannelId))
-                            Danbooru(e, "futanari", 68);
-                        else
-                            SfwChannel(e);
-                        break;
-
-                    case "incest":
-                    case "wincest":
-                        if (!sfw.Contains(e.Message.ChannelId))
-                            Danbooru(e, "incest", 41);
-                        else
-                            SfwChannel(e);
-                        break;
-*/
-/* Disabled because Neko.js
-                    case "rule34":
-                        if (!sfw.Contains(e.Message.ChannelId))
-                            Rule34(e);
-                        else
-                            SfwChannel(e);
-                        break;
-
-                    case "gelbooru":
-                        if (!sfw.Contains(e.Message.ChannelId))
-                            Gelbooru(e);
-                        else
-                            SfwChannel(e);
-                        break;
-
-                    case "safebooru":
-                        if (!sfw.Contains(e.Message.ChannelId))
-                            Safebooru(e);
-                        else
-                            SfwChannel(e);
-                        break;
-
-                    case "cosplay":
-                        if (!sfw.Contains(e.Message.ChannelId))
-                            Cosplay(e);
-                        else
-                            SfwChannel(e);
-                        break;
-
-                    case "pitur":
-                        if (!sfw.Contains(e.Message.ChannelId))
-                            Pitur(e);
-                        else
-                            SfwChannel(e);
-                        break;
-
-                    case "waifu":
-                        Waifu(e);
-                        break;
-
-                    case "kona":
-                        if (!sfw.Contains(e.Message.ChannelId))
-                            Kona(e);
-                        else
-                            SfwChannel(e);
-                        break;
-
-                    case "gold":
-                        if (!sfw.Contains(e.Message.ChannelId))
-                            Gold(e);
-                        else
-                            SfwChannel(e);
-                        break;
-
-                    case "nsfw":
-                        Nsfw(e);
-                        break;
-*/
-                    case "music":
-                        Music(e);
-                        break;
-
-                    case "cid":
-                        Cid(e);
-                        break;
-
-                    case "skip":
-                        Skip(e);
-                        break;
-
-                    case "forceskip":
-                        AdminSkip(e);
-                        break;
-
-                    case "song":
-                        Song(e);
-                        break;
-/* Disabled because Neko.js
-                    case "kys":
-                    case "killyourself":
-                        Kys(e);
-                        break;
-
-                    case "notnow":
-                        NotNow(e);
-                        break;
-*/
-                    case "encore":
-                    case "ankouru":
-                    case "replay":
-                        VoteReplay(e);
-                        break;
-/* Disabled because Neko.js
-                    case "aicraievritaim":
-                    case "aicrai":
-                    case "aicraievritiem":
-                    case "icri":
-                    case "sadhorn":
-                        SadHorn(e);
-                        break;
-*/
-                    case "request":
-                        Request(e);
-                        break;
-
-                    case "playlist":
-                        Playlist(e);
-                        break;
-/* Disabled because Neko.js
-                    case "help":
-                    case "commands":
-                        Commands(e);
-                        break;
-*/
-
-                    case "color":
-                        Color(e);
-                        break;
-
-                    default:
-                        break;
-                }
-            }
-        }
-
-        private static async void RainbowThread()
-        {
-            while (client.State != DiscordClientState.Connected)
-            {
-                await Task.Delay(500);
-            }
-            Server server = client.GetServer("63296437932273664");
-            Role role = client.FindRoles(server, "@nekobot").FirstOrDefault();
-            Random random = new Random();
-            PackedColor color = new PackedColor(0);
-            byte[] bytes = new byte[3];
-            while (client.State == DiscordClientState.Connected)
-            {
-                random.NextBytes(bytes);
-                color.Red = bytes[0];
-                color.Green = bytes[1];
-                color.Blue = bytes[2];
-
-                await client.EditRole(role, color: color);
-                await Task.Delay(100);
-            }
-        }
-
-        private static async void Color(MessageEventArgs e)
-        {
-            if (permissions[2].Contains(e.Message.UserId) || permissions[3].Contains(e.Message.UserId))
-            {
-                Role role = client.FindRoles(e.Server, e.Message.Text.Split(' ')[1]).FirstOrDefault();
-                PackedColor color = new PackedColor(0);
-                color.Red = Convert.ToByte(e.Message.Text.Split(' ')[2]);
-                color.Green = Convert.ToByte(e.Message.Text.Split(' ')[3]);
-                color.Blue = Convert.ToByte(e.Message.Text.Split(' ')[4]);
-                try
-                {
-                    await client.EditRole(role, color: color);
-                    await client.SendMessage(e.Channel, "Role " + role.Name + "'s color has been changed.");
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex.Message);
-                }
-            }
-        }
-
-        private static void Playlist(MessageEventArgs e)
-        {
-            foreach (string id in streams)
-            {
-                if (e.Message.Channel.Server.VoiceChannels.Contains(client.GetChannel(id)))
-                {
-                    foreach (Member m in e.Message.Channel.Server.Members)
-                    {
-                        if (m.VoiceChannelId == id && m.UserId == e.Message.UserId)
-                        {
-                            string list = "Now Playing: " + Path.GetFileNameWithoutExtension(playing[id]) + System.Environment.NewLine + "Next songs:";
-                            for (int i = 0; i < playlist[id].Count; i++)
-                            {
-                                if (playlist[id][i].Item2 == "Request")
-                                {
-                                    list += System.Environment.NewLine + (i + 1).ToString() + ". **[" + playlist[id][i].Item2 + " by <@" + playlist[id][i].Item3 + ">]** " + playlist[id][i].Item1;
-                                }
-                                else
-                                {
-                                    list += System.Environment.NewLine + (i + 1).ToString() + ". **[" + playlist[id][i].Item2 + "]** " + playlist[id][i].Item1;
-                                }
-                                if (i == 9)
-                                    break;
-                            }
-                            client.SendMessage(e.Message.Channel, list);
-                        }
-                    }
-                }
-            }
-        }
-
-        private static void Request(MessageEventArgs e)
-        {
-            foreach (string id in streams)
-            {
-                if (e.Message.Channel.Server.VoiceChannels.Contains(client.GetChannel(id)))
-                {
-                    foreach (Member m in e.Message.Channel.Server.Members)
-                    {
-                        if (m.VoiceChannelId == id && m.UserId == e.Message.UserId)
-                        {
-                            try
-                            {
-                                bool requestfound = false;
-                                var files = from file in Directory.EnumerateFiles(@"E:\Sync\Music", "*.*").Where(s => musicexts.Contains(Path.GetExtension(s))) select new { File = file };
-                                foreach (var f in files)
-                                {
-                                    if (Path.GetFileNameWithoutExtension(f.File).ToLower().Contains(e.Message.Text.Substring(9).ToLower()))
-                                    {
-                                        int index = 0;
-                                        for (int i = 0; i < playlist[id].Count; i++)
-                                        {
-                                            if (playlist[id][i].Item2 == "Encore" || playlist[id][i].Item2 == "Request")
-                                            {
-                                                index++;
-                                            }
-                                        }
-                                        bool isAlreadyInPlaylist = false;
-                                        int songindex = 0;
-                                        for (int z = 0; z < playlist[id].Count; z++)
-                                        {
-                                            if (playlist[id][z].Item1 == Path.GetFileNameWithoutExtension(f.File))
-                                            {
-                                                isAlreadyInPlaylist = true;
-                                                songindex = z;
-                                            }
-                                        }
-                                        if (isAlreadyInPlaylist)
-                                        {
-                                            client.SendMessage(e.Message.Channel, "<@" + e.Message.UserId + "> Your request is already in the playlist at position " + (songindex+1).ToString() + ".", new string[] { e.Message.UserId });
-                                            return;
-                                        }
-                                        playlist[id].Insert(index, Tuple.Create(Path.GetFileNameWithoutExtension(f.File), "Request", e.Message.UserId));
-                                        client.SendMessage(e.Message.Channel, "<@" + e.Message.UserId + "> Your request has been added to the list.", new string[] { e.Message.UserId });
-                                        requestfound = true;
-                                        break;
-                                    }
-                                }
-                                if (!requestfound)
-                                {
-                                    client.SendMessage(e.Message.Channel, "<@" + e.Message.UserId + "> Your request was not found.", new string[] { e.Message.UserId });
-                                }
-                            }
-                            catch (Exception ex)
-                            {
-                                Console.WriteLine(ex.Message);
-                                client.SendMessage(e.Message.Channel, "<@" + e.Message.UserId + "> Your request wasn't added because it was invalid.", new string[] { e.Message.UserId });
-                                return;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        private static void VoteReplay(MessageEventArgs e)
-        {
-            foreach (string id in streams)
-            {
-                if (e.Message.Channel.Server.VoiceChannels.Contains(client.GetChannel(id)))
-                {
-                    int listeningcount = 0;
-                    foreach (Member m in e.Message.Channel.Server.Members)
-                    {
-                        if (m.VoiceChannelId == id && m.UserId != client.CurrentUserId)
-                        {
-                            listeningcount++;
-                        }
-                    }
-                    foreach (Member m in e.Message.Channel.Server.Members)
-                    {
-                        if (m.VoiceChannelId == id && m.UserId == e.Message.UserId)
-                        {
-                            if (!replay[id].Contains(e.Message.UserId))
-                            {
-                                replay[id].Add(e.Message.UserId);
-                                if (replay[id].Count >= Math.Ceiling((decimal)listeningcount / 2))
-                                {
-                                    client.SendMessage(e.Message.Channel, replay[id].Count + "/" + listeningcount + " votes to replay current song. 50%+ achieved, song will be replayed.");
-                                    encore[id] = true;
-                                }
-                                else
-                                {
-                                    client.SendMessage(e.Message.Channel, replay[id].Count + "/" + listeningcount + " votes to replay current song. (Needs 50%+ to replay)");
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        private static void SadHorn(MessageEventArgs e)
-        {
-            client.SendMessage(e.Message.Channel, "https://www.youtube.com/watch?v=0JAn8eShOo8");
-        }
-
-        private static void NotNow(MessageEventArgs e)
-        {
-            client.SendMessage(e.Message.Channel, "https://www.youtube.com/watch?v=2BZUzJfKFwM");
-        }
-
-        private static void Song(MessageEventArgs e)
-        {
-            foreach (string id in streams)
-            {
-                if (e.Message.Channel.Server.VoiceChannels.Contains(client.GetChannel(id)))
-                {
-                    foreach (Member m in e.Message.Channel.Server.Members)
-                    {
-                        if (m.VoiceChannelId == id && m.UserId == e.Message.UserId)
-                        {
-                            string title = "";
-                            TagLib.File song = TagLib.File.Create(playing[id]);
-                            if (song.Tag.Title != null && song.Tag.Title != "")
-                            {
-                                if (song.Tag.Performers != null)
-                                {
-                                    foreach (string p in song.Tag.Performers)
-                                    {
-                                        title += p + " ";
-                                    }
-                                }
-                                if (title != "")
-                                    title += "**-** ";
-                                title += song.Tag.Title;
-                            }
-                            else
-                            {
-                                title = Path.GetFileNameWithoutExtension(song.Name);
-                            }
-                            client.SendMessage(e.Message.Channel , "Song: " + title);
-                        }
-                    }
-                }
-            }
-        }
-
-        private static void AdminSkip(MessageEventArgs e)
-        {
-            if (permissions[1].Contains(e.Message.UserId) | permissions[2].Contains(e.Message.UserId) | permissions[3].Contains(e.Message.UserId))
-            {
-                foreach (string id in streams)
-                {
-                    if (e.Message.Channel.Server.VoiceChannels.Contains(client.GetChannel(id)))
-                    {
-                        foreach (Member m in e.Message.Channel.Server.Members)
-                        {
-                            if (m.VoiceChannelId == id && m.UserId == e.Message.UserId)
-                            {
-                                forceskip[id] = true;
-                                client.SendMessage(e.Message.Channel, "Skipping song.");
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        private static void Skip(MessageEventArgs e)
-        {
-            foreach (string id in streams)
-            {
-                if (e.Message.Channel.Server.VoiceChannels.Contains(client.GetChannel(id)))
-                {
-                    int listeningcount = 0;
-                    foreach (Member m in e.Message.Channel.Server.Members)
-                    {
-                        if (m.VoiceChannelId == id && m.UserId != client.CurrentUserId)
-                        {
-                            listeningcount++;
-                        }
-                    }
-                    foreach (Member m in e.Message.Channel.Server.Members)
-                    {
-                        if (m.VoiceChannelId == id && m.UserId == e.Message.UserId)
-                        {
-                            if (!votes[id].Contains(e.Message.UserId))
-                            {
-                                votes[id].Add(e.Message.UserId);
-                                if (votes[id].Count >= Math.Ceiling((decimal)listeningcount/2))
-                                {
-                                    client.SendMessage(e.Message.Channel, votes[id].Count + "/" + listeningcount + " votes to skip current song. 50%+ achieved, skipping song.");
-                                    skipsong[id] = true;
-                                }
-                                else
-                                {
-                                    client.SendMessage(e.Message.Channel, votes[id].Count + "/" + listeningcount + " votes to skip current song. (Needs 50%+ to skip)");
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        private static void Cid(MessageEventArgs e)
-        {
-            string mess = e.Message.Text.Substring(5);
-            IEnumerable<Channel> chans = e.Message.Channel.Server.Channels;
-            foreach (Channel c in chans)
-            {
-                if (c.Name.Contains(mess))
-                {
-                    client.SendMessage(e.Message.Channel, "Channel <#" + c.Id + "> (" + c.Id + ") is a " + c.Type + " channel.");
-                }
-            }
-        }
-
-        private static async void Music(MessageEventArgs e)
-        {
-            string mess = e.Message.Text.Substring(1);
-            string[] words = mess.Split(' ');
-            if (permissions[3].Contains(e.Message.UserId))
-            {
-                if (words[1].ToLower() == "on")
-                {
-                    if (words[2] != null)
-                    {
-                        Channel c = client.GetChannel(words[2]);
-                        if (c.Type == "voice")
-                        {
-                            streams.Add(c.Id);
-                            UpdateStreamChannels();
-                            Task.Run(() => StreamMusic(c.Id));
-                            await client.SendMessage(e.Message.Channel, "Channel " + c.Name + " added to music streaming channel list.");
-                        }
-                    }
-                }
-                else if (words[1].ToLower() == "off")
-                {
-                    if (words[2] != null)
-                    {
-                        Channel c = client.GetChannel(words[2]);
-                        if (c.Type == "voice")
-                        {
-                            if (streams.Contains(c.Id))
-                            {
-                                streams.Remove(c.Id);
-                                UpdateStreamChannels();
-                                await client.SendMessage(e.Message.Channel, "Channel " + c.Name + " removed from music streaming channel list.");
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        private static void SfwChannel(MessageEventArgs e)
-        {
-            string nsfwchans = "";
-            foreach (Channel c in e.Message.Channel.Server.Channels)
-            {
-                if (!sfw.Contains(c.Id) && c.Type != "voice")
-                    nsfwchans = nsfwchans + "<#" + c.Id + "> ";
-            }
-            if (nsfwchans != "")
-                client.SendMessage(e.Message.Channel, "<@" + e.Message.UserId + "> This channel doesn't allow nsfw commands. On this server, these channels allow it: " + nsfwchans, new string[] {e.Message.UserId});
-            else
-                client.SendMessage(e.Message.Channel, "<@" + e.Message.UserId + "> This channel doesn't allow nsfw commands.", new string[] { e.Message.UserId });
-        }
-
-        private static void Nsfw(MessageEventArgs e)
-        {
-            string mess = e.Message.Text.Substring(1).ToLower();
-            string[] words = mess.Split(' ');
-            if (words[1] == "status")
-            {
-                if (sfw.Contains(e.Message.ChannelId))
-                {
-                    client.SendMessage(e.Message.Channel, "Channel " + e.Message.Channel.Name + " has nsfw commands disabled.");
-                }
-                else
-                {
-                    client.SendMessage(e.Message.Channel, "Channel " + e.Message.Channel.Name + " has nsfw commands enabled.");
-                }
-            }
-            if (permissions[1].Contains(e.Message.UserId) | permissions[2].Contains(e.Message.UserId) | permissions[3].Contains(e.Message.UserId))
-            {
-                if (words[1] == "on")
-                {
-                    if (sfw.Contains(e.Message.ChannelId))
-                    {
-                        sfw.Remove(e.Message.ChannelId);
-                        UpdateChannels();
-                    }
-                    client.SendMessage(e.Message.Channel, "Channel " + e.Message.Channel.Name + " now has nsfw commands enabled.");
-                }
-                else if (words[1] == "off")
-                {
-                    if (!sfw.Contains(e.Message.ChannelId))
-                    {
-                        sfw.Add(e.Message.ChannelId);
-                        UpdateChannels();
-                    }
-                    client.SendMessage(e.Message.Channel, "Channel " + e.Message.Channel.Name + " now has nsfw commands disabled.");
-                }
-            }
-        }
-
-        public static async void Danbooru(MessageEventArgs e, string tag, int max)
-        {
-            int retry = 0;
-            Random rnd = new Random();
-            string sURL;
-            sURL = "https://danbooru.donmai.us/posts.json?tags=" + tag + "&limit=100&page=" + rnd.Next(1, max).ToString();
-            WebRequest wrGETURL;
-            wrGETURL = WebRequest.Create(sURL);
-            Stream objStream = null;
-            retry = 0;
-            while (retry < 5)
-            {
-                try
-                {
-                    objStream = (await wrGETURL.GetResponseAsync()).GetResponseStream();
-                    break;
-                }
-                catch (WebException ex)
-                {
-                    Console.WriteLine(ex.Message);
-                    await Task.Delay(5000);
-                }
-                retry++;
-                if (retry == 5)
-                    return;
-            }
-            StreamReader objReader = new StreamReader(objStream);
-            string sLine = "";
-            while (sLine != null)
-            {
-                sLine = objReader.ReadLine();
-                if (sLine != null)
-                    break;
-            }
-            dynamic result = Newtonsoft.Json.Linq.JArray.Parse(sLine);
-            retry = 0;
-            while (retry < 5)
-            {
-                try
-                {
-                    await client.SendMessage(e.Message.Channel, "https://danbooru.donmai.us" + result[rnd.Next(0, 100)].file_url.ToString());
-                    break;
-                }
-                catch (WebException ex)
-                {
-                    Console.WriteLine(ex.Message);
-                    await Task.Delay(5000);
-                }
-                retry++;
-                if (retry == 5)
-                    return;
-            }
-        }
-
-        public static async void Safebooru(MessageEventArgs e)
-        {
-            int count = 0;
-            int retry = 0;
-            Random rnd = new Random();
-            HttpWebRequest wr;
-            HttpWebResponse res;
-            XmlDocument xdoc = new XmlDocument();
-            retry = 0;
-            while (retry < 5)
-            {
-                try
-                {
-                    wr = WebRequest.Create("http://safebooru.org/index.php?page=dapi&s=post&q=index&tags=" + e.Message.RawText.Substring(10)) as HttpWebRequest;
-                    res = wr.GetResponse() as HttpWebResponse;
-                    xdoc.Load(res.GetResponseStream());
-                    break;
-                }
-                catch (WebException ex)
-                {
-                    Console.WriteLine(ex.Message);
-                    await Task.Delay(5000);
-                }
-                catch (HttpRequestException we)
-                {
-                    Console.WriteLine(we.Message);
-                    await Task.Delay(5000);
-                }
-                catch (Exception aex)
-                {
-                    Console.WriteLine(aex.Message);
-                    await Task.Delay(5000);
-                }
-                retry++;
-                if (retry == 5)
-                    return;
-            }
-            XmlNode posts = xdoc.SelectSingleNode("posts");
-            count = int.Parse(posts.Attributes["count"].Value.ToString());
-            if (count < 1)
-            {
-                retry = 0;
-                while (retry < 5)
-                {
-                    try
-                    {
-                        await client.SendMessage(e.Message.Channel, "There isn't anything under the tag(s) " + e.Message.RawText.Substring(10) + " on safebooru.");
-                        return;
-                    }
-                    catch (WebException ex)
-                    {
-                        Console.WriteLine(ex.Message);
-                        await Task.Delay(5000);
-                    }
-                    catch (HttpRequestException we)
-                    {
-                        Console.WriteLine(we.Message);
-                        await Task.Delay(5000);
-                    }
-                    catch (Exception aex)
-                    {
-                        Console.WriteLine(aex.Message);
-                        await Task.Delay(5000);
-                    }
-                    retry++;
-                    if (retry == 5)
-                        return;
-                }
-            }
-            string sURL;
-            sURL = "http://safebooru.org/index.php?page=dapi&s=post&q=index&limit=1&tags=" + e.Message.RawText.Substring(10) + "&pid=" + rnd.Next(0, count).ToString();
-            WebRequest wrGETURL;
-            wrGETURL = WebRequest.Create(sURL);
-            Stream objStream = null;
-            retry = 0;
-            while (retry < 5)
-            {
-                try
-                {
-                    objStream = (await wrGETURL.GetResponseAsync()).GetResponseStream();
-                    break;
-                }
-                catch (WebException ex)
-                {
-                    Console.WriteLine(ex.Message);
-                    await Task.Delay(5000);
-                }
-                catch (HttpRequestException we)
-                {
-                    Console.WriteLine(we.Message);
-                    await Task.Delay(5000);
-                }
-                catch (Exception aex)
-                {
-                    Console.WriteLine(aex.Message);
-                    await Task.Delay(5000);
-                }
-                retry++;
-                if (retry == 5)
-                    return;
-            }
-            StreamReader objReader = new StreamReader(objStream);
-            string sLine = "";
-            sLine = objReader.ReadToEnd();
-            XmlDocument xml = new XmlDocument();
-            xml.LoadXml(sLine);
-            dynamic result = Newtonsoft.Json.Linq.JObject.Parse(JsonConvert.SerializeXmlNode(xml));
-            string file_url = "";
-            try
-            {
-                foreach (string key in result.posts.post)
-                {
-                    if (key.Contains("http://"))
-                    {
-                        file_url = key;
-                        break;
-                    }
-                }
-            }
-            catch (Exception aex)
-            {
-                Console.WriteLine(aex.Message);
-                return;
-            }
-            retry = 0;
-            while (retry < 5)
-            {
-                try
-                {
-                    await client.SendMessage(e.Message.Channel, file_url);
-                    break;
-                }
-                catch (WebException ex)
-                {
-                    Console.WriteLine(ex.Message);
-                    await Task.Delay(5000);
-                }
-                catch (HttpRequestException we)
-                {
-                    Console.WriteLine(we.Message);
-                    await Task.Delay(5000);
-                }
-                catch (Exception aex)
-                {
-                    Console.WriteLine(aex.Message);
-                    await Task.Delay(5000);
-                }
-                retry++;
-                if (retry == 5)
-                    return;
-            }
-        }
-
-        public static async void Gelbooru(MessageEventArgs e)
-        {
-            int count = 0;
-            int retry = 0;
-            Random rnd = new Random();
-            HttpWebRequest wr;
-            HttpWebResponse res;
-            XmlDocument xdoc = new XmlDocument();
-            retry = 0;
-            while (retry < 5)
-            {
-                try
-                {
-                    wr = WebRequest.Create("http://gelbooru.com/index.php?page=dapi&s=post&q=index&tags=" + e.Message.RawText.Substring(9)) as HttpWebRequest;
-                    res = wr.GetResponse() as HttpWebResponse;
-                    xdoc.Load(res.GetResponseStream());
-                    break;
-                }
-                catch (WebException ex)
-                {
-                    Console.WriteLine(ex.Message);
-                    await Task.Delay(5000);
-                }
-                catch (HttpRequestException we)
-                {
-                    Console.WriteLine(we.Message);
-                    await Task.Delay(5000);
-                }
-                catch (Exception aex)
-                {
-                    Console.WriteLine(aex.Message);
-                    await Task.Delay(5000);
-                }
-                retry++;
-                if (retry == 5)
-                    return;
-            }
-            XmlNode posts = xdoc.SelectSingleNode("posts");
-            count = int.Parse(posts.Attributes["count"].Value.ToString());
-            if (count < 1)
-            {
-                retry = 0;
-                while (retry < 5)
-                {
-                    try
-                    {
-                        await client.SendMessage(e.Message.Channel, "There isn't anything under the tag(s) " + e.Message.RawText.Substring(9) + " on gelbooru.");
-                        return;
-                    }
-                    catch (WebException ex)
-                    {
-                        Console.WriteLine(ex.Message);
-                        await Task.Delay(5000);
-                    }
-                    catch (HttpRequestException we)
-                    {
-                        Console.WriteLine(we.Message);
-                        await Task.Delay(5000);
-                    }
-                    catch (Exception aex)
-                    {
-                        Console.WriteLine(aex.Message);
-                        await Task.Delay(5000);
-                    }
-                    retry++;
-                    if (retry == 5)
-                        return;
-                }
-            }
-            string sURL;
-            sURL = "http://gelbooru.com/index.php?page=dapi&s=post&q=index&limit=1&tags=" + e.Message.RawText.Substring(9) + "&pid=" + rnd.Next(0, count).ToString();
-            WebRequest wrGETURL;
-            wrGETURL = WebRequest.Create(sURL);
-            Stream objStream = null;
-            retry = 0;
-            while (retry < 5)
-            {
-                try
-                {
-                    objStream = (await wrGETURL.GetResponseAsync()).GetResponseStream();
-                    break;
-                }
-                catch (WebException ex)
-                {
-                    Console.WriteLine(ex.Message);
-                    await Task.Delay(5000);
-                }
-                catch (HttpRequestException we)
-                {
-                    Console.WriteLine(we.Message);
-                    await Task.Delay(5000);
-                }
-                catch (Exception aex)
-                {
-                    Console.WriteLine(aex.Message);
-                    await Task.Delay(5000);
-                }
-                retry++;
-                if (retry == 5)
-                    return;
-            }
-            StreamReader objReader = new StreamReader(objStream);
-            string sLine = "";
-            sLine = objReader.ReadToEnd();
-            XmlDocument xml = new XmlDocument();
-            xml.LoadXml(sLine);
-            dynamic result = Newtonsoft.Json.Linq.JObject.Parse(JsonConvert.SerializeXmlNode(xml));
-            string file_url = "";
-            try
-            {
-                foreach (string key in result.posts.post)
-                {
-                    if (key.Contains("http://"))
-                    {
-                        file_url = key;
-                        break;
-                    }
-                }
-            }
-            catch (Exception aex)
-            {
-                Console.WriteLine(aex.Message);
-                return;
-            }
-            retry = 0;
-            while (retry < 5)
-            {
-                try
-                {
-                    await client.SendMessage(e.Message.Channel, file_url);
-                    break;
-                }
-                catch (WebException ex)
-                {
-                    Console.WriteLine(ex.Message);
-                    await Task.Delay(5000);
-                }
-                catch (HttpRequestException we)
-                {
-                    Console.WriteLine(we.Message);
-                    await Task.Delay(5000);
-                }
-                catch (Exception aex)
-                {
-                    Console.WriteLine(aex.Message);
-                    await Task.Delay(5000);
-                }
-                retry++;
-                if (retry == 5)
-                    return;
-            }
-        }
-
-        public static async void Rule34(MessageEventArgs e)
-        {
-            int count = 0;
-            int retry = 0;
-            Random rnd = new Random();
-            HttpWebRequest wr;
-            HttpWebResponse res;
-            XmlDocument xdoc = new XmlDocument();
-            retry = 0;
-            while (retry < 5)
-            {
-                try
-                {
-                    wr = WebRequest.Create("http://rule34.xxx/index.php?page=dapi&s=post&q=index&tags=" + e.Message.RawText.Substring(8)) as HttpWebRequest;
-                    res = wr.GetResponse() as HttpWebResponse;
-                    xdoc.Load(res.GetResponseStream());
-                    break;
-                }
-                catch (WebException ex)
-                {
-                    Console.WriteLine(ex.Message);
-                    await Task.Delay(5000);
-                }
-                catch (HttpRequestException we)
-                {
-                    Console.WriteLine(we.Message);
-                    await Task.Delay(5000);
-                }
-                catch (Exception aex)
-                {
-                    Console.WriteLine(aex.Message);
-                    await Task.Delay(5000);
-                }
-                retry++;
-                if (retry == 5)
-                    return;
-            }
-            XmlNode posts = xdoc.SelectSingleNode("posts");
-            count = int.Parse(posts.Attributes["count"].Value.ToString());
-            if (count < 1)
-            {
-                retry = 0;
-                while (retry < 5)
-                {
-                    try
-                    {
-                        await client.SendMessage(e.Message.Channel, "There isn't anything under the tag(s) " + e.Message.RawText.Substring(8) + " on rule34.");
-                        return;
-                    }
-                    catch (WebException ex)
-                    {
-                        Console.WriteLine(ex.Message);
-                        await Task.Delay(5000);
-                    }
-                    catch (HttpRequestException we)
-                    {
-                        Console.WriteLine(we.Message);
-                        await Task.Delay(5000);
-                    }
-                    catch (Exception aex)
-                    {
-                        Console.WriteLine(aex.Message);
-                        await Task.Delay(5000);
-                    }
-                    retry++;
-                    if (retry == 5)
-                        return;
-                }
-            }
-            string sURL;
-            sURL = "http://rule34.xxx/index.php?page=dapi&s=post&q=index&limit=1&tags=" + e.Message.RawText.Substring(8) + "&pid=" + rnd.Next(0, count).ToString();
-            WebRequest wrGETURL;
-            wrGETURL = WebRequest.Create(sURL);
-            Stream objStream = null;
-            retry = 0;
-            while (retry < 5)
-            {
-                try
-                {
-                    objStream = (await wrGETURL.GetResponseAsync()).GetResponseStream();
-                    break;
-                }
-                catch (WebException ex)
-                {
-                    Console.WriteLine(ex.Message);
-                    await Task.Delay(5000);
-                }
-                catch (HttpRequestException we)
-                {
-                    Console.WriteLine(we.Message);
-                    await Task.Delay(5000);
-                }
-                catch (Exception aex)
-                {
-                    Console.WriteLine(aex.Message);
-                    await Task.Delay(5000);
-                }
-                retry++;
-                if (retry == 5)
-                    return;
-            }
-            StreamReader objReader = new StreamReader(objStream);
-            string sLine = "";
-            sLine = objReader.ReadToEnd();
-            XmlDocument xml = new XmlDocument();
-            xml.LoadXml(sLine);
-            dynamic result = Newtonsoft.Json.Linq.JObject.Parse(JsonConvert.SerializeXmlNode(xml));
-            string file_url = "";
-            try
-            {
-                foreach (string key in result.posts.post)
-                {
-                    if (key.Contains("http://"))
-                    {
-                        file_url = key;
-                        break;
-                    }
-                }
-            }
-            catch (Exception aex)
-            {
-                Console.WriteLine(aex.Message);
-                return;
-            }
-            retry = 0;
-            while (retry < 5)
-            {
-                try
-                {
-                    await client.SendMessage(e.Message.Channel, file_url);
-                    break;
-                }
-                catch (WebException ex)
-                {
-                    Console.WriteLine(ex.Message);
-                    await Task.Delay(5000);
-                }
-                catch (HttpRequestException we)
-                {
-                    Console.WriteLine(we.Message);
-                    await Task.Delay(5000);
-                }
-                catch (Exception aex)
-                {
-                    Console.WriteLine(aex.Message);
-                    await Task.Delay(5000);
-                }
-                retry++;
-                if (retry == 5)
-                    return;
-            }
-        }
-
-        public static async void Kona(MessageEventArgs e)
-        {
-            int count = 0;
-            int retry = 0;
-            Random rnd = new Random();
-            HttpWebRequest wr;
-            HttpWebResponse res;
-            XmlDocument xdoc = new XmlDocument();
-            while (retry < 5)
-            {
-                try
-                {
-                    wr = WebRequest.Create("http://konachan.com/post.xml?tags=" + e.Message.RawText.Substring(6)) as HttpWebRequest;
-                    res = wr.GetResponse() as HttpWebResponse;
-                    xdoc.Load(res.GetResponseStream());
-                    break;
-                }
-                catch (WebException ex)
-                {
-                    Console.WriteLine(ex.Message);
-                    await Task.Delay(5000);
-                }
-                catch (HttpRequestException we)
-                {
-                    Console.WriteLine(we.Message);
-                    await Task.Delay(5000);
-                }
-                catch (Exception aex)
-                {
-                    Console.WriteLine(aex.Message);
-                    await Task.Delay(5000);
-                }
-                retry++;
-                if (retry == 5)
-                    return;
-            }
-            XmlNode posts = xdoc.SelectSingleNode("posts");
-            count = int.Parse(posts.Attributes["count"].Value.ToString());
-            if (count < 1)
-            {
-                retry = 0;
-                while (retry < 5)
-                {
-                    try
-                    {
-                        await client.SendMessage(e.Message.Channel, "There isn't anything under the tag(s) " + e.Message.RawText.Substring(6) + " on konachan.");
-                        return;
-                    }
-                    catch (WebException ex)
-                    {
-                        Console.WriteLine(ex.Message);
-                        await Task.Delay(5000);
-                    }
-                    catch (HttpRequestException we)
-                    {
-                        Console.WriteLine(we.Message);
-                        await Task.Delay(5000);
-                    }
-                    catch (Exception aex)
-                    {
-                        Console.WriteLine(aex.Message);
-                        await Task.Delay(5000);
-                    }
-                    retry++;
-                    if (retry == 5)
-                        return;
-                }
-            }
-            string sURL;
-            sURL = "http://konachan.com/post.json?tags=" + e.Message.RawText.Substring(6) + "&limit=1&page=" + rnd.Next(1, count + 1).ToString();
-            WebRequest wrGETURL;
-            wrGETURL = WebRequest.Create(sURL);
-            Stream objStream = null;
-            retry = 0;
-            while (retry < 5)
-            {
-                try
-                {
-                    objStream = (await wrGETURL.GetResponseAsync()).GetResponseStream();
-                    break;
-                }
-                catch (WebException ex)
-                {
-                    Console.WriteLine(ex.Message);
-                    await Task.Delay(5000);
-                }
-                catch (HttpRequestException we)
-                {
-                    Console.WriteLine(we.Message);
-                    await Task.Delay(5000);
-                }
-                catch (Exception aex)
-                {
-                    Console.WriteLine(aex.Message);
-                    await Task.Delay(5000);
-                }
-                retry++;
-                if (retry == 5)
-                    return;
-            }
-            StreamReader objReader = new StreamReader(objStream);
-            string sLine = "";
-            while (sLine != null)
-            {
-                sLine = objReader.ReadLine();
-                if (sLine != null)
-                    break;
-            }
-            dynamic result = Newtonsoft.Json.Linq.JArray.Parse(sLine);
-            retry = 0;
-            while (retry < 5)
-            {
-                try
-                {
-                    await client.SendMessage(e.Message.Channel, result[0].file_url.ToString());
-                    break;
-                }
-                catch (WebException ex)
-                {
-                    Console.WriteLine(ex.Message);
-                    await Task.Delay(5000);
-                }
-                catch (HttpRequestException we)
-                {
-                    Console.WriteLine(we.Message);
-                    await Task.Delay(5000);
-                }
-                catch (Exception aex)
-                {
-                    Console.WriteLine(aex.Message);
-                    await Task.Delay(5000);
-                }
-                retry++;
-                if (retry == 5)
-                    return;
-            }
-        }
-
-        public static void Say(MessageEventArgs e)
-        {
-            client.SendMessage(e.Message.Channel, e.Message.RawText.Substring(5), e.Message.MentionIds);
-        }
-
-        public static void Owner(MessageEventArgs e)
-        {
-            if (permissions[3].Contains(e.Message.UserId))
-            {
-                List<User> users = new List<User> { };
-                foreach (string mention in e.Message.MentionIds)
-                {
-                    users.Add(client.GetUser(mention));
-                }
-                foreach (User user in users)
-                {
-                    if (user != null)
-                    {
-                        if (permissions[0].Contains(user.Id))
-                            permissions[0].Remove(user.Id);
-                        if (permissions[1].Contains(user.Id))
-                            permissions[1].Remove(user.Id);
-                        if (permissions[2].Contains(user.Id))
-                            permissions[2].Remove(user.Id);
-                        if (permissions[3].Contains(user.Id))
-                            permissions[3].Remove(user.Id);
-                        permissions[3].Add(user.Id);
-                        UpdatePermissionFiles();
-                        Console.WriteLine(user.Name + " is now an owner! (Permission level is now 3)");
-                        client.SendMessage(e.Message.Channel, user.Name + " is now an owner! (Permission level is now 3)");
-                    }
-                }
-            }
-        }
-
-        public static void Deowner(MessageEventArgs e)
-        {
-            if (permissions[3].Contains(e.Message.UserId))
-            {
-                List<User> users = new List<User> { };
-                foreach (string mention in e.Message.MentionIds)
-                {
-                    users.Add(client.GetUser(mention));
-                }
-                foreach (User user in users)
-                {
-                    if (user != null)
-                    {
-                        if (permissions[3].Contains(user.Id))
-                        {
-                            permissions[3].Remove(user.Id);
-                            permissions[0].Add(user.Id);
-                            UpdatePermissionFiles();
-                            Console.WriteLine(user.Name + " is no longer an owner! (Permission level is now 0)");
-                            client.SendMessage(e.Message.Channel, user.Name + " is no longer an owner! (Permission level is now 0)");
-                        }
-                        else
-                        {
-                            client.SendMessage(e.Message.Channel, user.Name + " is not an owner!");
-                        }
-                    }
-                }
-            }
-        }
-
-        public static void Admin(MessageEventArgs e)
-        {
-            if (permissions[3].Contains(e.Message.UserId))
-            {
-                List<User> users = new List<User> { };
-                foreach (string mention in e.Message.MentionIds)
-                {
-                    users.Add(client.GetUser(mention));
-                }
-                foreach (User user in users)
-                {
-                    if (user != null)
-                    {
-                        if (!permissions[3].Contains(user.Id))
-                        {
-                            if (permissions[0].Contains(user.Id))
-                                permissions[0].Remove(user.Id);
-                            if (permissions[1].Contains(user.Id))
-                                permissions[1].Remove(user.Id);
-                            if (permissions[2].Contains(user.Id))
-                                permissions[2].Remove(user.Id);
-                            permissions[2].Add(user.Id);
-                            UpdatePermissionFiles();
-                            Console.WriteLine(user.Name + " is now an admin! (Permission level is now 2)");
-                            client.SendMessage(e.Message.Channel, user.Name + " is now an admin! (Permission level is now 2)");
-                        }
-                        else
-                        {
-                            client.SendMessage(e.Message.Channel, "The !admin command cannot be used on an owner!");
-                        }
-                    }
-                }
-            }
-        }
-
-        public static void Deadmin(MessageEventArgs e)
-        {
-            if (permissions[3].Contains(e.Message.UserId))
-            {
-                List<User> users = new List<User> { };
-                foreach (string mention in e.Message.MentionIds)
-                {
-                    users.Add(client.GetUser(mention));
-                }
-                foreach (User user in users)
-                {
-                    if (user != null)
-                    {
-                        if (permissions[2].Contains(user.Id) && !permissions[3].Contains(user.Id))
-                        {
-                            permissions[2].Remove(user.Id);
-                            permissions[0].Add(user.Id);
-                            UpdatePermissionFiles();
-                            Console.WriteLine(user.Name + " is no longer an admin! (Permission level is now 0)");
-                            client.SendMessage(e.Message.Channel, user.Name + " is no longer an admin! (Permission level is now 0)");
-                        }
-                        else
-                        {
-                            client.SendMessage(e.Message.Channel, user.Name + " is not an admin!");
-                        }
-                    }
-                }
-            }
-        }
-
-        public static void Mod(MessageEventArgs e)
-        {
-            if (permissions[3].Contains(e.Message.UserId) || permissions[2].Contains(e.Message.UserId))
-            {
-                List<User> users = new List<User> { };
-                foreach (string mention in e.Message.MentionIds)
-                {
-                    users.Add(client.GetUser(mention));
-                }
-                foreach (User user in users)
-                {
-                    if (user != null)
-                    {
-                        if (!permissions[3].Contains(user.Id) && !permissions[2].Contains(user.Id))
-                        {
-                            if (permissions[0].Contains(user.Id))
-                                permissions[0].Remove(user.Id);
-                            if (permissions[1].Contains(user.Id))
-                                permissions[1].Remove(user.Id);
-                            permissions[1].Add(user.Id);
-                            UpdatePermissionFiles();
-                            Console.WriteLine(user.Name + " is now a mod! (Permission level is now 1)");
-                            client.SendMessage(e.Message.Channel, user.Name + " is now a mod! (Permission level is now 1)");
-                        }
-                        else
-                        {
-                            client.SendMessage(e.Message.Channel, "The !mod command cannot be used on an admin or an owner!");
-                        }
-                    }
-                }
-            }
-        }
-
-        public static void Demod(MessageEventArgs e)
-        {
-            if (permissions[3].Contains(e.Message.UserId) || permissions[2].Contains(e.Message.UserId))
-            {
-                List<User> users = new List<User> { };
-                foreach (string mention in e.Message.MentionIds)
-                {
-                    users.Add(client.GetUser(mention));
-                }
-                foreach (User user in users)
-                {
-                    if (user != null)
-                    {
-                        if (permissions[1].Contains(user.Id) && !permissions[3].Contains(user.Id) && !permissions[2].Contains(user.Id))
-                        {
-                            permissions[1].Remove(user.Id);
-                            permissions[0].Add(user.Id);
-                            UpdatePermissionFiles();
-                            Console.WriteLine(user.Name + " is no longer a mod! (Permission level is now 0)");
-                            client.SendMessage(e.Message.Channel, user.Name + " is no longer a mod! (Permission level is now 0)");
-                        }
-                        else
-                        {
-                            client.SendMessage(e.Message.Channel, user.Name + " is not a mod!");
-                        }
-                    }
-                }
-            }
-        }
-
-        public static void AcceptInvitation(MessageEventArgs e)
-        {
-            if (permissions[3].Contains(e.Message.UserId) || permissions[2].Contains(e.Message.UserId) || permissions[1].Contains(e.Message.UserId))
-            {
-                string[] words = e.Message.Text.Substring(1).Split(' ');
-                if (1 < words.Length)
-                {
-                    try
-                    {
-                        client.AcceptInvite(words[1]);
-                        client.SendMessage(e.Message.Channel, "Invitation accepted!");
-                    }
-                    catch
-                    {
-                        client.SendMessage(e.Message.Channel, "Invitation invalid!");
-                    }
-                }
-            }
-        }
-
-        public static void Status(MessageEventArgs e)
-        {
-            if (e.Message.Channel.IsPrivate)
-            {
-                client.SendMessage(e.Message.Channel, "I work!");
-            }
-            else
-            {
-                client.SendMessage(e.Message.Channel, "<@" + e.Message.UserId + "> I work!", new string[] { e.Message.UserId });
-            }
-        }
-
-        public static void WhereAmI(MessageEventArgs e)
-        {
-            if (!e.Message.Channel.IsPrivate)
-            {
-                Discord.Server server = client.GetServer(e.Message.Channel.ServerId);
-                string sowner = "";
-                foreach (var member in server.Members)
-                    if (member.UserId == server.OwnerId)
-                        sowner = member.User.Name;
-                string whereami = String.Format("You are currently in *{0}* ({1}) on server *{2}* ({3}) owned by {4}.", e.Message.Channel.Name, e.Message.ChannelId, server.Name, server.Id, sowner);
-                client.SendMessage(e.Message.ChannelId, whereami);
-            }
-            else
-            {
-                string whereami = String.Format("You are currently in a private message with me, baka.");
-                client.SendMessage(e.Message.ChannelId, whereami);
-            }
-        }
-
-        public static void WhoIs(MessageEventArgs e)
-        {
-            //!whois Username
-            if (!e.Message.Channel.IsPrivate)
-            {
-                string username = e.Message.Text.Substring(7).Split(' ')[0];
-                Console.WriteLine("Whois was invoked on: " + username);
-                Discord.Server foundServer = client.GetServer(e.Message.Channel.ServerId);
-                if (foundServer != null)
-                {
-                    foreach (var member in foundServer.Members)
-                    {
-                        if (member.User.Name.ToLower() == username.ToLower())
-                        {
-                            Discord.User foundMember = member.User;
-                            int permission = 0;
-                            if (permissions[3].Contains(foundMember.Id))
-                                permission = 3;
-                            else if (permissions[2].Contains(foundMember.Id))
-                                permission = 2;
-                            else if (permissions[1].Contains(foundMember.Id))
-                                permission = 1;
-                            else if (permissions[0].Contains(foundMember.Id))
-                                permission = 0;
-                            if (member.UserId != client.CurrentUserId)
-                                client.SendMessage(e.Message.Channel, string.Format("{0}'s user id is {1} and his/her permission level to me is {2}.", foundMember.Name, foundMember.Id, permission.ToString()));
-                            else
-                                client.SendMessage(e.Message.Channel, "My id is " + client.CurrentUserId + ".");
-                            return;
-                        }
-                    }
-                }
-            }
-            else
-            {
-                client.SendMessage(e.Message.Channel, "Sorry, I can't do this in a private message.");
-            }
-        }
-
-        public static void SelfDestruct(MessageEventArgs e)
-        {
-            if (permissions[3].Contains(e.Message.UserId))
-            {
-                client.SendMessage(e.Message.Channel, "Bye!");
-                client.Disconnect();
-                Environment.Exit(0);
-            }
-            else
-            {
-                if (e.Message.Channel.IsPrivate)
-                {
-                    client.SendMessage(e.Message.Channel, "Wh-why? You don't like me? :c");
-                }
-                else
-                {
-                    client.SendMessage(e.Message.Channel, "<@" + e.Message.UserId + "> Wh-why? You don't like me? :c", new string[] { e.Message.UserId });
-                }
-            }
-        }
-
-        public static void Leave(MessageEventArgs e)
-        {
-            if (permissions[2].Contains(e.Message.UserId) || permissions[3].Contains(e.Message.UserId))
-            {
-                client.SendMessage(e.Message.Channel, "Bye " + e.Message.Channel.Name + "!");
-                client.LeaveServer(e.Message.Channel.Server);
-            }
-            else
-            {
-                if (e.Message.Channel.IsPrivate)
-                {
-                    client.SendMessage(e.Message.Channel, "Wh-why? You don't like me? :c");
-                }
-                else
-                {
-                    client.SendMessage(e.Message.Channel, "<@" + e.Message.UserId + "> Wh-why? You don't like me? :c", new string[] { e.Message.UserId });
-                }
-            }
-        }
-
-        public static void Ping(MessageEventArgs e)
-        {
-            client.SendMessage(e.Message.Channel, "Pong!");
-        }
-
-        public static async void Quote(MessageEventArgs e)
-        {
-            int retry = 0;
-            string sURL;
-            sURL = "https://julxzs.website/api/quote";
-            WebRequest wrGETURL;
-            wrGETURL = WebRequest.Create(sURL);
-            ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls | SecurityProtocolType.Tls12;
-            ServicePointManager.ServerCertificateValidationCallback = delegate { return true; };
-            Stream objStream = null;
-            retry = 0;
-            while (retry < 5)
-            {
-                try
-                {
-                    objStream = (await wrGETURL.GetResponseAsync()).GetResponseStream();
-                    break;
-                }
-                catch (WebException ex)
-                {
-                    Console.WriteLine(ex.Message);
-                    await Task.Delay(5000);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex.Message);
-                    await Task.Delay(5000);
-                }
-                retry++;
-                if (retry == 5)
-                    return;
-            }
-            StreamReader objReader = new StreamReader(objStream);
-            string sLine = "";
-            while (sLine != null)
-            {
-                sLine = objReader.ReadLine();
-                if (sLine != null)
-                    break;
-            }
-            dynamic result = Newtonsoft.Json.Linq.JObject.Parse(sLine);
-            retry = 0;
-            while (retry < 5)
-            {
-                try
-                {
-                    await client.SendMessage(e.Message.Channel, "\"" + result.quote.quote + "\" - " + result.quote.author + " " + result.quote.date);
-                    break;
-                }
-                catch (WebException ex)
-                {
-                    Console.WriteLine(ex.Message);
-                    await Task.Delay(5000);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex.Message);
-                    await Task.Delay(5000);
-                }
-                retry++;
-                if (retry == 5)
-                    return;
-            }
-        }
-
-        public static void Pet(MessageEventArgs e)
-        {
-            string reply = "";
-            if (e.Message.MentionIds.Count<string>() > 0 || e.Message.IsMentioningEveryone)
-            {
-                reply = reply + "<@" + e.Message.UserId + "> *pets* ";
-                List<string> mentions = new List<string>() { };
-                mentions.Add(e.Message.UserId);
-                foreach (string m in e.Message.MentionIds)
-                {
-                    mentions.Add(m);
-                }
-                if (e.Message.IsMentioningEveryone)
-                {
-                    reply = reply + "@everyone ! *purrs*";
-                }
-                else
-                {
-                    foreach (string m in e.Message.MentionIds)
-                    {
-                        reply = reply + "<@" + m + "> ";
-                    }
-                    reply = reply + "! ";
-                }
-                if (e.Message.IsMentioningMe && !e.Message.IsMentioningEveryone)
-                {
-                    reply = reply + "*purrs*";
-                }
-                client.SendMessage(e.Message.Channel, reply, mentions.ToArray());
-            }
-            else
-            {
-                client.SendMessage(e.Message.Channel, "*purrs*");
-            }
-        }
-
-        public static void Nya(MessageEventArgs e)
-        {
-            client.SendMessage(e.Message.Channel, "Nyaaa~");
-        }
-
-        public static void Poi(MessageEventArgs e)
-        {
-            client.SendMessage(e.Message.Channel, "Poi!");
-        }
-
-        public static void Rand(MessageEventArgs e)
-        {
-            string[] words = e.Message.Text.Substring(1).Split(' ');
-            int x = 1;
-            int y = 101;
-            int z;
-            if (1 < words.Length)
-            {
-                if (int.TryParse(words[1], out z))
-                {
-                    x = int.Parse(words[1]);
-                }
-                if (2 < words.Length)
-                {
-                    if (int.TryParse(words[2], out z))
-                    {
-                        y = int.Parse(words[2]);
-                        y++;
-                    }
-                }
-                else
-                {
-                    y = x;
-                    x = 1;
-                }
-            }
-            if (y < x)
-            {
-                z = x;
-                x = y;
-                y = z;
-            }
-            else if (x == y)
-            {
-                y++;
-            }
-            Random rnd = new Random();
-            if (e.Message.Channel.IsPrivate)
-            {
-                client.SendMessage(e.Message.Channel, rnd.Next(x, y).ToString());
-            }
-            else
-            {
-                client.SendMessage(e.Message.Channel, "<@" + e.Message.UserId + "> " + rnd.Next(x, y).ToString(), new string[] { e.Message.UserId });
-            }
-        }
-
-        public static async void Neko(MessageEventArgs e)
-        {
-            int retry = 0;
-            string sURL;
-            sURL = "https://lewdchan.com/neko/src/list.php";
-            WebRequest wrGETURL;
-            wrGETURL = WebRequest.Create(sURL);
-            Stream objStream = null;
-            retry = 0;
-            while (retry < 5)
-            {
-                try
-                {
-                    objStream = (await wrGETURL.GetResponseAsync()).GetResponseStream();
-                    break;
-                }
-                catch (WebException ex)
-                {
-                    Console.WriteLine(ex.Message);
-                    await Task.Delay(5000);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex.Message);
-                    await Task.Delay(5000);
-                }
-                retry++;
-                if (retry == 5)
-                    return;
-            }
-            StreamReader objReader = new StreamReader(objStream);
-            string sLine = "";
-            List<string> files = new List<string>();
-            while (sLine != null)
-            {
-                sLine = objReader.ReadLine();
-                if (sLine != null && StringExtension.GetLast(sLine, 4) != "webm")
-                    files.Add(sLine);
-            }
-            Random rnd = new Random();
-            retry = 0;
-            while (retry < 5)
-            {
-                try
-                {
-                    await client.SendMessage(e.Message.Channel, "https://lewdchan.com/neko/src/" + files[rnd.Next(0, files.Count)]);
-                    break;
-                }
-                catch (WebException ex)
-                {
-                    Console.WriteLine(ex.Message);
-                    await Task.Delay(5000);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex.Message);
-                    await Task.Delay(5000);
-                }
-                retry++;
-                if (retry == 5)
-                    return;
-            }
-        }
-
-        public static async void Kitsune(MessageEventArgs e)
-        {
-            int retry = 0;
-            string sURL;
-            sURL = "https://lewdchan.com/kitsune/src/list.php";
-            WebRequest wrGETURL;
-            wrGETURL = WebRequest.Create(sURL);
-            Stream objStream = null;
-            retry = 0;
-            while (retry < 5)
-            {
-                try
-                {
-                    objStream = (await wrGETURL.GetResponseAsync()).GetResponseStream();
-                    break;
-                }
-                catch (WebException ex)
-                {
-                    Console.WriteLine(ex.Message);
-                    await Task.Delay(5000);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex.Message);
-                    await Task.Delay(5000);
-                }
-                retry++;
-                if (retry == 5)
-                    return;
-            }
-            StreamReader objReader = new StreamReader(objStream);
-            string sLine = "";
-            List<string> files = new List<string>();
-            while (sLine != null)
-            {
-                sLine = objReader.ReadLine();
-                if (sLine != null && StringExtension.GetLast(sLine, 4) != "webm")
-                    files.Add(sLine);
-            }
-            Random rnd = new Random();
-            retry = 0;
-            while (retry < 5)
-            {
-                try
-                {
-                    await client.SendMessage(e.Message.Channel, "https://lewdchan.com/kitsune/src/" + files[rnd.Next(0, files.Count)]);
-                    break;
-                }
-                catch (WebException ex)
-                {
-                    Console.WriteLine(ex.Message);
-                    await Task.Delay(5000);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex.Message);
-                    await Task.Delay(5000);
-                }
-                retry++;
-                if (retry == 5)
-                    return;
-            }
-        }
-
-        public static async void Lewd(MessageEventArgs e)
-        {
-            int retry = 0;
-            string sURL;
-            sURL = "https://lewdchan.com/lewd/src/list.php";
-            WebRequest wrGETURL;
-            wrGETURL = WebRequest.Create(sURL);
-            Stream objStream = null;
-            while (retry < 5)
-            {
-                try
-                {
-                    objStream = (await wrGETURL.GetResponseAsync()).GetResponseStream();
-                    break;
-                }
-                catch (WebException ex)
-                {
-                    Console.WriteLine(ex.Message);
-                    await Task.Delay(5000);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex.Message);
-                    await Task.Delay(5000);
-                }
-                retry++;
-                if (retry == 5)
-                    return;
-            }
-            StreamReader objReader = new StreamReader(objStream);
-            string sLine = "";
-            List<string> files = new List<string>();
-            while (sLine != null)
-            {
-                sLine = objReader.ReadLine();
-                if (sLine != null && StringExtension.GetLast(sLine, 4) != "webm")
-                    files.Add(sLine);
-            }
-            Random rnd = new Random();
-            retry = 0;
-            while (retry < 5)
-            {
-                try
-                {
-                    await client.SendMessage(e.Message.Channel, "https://lewdchan.com/lewd/src/" + files[rnd.Next(0, files.Count)]);
-                    break;
-                }
-                catch (WebException ex)
-                {
-                    Console.WriteLine(ex.Message);
-                    await Task.Delay(5000);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex.Message);
-                    await Task.Delay(5000);
-                }
-                retry++;
-                if (retry == 5)
-                    return;
-            }
-        }
-
-        public static async void Qt(MessageEventArgs e)
-        {
-            int retry = 0;
-            string sURL;
-            sURL = "https://lewdchan.com/qt/src/list.php";
-            WebRequest wrGETURL;
-            wrGETURL = WebRequest.Create(sURL);
-            Stream objStream = null;
-            retry = 0;
-            while (retry < 5)
-            {
-                try
-                {
-                    objStream = (await wrGETURL.GetResponseAsync()).GetResponseStream();
-                    break;
-                }
-                catch (WebException ex)
-                {
-                    Console.WriteLine(ex.Message);
-                    await Task.Delay(5000);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex.Message);
-                    await Task.Delay(5000);
-                }
-                retry++;
-                if (retry == 5)
-                    return;
-            }
-            StreamReader objReader = new StreamReader(objStream);
-            string sLine = "";
-            List<string> files = new List<string>();
-            while (sLine != null)
-            {
-                sLine = objReader.ReadLine();
-                if (sLine != null && StringExtension.GetLast(sLine, 4) != "webm")
-                    files.Add(sLine);
-            }
-            Random rnd = new Random();
-            retry = 0;
-            while (retry < 5)
-            {
-                try
-                {
-                    await client.SendMessage(e.Message.Channel, "https://lewdchan.com/qt/src/" + files[rnd.Next(0, files.Count)]);
-                    break;
-                }
-                catch (WebException ex)
-                {
-                    Console.WriteLine(ex.Message);
-                    await Task.Delay(5000);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex.Message);
-                    await Task.Delay(5000);
-                }
-                retry++;
-                if (retry == 5)
-                    return;
-            }
-        }
-
-        public static void Uninstall(MessageEventArgs e)
-        {
-            client.SendMessage(e.Message.Channel, "https://www.youtube.com/watch?v=iNCXiMt1bR4");
-        }
-
-        public static void Kys(MessageEventArgs e)
-        {
-            client.SendMessage(e.Message.Channel, "https://www.youtube.com/watch?v=2dbR2JZmlWo");
-        }
-
-        public static void Roll(MessageEventArgs e)
-        {
-            string[] words = e.Message.Text.Substring(1).Split(' ');
-            int x = 1;
-            int y = 7;
-            int z = 1;
-            int a;
-            Random rnd = new Random();
-            if (1 < words.Length)
-            {
-                if (int.TryParse(words[1], out a))
-                {
-                    y = int.Parse(words[1]);
-                    y++;
-                }
-                if (2 < words.Length)
-                {
-                    if (int.TryParse(words[2], out a))
-                    {
-                        x = int.Parse(words[2]);
-                    }
-                    if (3 < words.Length)
-                    {
-                        if (int.TryParse(words[3], out a))
-                        {
-                            z = int.Parse(words[3]);
-                        }
-                    }
-                }
-            }
-            if (x <= 0 || y <= 0 || z <= 0)
-            {
-                if (e.Message.Channel.IsPrivate)
-                {
-                    client.SendMessage(e.Message.Channel, "All 3 parameters must be higher than 0.");
-                }
-                else
-                {
-                    client.SendMessage(e.Message.Channel, "<@" + e.Message.UserId + "> All 3 parameters must be higher than 0.", new string[] { e.Message.UserId });
-                }
-                return;
-            }
-            if (x > 999)
-                x = 999;
-            if (y > 999)
-                y = 1000;
-            if (z > 999)
-                z = 999;
-            a = 0;
-            unchecked
-            {
-                for (int i = 1; i <= z; i++)
-                {
-                    for (int j = 1; j <= x; j++)
-                    {
-                        a += rnd.Next(1, y);
-                    }
-                }
-            }
-            if (a <= 0)
-            {
-                if (e.Message.Channel.IsPrivate)
-                {
-                    client.SendMessage(e.Message.Channel, "Result overflowed maximum int value of " + int.MaxValue.ToString());
-                }
-                else
-                {
-                    client.SendMessage(e.Message.Channel, "<@" + e.Message.UserId + "> Result overflowed maximum int value of " + int.MaxValue.ToString(), new string[] { e.Message.UserId });
-                }
-            }
-            else
-            {
-                if (e.Message.Channel.IsPrivate)
-                {
-                    client.SendMessage(e.Message.Channel, "Rolling " + x.ToString() + " " + (y - 1).ToString() + "-faced dices " + z.ToString() + " times... Result: " + a.ToString());
-                }
-                else
-                {
-                    client.SendMessage(e.Message.Channel, "<@" + e.Message.UserId + "> Rolling " + x.ToString() + " " + (y - 1).ToString() + "-faced dices " + z.ToString() + " times... Result: " + a.ToString(), new string[] { e.Message.UserId });
-                }
-            }
-        }
-
-        public static void Reverse(MessageEventArgs e)
-        {
-            string message = e.Message.Text.Substring(9);
-            /*MatchCollection matches = Regex.Matches(message, "<@(\\d{17})>");
-            if (matches.Count > 0)
-            {
-                foreach (Match m in matches)
-                {
-                    message = message.Replace("<@" + m.Groups[1].Value + ">", "@" + client.GetUser(m.Groups[1].Value).Name);
-                }
-            }
-            matches = Regex.Matches(message, "<#(\\d{17})>");
-            if (matches.Count > 0)
-            {
-                foreach (Match m in matches)
-                {
-                    message = message.Replace("<#" + m.Groups[1].Value + ">", client.GetChannel(m.Groups[1].Value).Name);
-                }
-            }*/
-            char[] chars = message.ToCharArray();
-            char[] result = new char[chars.Length];
-            for (int i = 0, j = message.Length - 1; i < message.Length; i++, j--)
-            {
-                result[i] = chars[j];
-            }
-            client.SendMessage(e.Message.Channel, new string(result), e.Message.MentionIds);
-        }
-
-        public static async void PlayerPost(MessageEventArgs e)
-        {
-            int retry = 0;
-            string[] words = e.Message.Text.Substring(1).Split(' ');
-            if (1 < words.Length)
-            {
-                string sURL;
-                sURL = "https://player.me/api/v1/feed/" + words[1];
-                WebRequest wrGETURL;
-                wrGETURL = WebRequest.Create(sURL);
-                Stream objStream = null;
-                retry = 0;
-                while (retry < 5)
-                {
-                    try
-                    {
-                        objStream = (await wrGETURL.GetResponseAsync()).GetResponseStream();
-                        break;
-                    }
-                    catch (WebException ex)
-                    {
-                        Console.WriteLine(ex.Message);
-                        await Task.Delay(5000);
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine(ex.Message);
-                        await Task.Delay(5000);
-                    }
-                    retry++;
-                }
-                StreamReader objReader = new StreamReader(objStream);
-                string sLine = "";
-                while (sLine != null)
-                {
-                    sLine = objReader.ReadLine();
-                    if (sLine != null)
-                        break;
-                }
-                dynamic result = Newtonsoft.Json.Linq.JObject.Parse(sLine);
-                retry = 0;
-                while (retry < 5)
-                {
-                    try
-                    {
-                        await client.SendMessage(e.Message.Channel, result.results.user.username.ToString() + ": " + result.results.data.post_raw.ToString());
-                        break;
-                    }
-                    catch (WebException ex)
-                    {
-                        Console.WriteLine(ex.Message);
-                        await Task.Delay(5000);
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine(ex.Message);
-                        await Task.Delay(5000);
-                    }
-                    retry++;
-                }
-            }
-        }
-
-        public static async void PlayerComment(MessageEventArgs e)
-        {
-            int retry = 0;
-            string[] words = e.Message.Text.Substring(1).Split(' ');
-            if (2 < words.Length)
-            {
-                string sURL;
-                string sURL2;
-                sURL = "https://player.me/api/v1/feed/" + words[1];
-                sURL2 = "https://player.me/api/v1/feed/" + words[1] + "/comments/" + words[2];
-                WebRequest wrGETURL;
-                WebRequest wrGETURL2;
-                wrGETURL = WebRequest.Create(sURL);
-                wrGETURL2 = WebRequest.Create(sURL2);
-                Stream objStream = null;
-                Stream objStream2 = null;
-                retry = 0;
-                while (retry < 5)
-                {
-                    try
-                    {
-                        objStream = (await wrGETURL.GetResponseAsync()).GetResponseStream();
-                        break;
-                    }
-                    catch (WebException ex)
-                    {
-                        Console.WriteLine(ex.Message);
-                        await Task.Delay(5000);
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine(ex.Message);
-                        await Task.Delay(5000);
-                    }
-                    retry++;
-                }
-                retry = 0;
-                while (retry < 5)
-                {
-                    try
-                    {
-                        objStream2 = wrGETURL2.GetResponse().GetResponseStream();
-                        break;
-                    }
-                    catch (WebException ex)
-                    {
-                        Console.WriteLine(ex.Message);
-                        await Task.Delay(5000);
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine(ex.Message);
-                        await Task.Delay(5000);
-                    }
-                    retry++;
-                }
-                StreamReader objReader = new StreamReader(objStream);
-                StreamReader objReader2 = new StreamReader(objStream2);
-                string sLine = "";
-                string sLine2 = "";
-                while (sLine != null)
-                {
-                    sLine = objReader.ReadLine();
-                    if (sLine != null)
-                        break;
-                }
-                while (sLine2 != null)
-                {
-                    sLine2 = objReader2.ReadLine();
-                    if (sLine2 != null)
-                        break;
-                }
-                dynamic result = Newtonsoft.Json.Linq.JObject.Parse(sLine);
-                dynamic result2 = Newtonsoft.Json.Linq.JObject.Parse(sLine2);
-                retry = 0;
-                while (retry < 5)
-                {
-                    try
-                    {
-                        await client.SendMessage(e.Message.Channel, "Post - " + result.results.user.username.ToString() + ": " + result.results.data.post_raw.ToString());
-                        break;
-                    }
-                    catch (WebException ex)
-                    {
-                        Console.WriteLine(ex.Message);
-                        await Task.Delay(5000);
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine(ex.Message);
-                        await Task.Delay(5000);
-                    }
-                    retry++;
-                }
-                retry = 0;
-                while (retry < 5)
-                {
-                    try
-                    {
-                        await client.SendMessage(e.Message.Channel, "Comment - " + result2.results.user.username.ToString() + ": " + result2.results.data.post_raw.ToString());
-                        break;
-                    }
-                    catch (WebException ex)
-                    {
-                        Console.WriteLine(ex.Message);
-                        await Task.Delay(5000);
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine(ex.Message);
-                        await Task.Delay(5000);
-                    }
-                    retry++;
-                }
-            }
-        }
-
-        public static async void PlayerBio(MessageEventArgs e)
-        {
-            string[] words = e.Message.Text.Substring(1).Split(' ');
-            if (1 < words.Length)
-            {
-                string sURL;
-                sURL = "https://player.me/api/v1/users?_query=" + words[1];
-                WebRequest wrGETURL;
-                wrGETURL = WebRequest.Create(sURL);
-                Stream objStream = null;
-                try
-                {
-                    objStream = (await wrGETURL.GetResponseAsync()).GetResponseStream();
-                }
-                catch (ArgumentOutOfRangeException ex)
-                {
-                    Console.WriteLine(ex.Message);
-                }
-                StreamReader objReader = new StreamReader(objStream);
-                string sLine = "";
-                while (sLine != null)
-                {
-                    sLine = objReader.ReadLine();
-                    if (sLine != null)
-                        break;
-                }
-                dynamic result = Newtonsoft.Json.Linq.JObject.Parse(sLine);
-                try
-                {
-                    if (result.results[0] != null)
-                        Console.Write("");
-                    try
-                    {
-                        await client.SendMessage(e.Message.Channel, words[1] + "'s short bio: " + result.results[0].short_description.ToString());
-                    }
-                    catch (Exception exc)
-                    {
-                        Console.WriteLine(exc.Message);
-                    }
-                }
-                catch (ArgumentOutOfRangeException exc)
-                {
-                    Console.WriteLine(exc.Message);
-                    sURL = "https://player.me/api/v1/groups?_query=" + words[1];
-                    wrGETURL = WebRequest.Create(sURL);
-                    try
-                    {
-                        objStream = (await wrGETURL.GetResponseAsync()).GetResponseStream();
-                    }
-                    catch (ArgumentOutOfRangeException ex)
-                    {
-                        Console.WriteLine(ex.Message);
-                    }
-                    objReader = new StreamReader(objStream);
-                    sLine = "";
-                    while (sLine != null)
-                    {
-                        sLine = objReader.ReadLine();
-                        if (sLine != null)
-                            break;
-                    }
-                    result = Newtonsoft.Json.Linq.JObject.Parse(sLine);
-                    try
-                    {
-                        if (result.results[0] != null)
-                            Console.Write("");
-                        try
-                        {
-                            await client.SendMessage(e.Message.Channel, words[1] + "'s short bio: " + result.results[0].short_description.ToString());
-                        }
-                        catch (Exception exce)
-                        {
-                            Console.WriteLine(exce.Message);
-                        }
-                    }
-                    catch (ArgumentOutOfRangeException exce)
-                    {
-                        Console.WriteLine(exce.Message);
-                        try
-                        {
-                            await client.SendMessage(e.Message.Channel, words[1] + " doesn't exist.");
-                        }
-                        catch (Exception ex)
-                        {
-                            Console.WriteLine(ex.Message);
-                        }
-                    }
-                }
-            }
-        }
-
-        public static async void PlayerLongBio(MessageEventArgs e)
-        {
-            string[] words = e.Message.Text.Substring(1).Split(' ');
-            if (1 < words.Length)
-            {
-                string sURL;
-                sURL = "https://player.me/api/v1/users?_query=" + words[1];
-                WebRequest wrGETURL;
-                wrGETURL = WebRequest.Create(sURL);
-                Stream objStream = null;
-                try
-                {
-                    objStream = (await wrGETURL.GetResponseAsync()).GetResponseStream();
-                }
-                catch (ArgumentOutOfRangeException ex)
-                {
-                    Console.WriteLine(ex.Message);
-                }
-                StreamReader objReader = new StreamReader(objStream);
-                string sLine = "";
-                while (sLine != null)
-                {
-                    sLine = objReader.ReadLine();
-                    if (sLine != null)
-                        break;
-                }
-                dynamic result = Newtonsoft.Json.Linq.JObject.Parse(sLine);
-                try
-                {
-                    if (result.results[0] != null)
-                        Console.Write("");
-                    try
-                    {
-                        await client.SendMessage(e.Message.Channel, words[1] + "'s long bio: " + result.results[0].description.ToString());
-                    }
-                    catch (Exception exc)
-                    {
-                        Console.WriteLine(exc.Message);
-                    }
-                }
-                catch (ArgumentOutOfRangeException exc)
-                {
-                    Console.WriteLine(exc.Message);
-                    sURL = "https://player.me/api/v1/groups?_query=" + words[1];
-                    wrGETURL = WebRequest.Create(sURL);
-                    try
-                    {
-                        objStream = (await wrGETURL.GetResponseAsync()).GetResponseStream();
-                    }
-                    catch (ArgumentOutOfRangeException ex)
-                    {
-                        Console.WriteLine(ex.Message);
-                    }
-                    objReader = new StreamReader(objStream);
-                    sLine = "";
-                    while (sLine != null)
-                    {
-                        sLine = objReader.ReadLine();
-                        if (sLine != null)
-                            break;
-                    }
-                    result = Newtonsoft.Json.Linq.JObject.Parse(sLine);
-                    try
-                    {
-                        if (result.results[0] != null)
-                            Console.Write("");
-                        try
-                        {
-                            await client.SendMessage(e.Message.Channel, words[1] + "'s long bio: " + result.results[0].description.ToString());
-                        }
-                        catch (Exception exce)
-                        {
-                            Console.WriteLine(exce.Message);
-                        }
-                    }
-                    catch (ArgumentOutOfRangeException exce)
-                    {
-                        Console.WriteLine(exce.Message);
-                        try
-                        {
-                            await client.SendMessage(e.Message.Channel, words[1] + " doesn't exist.");
-                        }
-                        catch (Exception ex)
-                        {
-                            Console.WriteLine(ex.Message);
-                        }
-                    }
-                }
-            }
-        }
-
-        public static void Avatar(MessageEventArgs e)
-        {
-            List<User> users = new List<User> { };
-            foreach (string mention in e.Message.MentionIds)
-            {
-                users.Add(client.GetUser(mention));
-            }
-            foreach (User user in users)
-            {
-                client.SendMessage(e.Message.Channel, user.AvatarUrl);
-            }
-        }
-
-        public static async void PlayerAvatar(MessageEventArgs e)
-        {
-            string[] words = e.Message.Text.Substring(1).Split(' ');
-            if (1 < words.Length)
-            {
-                string sURL;
-                sURL = "https://player.me/api/v1/users?_query=" + words[1];
-                WebRequest wrGETURL;
-                wrGETURL = WebRequest.Create(sURL);
-                Stream objStream = null;
-                try
-                {
-                    objStream = (await wrGETURL.GetResponseAsync()).GetResponseStream();
-                }
-                catch (ArgumentOutOfRangeException ex)
-                {
-                    Console.WriteLine(ex.Message);
-                }
-                StreamReader objReader = new StreamReader(objStream);
-                string sLine = "";
-                while (sLine != null)
-                {
-                    sLine = objReader.ReadLine();
-                    if (sLine != null)
-                        break;
-                }
-                dynamic result = Newtonsoft.Json.Linq.JObject.Parse(sLine);
-                try
-                {
-                    if (result.results[0] != null)
-                        Console.Write("");
-                    try
-                    {
-                        await client.SendMessage(e.Message.Channel, words[1] + "'s avatar: http:" + result.results[0].avatar.original.ToString());
-                    }
-                    catch (Exception exc)
-                    {
-                        Console.WriteLine(exc.Message);
-                    }
-                }
-                catch (ArgumentOutOfRangeException exc)
-                {
-                    Console.WriteLine(exc.Message);
-                    sURL = "https://player.me/api/v1/groups?_query=" + words[1];
-                    wrGETURL = WebRequest.Create(sURL);
-                    try
-                    {
-                        objStream = (await wrGETURL.GetResponseAsync()).GetResponseStream();
-                    }
-                    catch (ArgumentOutOfRangeException ex)
-                    {
-                        Console.WriteLine(ex.Message);
-                    }
-                    objReader = new StreamReader(objStream);
-                    sLine = "";
-                    while (sLine != null)
-                    {
-                        sLine = objReader.ReadLine();
-                        if (sLine != null)
-                            break;
-                    }
-                    result = Newtonsoft.Json.Linq.JObject.Parse(sLine);
-                    try
-                    {
-                        if (result.results[0] != null)
-                            Console.Write("");
-                        try
-                        {
-                            await client.SendMessage(e.Message.Channel, words[1] + "'s avatar: http:" + result.results[0].avatar.original.ToString());
-                        }
-                        catch (Exception exce)
-                        {
-                            Console.WriteLine(exce.Message);
-                        }
-                    }
-                    catch (ArgumentOutOfRangeException exce)
-                    {
-                        Console.WriteLine(exce.Message);
-                        try
-                        {
-                            await client.SendMessage(e.Message.Channel, words[1] + " doesn't exist.");
-                        }
-                        catch (Exception ex)
-                        {
-                            Console.WriteLine(ex.Message);
-                        }
-                    }
-                }
-            }
-        }
-
-        public static void Cosplay(MessageEventArgs e)
-        {
-            var files = from file in Directory.EnumerateFiles(@"E:\Github\Nekobot\Nekobot\bin\Release\cosplay") select new { File = file };
-            Random rnd = new Random();
-            int img = rnd.Next(0, Directory.GetFiles(@"E:\Github\Nekobot\Nekobot\bin\Release\cosplay").Length);
-            int i = 0;
-            foreach (var f in files)
-            {
-                if (img == i)
-                {
-                    client.SendFile(e.Message.Channel, f.File);
-                    break;
-                }
-                i++;
-            }
-        }
-
-        public static void Pitur(MessageEventArgs e)
-        {
-            var files = from file in Directory.EnumerateFiles(@"E:\Github\Nekobot\Nekobot\bin\Release\pitur") select new { File = file };
-            Random rnd = new Random();
-            int img = rnd.Next(0, Directory.GetFiles(@"E:\Github\Nekobot\Nekobot\bin\Release\pitur").Length);
-            int i = 0;
-            foreach (var f in files)
-            {
-                if (img == i)
-                {
-                    client.SendFile(e.Message.Channel, f.File);
-                    break;
-                }
-                i++;
-            }
-        }
-
-        public static void Gold(MessageEventArgs e)
-        {
-            var files = from file in Directory.EnumerateFiles(@"D:\Users\Kusoneko\Google Drive\KanColle") select new { File = file };
-            Random rnd = new Random();
-            int img = rnd.Next(0, Directory.GetFiles(@"D:\Users\Kusoneko\Google Drive\KanColle").Length);
-            int i = 0;
-            foreach (var f in files)
-            {
-                if (img == i)
-                {
-                    client.SendFile(e.Message.Channel, f.File);
-                    break;
-                }
-                i++;
-            }
-        }
-
-        public static async void Waifu(MessageEventArgs e)
-        {
-            int retry = 0;
-            string sURL;
-            sURL = "https://julxzs.website/api/random-waifu";
-            WebRequest wrGETURL;
-            wrGETURL = WebRequest.Create(sURL);
-            ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls | SecurityProtocolType.Tls12 | SecurityProtocolType.Ssl3;
-            ServicePointManager.ServerCertificateValidationCallback = delegate { return true; };
-            Stream objStream = null;
-            retry = 0;
-            while (retry < 5)
-            {
-                try
-                {
-                    objStream = (await wrGETURL.GetResponseAsync()).GetResponseStream();
-                    break;
-                }
-                catch (WebException ex)
-                {
-                    Console.WriteLine(ex.Message);
-                    await Task.Delay(5000);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex.Message);
-                    await Task.Delay(5000);
-                }
-                retry++;
-                if (retry == 5)
-                    return;
-            }
-            StreamReader objReader = new StreamReader(objStream);
-            string sLine = "";
-            while (sLine != null)
-            {
-                sLine = objReader.ReadLine();
-                if (sLine != null)
-                    break;
-            }
-            dynamic result = Newtonsoft.Json.Linq.JObject.Parse(sLine);
-            retry = 0;
-            while (retry < 5)
-            {
-                try
-                {
-                    await client.SendMessage(e.Message.Channel, result.waifu.ToString());
-                    break;
-                }
-                catch (WebException ex)
-                {
-                    Console.WriteLine(ex.Message);
-                    await Task.Delay(5000);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex.Message);
-                    await Task.Delay(5000);
-                }
-                retry++;
-                if (retry == 5)
-                    return;
-            }
-        }
-
-        public static void Commands(MessageEventArgs e)
-        {
-            Discord.Channel channel = client.CreatePMChannel(e.Message.UserId).Result;
-            if (!e.Message.Channel.IsPrivate)
-            {
-                client.SendMessage(e.Message.Channel, "<@" + e.Message.UserId + "> I'm sending you the list of commands in PM!", new string[] { e.Message.UserId });
-            }
-            client.SendMessage(channel, @"List of all commands (optional command parameters are in square brackets [], aliases are in parenthesis ()):
- !status - Replies with I work if I'm not broken.
- !leave - Why would you want to do this? Nekobot will leave the server this is posted in. Only happens if used by permission level 2 or higher.
- !die - Why would you want to do this? Kills the bot for all servers it's in. Only happens if used by permission level 3.
- !pet [@username] [@everyone] - Tells who petted who, if multiple people are mentioned, all of them are petted, if everyone is in, only everyone will be in the reply. Purrs if everyone or mentioned herself or no mentions at all (assumes that you're petting her in that case).
- !playerpost id - Replies with the content of the post at https://player.me/feed/id
- !playercomment postid commentid - Replies with the content of the post and the highlighted comment at https://player.me/feed/postid?comment=commentid
- !playerbio username - Replies with the short bio of the user on player.me
- !playerlongbio username - Replies with the long bio of the user on player.me
- !playeravatar username - Returns the avatar of username on player.me
- !invite invitationcode - Nekobot joins the server that the invite represents. invitationcode corresponds to the 0Lv5NLFEoz3P07Aq part of https://discord.gg/0Lv5NLFEoz3P07Aq Requires permission level 1 or higher.
- !waifu - Replies with a random waifu from https://julxzs.website/api/random-waifu
- !music on/off channelid - Enables or disables music streaming in a particular voice channel. Requires permission level 3 for now because doesn't seem to be able to stream to more than one channel at once. Will require permission level 1 or higher if it ever becomes possible to send voice data to more than one server at once.
- !cid channelname - Gets the ID of all channel with the same name.
- !skip - Votes to skip currently playing song, requires user to be in a Nekobot music streaming channel, votes reset at the end of a song. Requires half or more of the amount of people who where in the channel before the song began to vote to skip.
- !forceskip - Force to skip currently playing song, requires user to be in a Nekobot music streaming channel and permission level 1 or higher.
- !song - Returns the ID3 tag title and author if possible, else filename of the currently playing song.
- !replay (!encore) (!ankouru) - Votes to replay the currently playing song after it's done, requires user to be in a Nekobot music streaming channel, votes reset at the end of a song. Requires half or more of the amount of people who where in the channel before the song began to vote to replay.
- !request requestedsong - Adds a request to the list of request for the channel, requires user to be in a Nekobot music streaming channel, only one request per person at a time is possible (example: User1 requests, User1 now has to wait for the song he requested to play before making another request).
- !commands (!help) - How you got this to show up. Will still send them in PM if you ask in a channel.
-That's all for now! Suggest ideas to Kusoneko, might add it at some point.");
-/* removed temporarily due to a random bug
- !sidetail - Grabs a random sidetail image from https://danbooru.donmai.us/posts?tags=sidetail Warning: can return a nsfw image
- !futanari (!futa) - Grabs a random futa image from http://danbooru.donmai.us/posts?tags=futanari Warning: can return a nsfw image
- !wincest (!incest) - Grabs a random incest image from https://danbooru.donmai.us/posts?tags=incest Warning: can return a nsfw image
-*/
-/* removed because Neko.js has it, and nekobot will change to neko.js
- !whereami - Replies with details about the channel and server where you did this command.
- !whois Username - Replies with the unique User ID of the specified user as well as his permission level. Warning: only works in a channel
- !ping - Replies with Pong!.
- !nya - Replies with Nyaaa~.
- !poi - Replies with Poi!.
- !rand [x] [y] - Generates a random number between x and y, both are optional: x defaults to 1 and y defaults to 100, if only 1 parameter is given, that parameter is y
- !neko - Grabs a random nekomimi image from https://lewdchan.com/neko Warning: can return a nsfw image
- !kitsune - Grabs a random kitsunemimi image from https://lewdchan.com/kitsune Warning: can return a nsfw image
- !lewd - Grabs a random lewd image from https://lewdchan.com/lewd Warning: can return a nsfw image
- !qt - Grabs a random 2d qt image from https://lewdchan.com/qt
- !uninstall - A great advice in any situation.
- !kys (!killyourself) - Another good advice.
- !roll [y] [x] [z] - Roll x y-faced dices z times. x and z are optional and both default to 1, y is also optional and default to 6 (for a 6-faced dice)
- !reverse - Replies with everything that follows the command reversed
- !quote - Replies with a random quote from https://julxzs.website/quotes
- !avatar @username - Returns the user's discord avatar
- !owner @username - Gives permission level 3 to a user with permission level 2 or lower. Requires permission level 3.
- !deowner @username - Removes any permission levels from a user and gets him/her to permission level 0. Requires permission level 3.
- !admin @username - Gives permission level 2 to a user with permission level 1 or lower. Requires permission level 3.
- !deadmin @username - Removes permission level 2 from a user and gets him/her to permission level 0. Requires permission level 3.
- !mod @username - Gives permission level 1 to a user with permission level 0. Requires permission level 2 or higher.
- !demod @username - Removes permission level 1 from a user and gets him/her to permission level 0. Requires permission level 2 or higher.
- !say - Replies with everything that follows the command.
- !kona tags - Grabs a random image fitting the tags from http://konachan.com/ Warning: can return a nsfw image, if nothing is returned, the tag is incorrect or doesn't have a minimum of 100 pictures
- !rule34 tags - Grabs a random image from http://rule34.xxx/ Warning: can return a nsfw image, if nothing is returned, tag is incorrect or doesn't have a minimum of 100 pictures
- !gelbooru tags - Grabs a random image from http://gelbooru.com/ Warning: can return a nsfw image, if nothing is returned, tag is incorrect or doesn't have a minimum of 100 pictures
- !cosplay - Grabs a random cosplay image from Salvy's folder - doesn't update, contains 157 images.
- !pitur - Grabs a random lewd image from Pitur's collection - doesn't update, contains 4396 images.
- !gold - Grabs a random kancolle image from Au-chan's collection - updates, though not in real time.
- !nsfw on/off/status - (on/off)Enables or disables the use of nsfw commands in a particular channel. Requires permission level 1 or higher. (status)Tells whether the channel allows the use of nsfw commands. Doesn't require any permission level.
- !notnow - How to rekt rin 101.
- !sadhorn (!icri) (!aicrai) (!aicraievritiem) (!aicraievritaim) - When sad things happen.
-*/
-        }
-
-        public static void Main(string[] args)
-        {
-            Console.OutputEncoding = System.Text.Encoding.UTF8;
-            //Attempt to stop the shitty "Could not create a secure SSL/TLS channel" error
-            ServicePointManager.Expect100Continue = true;
-            ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12 | SecurityProtocolType.Tls11 | SecurityProtocolType.Tls | SecurityProtocolType.Ssl3;
-            ServicePointManager.ServerCertificateValidationCallback += new RemoteCertificateValidationCallback(AlwaysGoodCertificate);
-            //Initialization
-            Console.WriteLine("Initializing Nekobot...");
-            LoadCredentials();
-            Console.Title = "Nekobot";
-            Console.WriteLine("Loading permissions...");
-            LoadPermissionFiles();
-            permissions[0] = normal;
-            permissions[1] = mods;
-            permissions[2] = admins;
-            permissions[3] = owner;
-            Console.WriteLine("Loading channel sfw settings...");
-            LoadChannels();
-            Console.WriteLine("Loading streaming channels...");
-            LoadStreamChannels();
-            Console.WriteLine("Connecting...");
-            //Bot events below
-            client.Connected += ClientConnected;
-            client.Disconnected += ClientDisconnected;
-            client.MessageCreated += ClientMessageCreated;
-            client.LogMessage += (s, e) => System.Diagnostics.Debug.WriteLine($"[{e.Severity}] ({e.Source}) {e.Message}");
-            //Allows the ability to type in the console window while the bot runs, thus allowing to have some console commands and a bot running at the same time.
+        static void InputThread()
+        {
+            bool accept = true;
+            while (accept)
+            {
+                string input = Console.ReadLine();
+            }
+        }
+
+        static void Main(string[] args)
+        {
+            // Load up the DB, or create it if it doesn't exist
+            LoadDB();
+            // Load up the config file
+            LoadConfig();
+            // Load the stream channels
+            LoadStreams();
+            // Initialize rest client
+            RCInit();
+            // Set up the events and enforce use of the command prefix
+            commands.UseCommandChar = true;
+            commands.CommandError += CommandError;
+            commands.UnknownCommand += UnknownCommand;
+            client.Connected += Connected;
+            client.Disconnected += Disconnected;
+            client.UserAdded += UserAdded;
+            client.LogMessage += LogMessage;
+            commands.CreateCommandGroup("", group => GenerateCommands(group));
+            // Keep the window open in case of crashes elsewhere... (hopefully)
             Thread input = new Thread(InputThread);
             input.Start();
-            //Thread rainbow = new Thread(RainbowThread);
-            //rainbow.Start();
-            //Connection time
+            // Connection, join server if there is one in config, and start music streams
             try
             {
-                client.Run(async () =>
+                client.Run(async() =>
                 {
-                    await client.Connect(email, pass);
-                    //Start music streaming
-                    await StartMusicThreads();
+                    await client.Connect(email, password);
+                    if (config["server"].ToString() != "")
+                    {
+                        await client.AcceptInvite(client.GetInvite(config["server"].ToString()).Result);
+                    }
+                    await StartMusicStreams();
                 });
             }
             catch (Exception e)
             {
-                Console.WriteLine("Error: " + e.Message);
+                Console.WriteLine($"Error: {e.GetBaseException().Message}");
             }
         }
 
-        private static Task StartMusicThreads()
+        protected static string CalculateTime(int minutes)
+        {
+            if (minutes == 0)
+                return "No time.";
+
+            int years, months, days, hours = 0;
+
+            hours = minutes / 60;
+            minutes %= 60;
+            days = hours / 24;
+            hours %= 24;
+            months = days / 30;
+            days %= 30;
+            years = months / 12;
+            months %= 12;
+
+            string animeWatched = "";
+
+            if (years > 0)
+            {
+                animeWatched += years;
+                if (years == 1)
+                    animeWatched += " **year**";
+                else
+                    animeWatched += " **years**";
+            }
+
+            if (months > 0)
+            {
+                if (animeWatched.Length > 0)
+                    animeWatched += ", ";
+                animeWatched += months;
+                if (months == 1)
+                    animeWatched += " **month**";
+                else
+                    animeWatched += " **months**";
+            }
+
+            if (days > 0)
+            {
+                if (animeWatched.Length > 0)
+                    animeWatched += ", ";
+                animeWatched += days;
+                if (days == 1)
+                    animeWatched += " **day**";
+                else
+                    animeWatched += " **days**";
+            }
+
+            if (hours > 0)
+            {
+                if (animeWatched.Length > 0)
+                    animeWatched += ", ";
+                animeWatched += hours;
+                if (hours == 1)
+                    animeWatched += " **hour**";
+                else
+                    animeWatched += " **hours**";
+            }
+
+            if (minutes > 0)
+            {
+                if (animeWatched.Length > 0)
+                    animeWatched += " and ";
+                animeWatched += minutes;
+                if (minutes == 1)
+                    animeWatched += " **minute**";
+                else
+                    animeWatched += " **minutes**";
+            }
+
+            return animeWatched;
+
+
+        }
+
+        private static string ImageBooru(string booru, string tags)
+        {
+            string safebooru = $"http://safebooru.org/index.php?page=dapi&s=post&q=index&limit=1&tags={tags}&pid=";
+            string gelbooru = $"http://gelbooru.com/index.php?page=dapi&s=post&q=index&limit=1&tags={tags}&pid=";
+            string rule34 = $"http://rule34.xxx/index.php?page=dapi&s=post&q=index&limit=1&tags={tags}&pid=";
+            string konachan = $"http://konachan.com/post.xml?limit=1&tags={tags}&page=";
+            string yandere = $"https://yande.re/post.xml?limit=1&tags={tags}&page=";
+            string lolibooru = $"http://lolibooru.moe/post/index.xml?limit=1&tags={tags}&page=";
+            string link = "";
+            if (booru == "safebooru")
+                link = safebooru;
+            if (booru == "gelbooru")
+                link = gelbooru;
+            if (booru == "rule34")
+                link = rule34;
+            if (booru == "konachan")
+                link = konachan;
+            if (booru == "yandere")
+                link = yandere;
+            if (booru == "lolibooru")
+                link = lolibooru;
+            int posts = GetBooruPostCount($"{link}");
+            if (posts == 0)
+                return $@"There is nothing under the tag(s):
+{tags}
+on {booru}. Please try something else.";
+            Random rnd = new Random();
+            return GetBooruImageLink($"{link}", rnd.Next(1, posts-1));
+        }
+
+        private static string GetBooruImageLink(string link, int postid)
+        {
+            rclient.BaseUrl = new System.Uri(link);
+            var request = new RestRequest(postid.ToString(), Method.GET);
+            var result = rclient.Execute(request);
+            XmlDocument xml = new XmlDocument();
+            xml.LoadXml(result.Content);
+            string json = JsonConvert.SerializeXmlNode(xml);
+            JObject res = JObject.Parse(json);
+            return res["posts"]["post"]["@file_url"].ToString().Replace(" ", "%20");
+        }
+
+        private static int GetBooruPostCount(string link)
+        {
+            rclient.BaseUrl = new System.Uri(link);
+            var request = new RestRequest("0", Method.GET);
+            var result = rclient.Execute(request);
+            XmlDocument xml = new XmlDocument();
+            xml.LoadXml(result.Content);
+            string json = JsonConvert.SerializeXmlNode(xml);
+            JObject res = JObject.Parse(json);
+            return int.Parse(res["posts"]["@count"].ToString());
+        }
+
+        private static string ImageFolders(string folder)
+        {
+            string[] imgexts = new string[] { ".jpg", ".jpeg", ".png", ".gif", ".bmp" };
+            var files = from file in System.IO.Directory.EnumerateFiles($@"{folder}", "*.*").Where(s => imgexts.Contains(System.IO.Path.GetExtension(s.ToLower()))) select new { File = file };
+            Random rnd = new Random();
+            int img = rnd.Next(0, files.Count());
+            return files.ElementAt(img).File;
+        }
+
+        private static string LewdSX(string chan)
+        {
+            rclient.BaseUrl = new Uri("https://lewdchan.com");
+            var request = new RestRequest($"{chan}/src/list.php", Method.GET);
+            string result = rclient.Execute(request).Content;
+            List<string> list = result.Split(new string[] { Environment.NewLine }, StringSplitOptions.None).ToList();
+            Regex re = new Regex(@"([^\s]+(\.(jpg|jpeg|png|gif|bmp)))");
+            foreach (Match m in re.Matches(result))
+            {
+                list.Add(m.Value);
+            }
+            Random rnd = new Random();
+            string image = $"https://lewdchan.com/{chan}/src/{list[rnd.Next(0, list.Count())]}";
+            return image;
+        }
+
+        private static void RCInit()
+        {
+            rclient.UserAgent = $"Nekobot {version}";
+        }
+
+        private static void LogMessage(object sender, LogMessageEventArgs e)
+        {
+            System.Diagnostics.Debug.WriteLine($"[{e.Severity}] {e.Source} : {e.Message}");
+        }
+
+        private static Task StartMusicStreams()
         {
             return Task.WhenAll(
               streams.Select(s =>
@@ -3294,98 +2395,220 @@ That's all for now! Suggest ideas to Kusoneko, might add it at some point.");
               .ToArray());
         }
 
-        private static bool AlwaysGoodCertificate(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
+        private static void LoadConfig()
         {
-            return true;
-        }
-
-        private static void ClientDebugMessage(object sender, LogMessageEventArgs e)
-        {
-            Console.WriteLine("/!\\DEBUG/!\\: " + e.Message);
-        }
-    }
-
-    public static class StringExtension
-    {
-        public static string GetLast(this string source, int tail_length)
-        {
-            if (tail_length >= source.Length)
-                return source;
-            return source.Substring(source.Length - tail_length);
-        }
-    }
-/* 64 bit stuffs, but voice doesn't support 64 bits so rolled back to 32 bit until it does
-    static class RandomExtensions
-    {
-        static int NextInt32(this Random rg)
-        {
-            unchecked
+            if (System.IO.File.Exists("config.json"))
+                config = JObject.Parse(System.IO.File.ReadAllText(@"config.json"));
+            else
             {
-                int firstBits = rg.Next(0, 1 << 4) << 28;
-                int lastBits = rg.Next(0, 1 << 28);
-                return firstBits | lastBits;
+                Console.WriteLine("config.json file not found! Unable to initialize Nekobot!");
+                connection.Close();
+                connection.Dispose();
+                Console.ReadKey();
+                Environment.Exit(0);
+            }
+            email = config["email"].ToString();
+            password = config["password"].ToString();
+            masterId = config["master"].ToString();
+            musicFolder = config["musicFolder"].ToString();
+            pitur = config["pitur"].ToString();
+            gold = config["gold"].ToString();
+            cosplay = config["cosplay"].ToString();
+            commands.CommandChar = config["prefix"].ToString()[0];
+            if (System.IO.File.Exists(@"..\..\..\version.json"))
+                versionfile = JObject.Parse(System.IO.File.ReadAllText(@"..\..\..\version.json"));
+            version = versionfile["version"].ToString();
+        }
+
+        private static void LoadDB()
+        {
+            if (!System.IO.File.Exists("nekobot.db"))
+            {
+                SQLiteConnection.CreateFile("nekobot.db");
+            }
+            connection = new SQLiteConnection("Data Source=nekobot.db;Version=3;");
+            connection.Open();
+            sql = "create table if not exists users (user varchar(17), perms int, ignored int)";
+            query = new SQLiteCommand(sql, connection);
+            query.ExecuteNonQuery();
+            sql = "create table if not exists flags (channel varchar(17), nsfw int, music int, ignored int)";
+            query = new SQLiteCommand(sql, connection);
+            query.ExecuteNonQuery();
+        }
+
+        private static void UserAdded(object sender, UserEventArgs e)
+        {
+            client.SendMessage(e.Server.DefaultChannel, $"Welcome to {e.Server.Name}, <@{e.User.Id}>!");
+        }
+
+        private static void Disconnected(object sender, DisconnectedEventArgs e)
+        {
+            Console.WriteLine("Disconnected");
+        }
+
+        private static void Connected(object sender, EventArgs e)
+        {
+            Console.WriteLine("Connected.");
+        }
+
+        private static void UnknownCommand(object sender, CommandEventArgs e)
+        {
+            Console.WriteLine(e.CommandText); // Testing if Unknown commands do work
+            // Is not a valid command
+            client.SendMessage(e.Channel, $"{commands.CommandChar}{e.CommandText} is not a valid command.");
+        }
+
+        private static void CommandError(object sender, CommandErrorEventArgs e)
+        {
+            string error = $"Command Error : {e.Exception.GetBaseException().Message}";
+            if (e.Exception.GetType() == typeof(NsfwFlagException))
+            {
+                error = "This channel doesn't allow nsfw commands.";
+            }
+            if (e.Exception.GetType() == typeof(MusicFlagException))
+            {
+                error = "You need to be in a music streaming channel to use this command.";
+            }
+            if (e.Exception.GetType() == typeof(PermissionException))
+            {
+                error = "You don't have the permissions to use this command. (Permissions needed: " + e.Command.MinPerms.ToString() + " / Current permissions: " + e.Permissions.Value.ToString() + ")";
+            }
+            client.SendMessage(e.Channel, error);
+            Console.WriteLine($"Command Error {e.Exception.GetBaseException().StackTrace} : {e.Exception.GetBaseException().Message}");
+        }
+
+        private static void LoadStreams()
+        {
+            sql = "select channel from flags where music = 1";
+            query = new SQLiteCommand(sql, connection);
+            SQLiteDataReader reader = query.ExecuteReader();
+            while (reader.Read())
+            {
+                streams.Add(reader["channel"].ToString());
             }
         }
 
-        public static decimal NextDecimal(this Random rg)
+        private static int CountVoiceChannelMembers(Channel chan)
         {
-            bool sign = rg.Next(2) == 1;
-            return rg.NextDecimal(sign);
-        }
-
-        static decimal NextDecimal(this Random rg, bool sign)
-        {
-            byte scale = (byte)rg.Next(29);
-            return new decimal(rg.NextInt32(),
-                               rg.NextInt32(),
-                               rg.NextInt32(),
-                               sign,
-                               scale);
-        }
-
-        static decimal NextNonNegativeDecimal(this Random rg)
-        {
-            return rg.NextDecimal(false);
-        }
-
-        public static decimal NextDecimal(this Random rg, decimal maxValue)
-        {
-            return (rg.NextNonNegativeDecimal() / Decimal.MaxValue) * maxValue; ;
-        }
-
-        public static decimal NextDecimal(this Random rg, decimal minValue, decimal maxValue)
-        {
-            if (minValue >= maxValue)
+            if (chan.Type != "voice") { return -1; }
+            int result = 0;
+            foreach (User u in chan.Members)
             {
-                throw new InvalidOperationException();
+                if (u.VoiceChannel == chan)
+                    result++;
             }
-            decimal range = maxValue - minValue;
-            return rg.NextDecimal(range) + minValue;
+            return result;
         }
 
-        static long NextNonNegativeLong(this Random rg)
+        private static bool GetIgnoredFlag(Channel chan, User user)
         {
-            byte[] bytes = new byte[sizeof(long)];
-            rg.NextBytes(bytes);
-            // strip out the sign bit
-            bytes[7] = (byte)(bytes[7] & 0x7f);
-            return BitConverter.ToInt64(bytes, 0);
-        }
-
-        public static long NextLong(this Random rg, long maxValue)
-        {
-            return (long)((rg.NextNonNegativeLong() / (double)Int64.MaxValue) * maxValue);
-        }
-
-        public static long NextLong(this Random rg, long minValue, long maxValue)
-        {
-            if (minValue >= maxValue)
+            sql = $"select ignored from flags where channel = '{chan.Id}'";
+            query = new SQLiteCommand(sql, connection);
+            SQLiteDataReader reader = query.ExecuteReader();
+            bool isIgnored = false;
+            while (reader.Read())
             {
-                throw new InvalidOperationException();
+                if (int.Parse(reader["ignored"].ToString()) == 1)
+                    isIgnored = true;
             }
-            long range = maxValue - minValue;
-            return rg.NextLong(range) + minValue;
+            sql = $"select ignored from users where user = '{user.Id}'";
+            query = new SQLiteCommand(sql, connection);
+            reader = query.ExecuteReader();
+            bool userIsIgnored = false;
+            while (reader.Read())
+            {
+                if (int.Parse(reader["ignored"].ToString()) == 1)
+                    userIsIgnored = true;
+            }
+            return isIgnored || userIsIgnored;
+        }
+
+        private static bool GetIgnoredFlag(Channel chan)
+        {
+            sql = $"select ignored from flags where channel = '{chan.Id}'";
+            query = new SQLiteCommand(sql, connection);
+            SQLiteDataReader reader = query.ExecuteReader();
+            bool isIgnored = false;
+            while (reader.Read())
+            {
+                if (int.Parse(reader["ignored"].ToString()) == 1)
+                    isIgnored = true;
+            }
+            return isIgnored;
+        }
+
+        private static bool GetIgnoredFlag(User user)
+        {
+            sql = $"select ignored from users where user = '{user.Id}'";
+            query = new SQLiteCommand(sql, connection);
+            SQLiteDataReader reader = query.ExecuteReader();
+            bool userIsIgnored = false;
+            while (reader.Read())
+            {
+                if (int.Parse(reader["ignored"].ToString()) == 1)
+                    userIsIgnored = true;
+            }
+            return userIsIgnored;
+        }
+
+        private static bool GetMusicFlag(User user)
+        {
+            sql = "select channel from flags where music = 1";
+            query = new SQLiteCommand(sql, connection);
+            SQLiteDataReader reader = query.ExecuteReader();
+            bool isInMusicChannel = false;
+            List<string> streams = new List<string>();
+            while (reader.Read())
+            {
+                streams.Add(reader["channel"].ToString());
+            }
+            if (user.VoiceChannel != null)
+            {
+                if (streams.Contains(user.VoiceChannel.Id))
+                {
+                    isInMusicChannel = true;
+                }
+            }
+            return isInMusicChannel;
+        }
+
+        private static bool GetNsfwFlag(Channel chan)
+        {
+            sql = "select nsfw from flags where channel = '" + chan.Id + "'";
+            query = new SQLiteCommand(sql, connection);
+            SQLiteDataReader reader = query.ExecuteReader();
+            bool isNsfw = false;
+            while (reader.Read())
+            {
+                if (int.Parse(reader["nsfw"].ToString()) == 1)
+                    isNsfw = true;
+            }
+            return isNsfw;
+        }
+
+        private static int GetPermissions(User user)
+        {
+            int PermissionLevel = 0;
+            if (user.Id != masterId)
+            {
+                sql = $"select count(perms) from users where user = '{user.Id}'";
+                query = new SQLiteCommand(sql, connection);
+                if (Convert.ToInt32(query.ExecuteScalar()) > 0)
+                {
+                    sql = $"select perms from users where user = '{user.Id}'";
+                    query = new SQLiteCommand(sql, connection);
+                    SQLiteDataReader reader = query.ExecuteReader();
+                    while (reader.Read())
+                    {
+                        PermissionLevel = int.Parse(reader["perms"].ToString());
+                    }
+                }
+            }
+            else
+            {
+                PermissionLevel = 10;
+            }
+            return PermissionLevel;
         }
     }
-*/
 }
