@@ -5,7 +5,7 @@ VisualStudioVersion = 14.0.23107.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nekobot", "Nekobot\Nekobot.csproj", "{E2CB1AB4-C221-4948-B1B8-2BF684502B5F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Discord.Net", "..\..\Discord.Net\src\Discord.Net.Net45\Discord.Net.csproj", "{8D71A857-879A-4A10-859E-5FF824ED6688}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Discord.Net", "..\Discord.Net\src\Discord.Net.Net45\Discord.Net.csproj", "{8D71A857-879A-4A10-859E-5FF824ED6688}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nekobot.Commands", "Nekobot.Commands\Nekobot.Commands.csproj", "{4C109E0E-5837-4A2E-8AB4-AB1F5CEAAC2D}"
 EndProject

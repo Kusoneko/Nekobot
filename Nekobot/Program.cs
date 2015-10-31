@@ -2190,6 +2190,7 @@ Type '**{commands.CommandChar}help [command]**' for more specific help on a part
             LoadDB();
             // Load up the config file
             LoadConfig();
+            Console.Title = $"Nekobot v{version}";
             // Load the stream channels
             LoadStreams();
             // Initialize rest client
