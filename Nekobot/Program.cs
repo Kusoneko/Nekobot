@@ -581,35 +581,44 @@ Next songs:";
                     await client.SendMessage(e.Channel, LewdSX("lewd"));
                 });
 
-            group.CreateCommand("pitur")
-                .NoArgs()
-                .FlagNsfw(true)
-                .Description("I'll give you a random lewd image from pitur's hentai collection")
-                .Syntax($"{commands.CommandChar}pitur")
-                .Do(async e =>
-                {
-                    await client.SendFile(e.Channel, ImageFolders(pitur));
-                });
+            if (pitur != "")
+            {
+                group.CreateCommand("pitur")
+                    .NoArgs()
+                    .FlagNsfw(true)
+                    .Description("I'll give you a random lewd image from pitur's hentai collection")
+                    .Syntax($"{commands.CommandChar}pitur")
+                    .Do(async e =>
+                    {
+                        await client.SendFile(e.Channel, ImageFolders(pitur));
+                    });
+            }
 
-            group.CreateCommand("gold")
-                .NoArgs()
-                .FlagNsfw(true)
-                .Description("I'll give you a random kancolle image from gold's collection")
-                .Syntax($"{commands.CommandChar}gold")
-                .Do(async e =>
-                {
-                    await client.SendFile(e.Channel, ImageFolders(gold));
-                });
+            if (gold != "")
+            {
+                group.CreateCommand("gold")
+                    .NoArgs()
+                    .FlagNsfw(true)
+                    .Description("I'll give you a random kancolle image from gold's collection")
+                    .Syntax($"{commands.CommandChar}gold")
+                    .Do(async e =>
+                    {
+                        await client.SendFile(e.Channel, ImageFolders(gold));
+                    });
+            }
 
-            group.CreateCommand("cosplay")
-                .NoArgs()
-                .FlagNsfw(true)
-                .Description("I'll give you a random cosplay image from Salvy's collection")
-                .Syntax($"{commands.CommandChar}cosplay")
-                .Do(async e =>
-                {
-                    await client.SendFile(e.Channel, ImageFolders(cosplay));
-                });
+            if (cosplay != "")
+            {
+                group.CreateCommand("cosplay")
+                    .NoArgs()
+                    .FlagNsfw(true)
+                    .Description("I'll give you a random cosplay image from Salvy's collection")
+                    .Syntax($"{commands.CommandChar}cosplay")
+                    .Do(async e =>
+                    {
+                        await client.SendFile(e.Channel, ImageFolders(cosplay));
+                    });
+            }
 
             group.CreateCommand("safebooru")
                 .AnyArgs()
