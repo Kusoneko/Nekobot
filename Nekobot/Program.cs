@@ -627,7 +627,7 @@ Next songs:";
                 .Syntax($"{commands.CommandChar}safebooru [[+/-]tag1] [[+/-]tag2] [[+/-]tagn]")
                 .Do(async e =>
                 {
-                    await client.SendMessage(e.Channel, ImageBooru("safebooru", e.ArgText));
+                    await client.SendMessage(e.Channel, ImageBooru("safebooru", String.Join("%20", e.Args)));
                 });
 
             group.CreateCommand("gelbooru")
@@ -638,7 +638,7 @@ Next songs:";
                 .Syntax($"{commands.CommandChar}gelbooru [[+/-]tag1] [[+/-]tag2] [[+/-]tagn]")
                 .Do(async e =>
                 {
-                    await client.SendMessage(e.Channel, ImageBooru("gelbooru", e.ArgText));
+                    await client.SendMessage(e.Channel, ImageBooru("gelbooru", String.Join("%20", e.Args)));
                 });
 
             group.CreateCommand("rule34")
@@ -648,7 +648,7 @@ Next songs:";
                 .Syntax($"{commands.CommandChar}rule34 [[+/-]tag1] [[+/-]tag2] [[+/-]tagn]")
                 .Do(async e =>
                 {
-                    await client.SendMessage(e.Channel, ImageBooru("rule34", e.ArgText));
+                    await client.SendMessage(e.Channel, ImageBooru("rule34", String.Join("%20", e.Args)));
                 });
 
             group.CreateCommand("konachan")
@@ -658,7 +658,7 @@ Next songs:";
                 .Syntax($"{commands.CommandChar}konachan [[+/-]tag1] [[+/-]tag2] [[+/-]tagn]")
                 .Do(async e =>
                 {
-                    await client.SendMessage(e.Channel, ImageBooru("konachan", e.ArgText));
+                    await client.SendMessage(e.Channel, ImageBooru("konachan", String.Join("%20", e.Args)));
                 });
 
             group.CreateCommand("kona")
@@ -668,7 +668,7 @@ Next songs:";
                 .Syntax($"{commands.CommandChar}kona [[+/-]tag1] [[+/-]tag2] [[+/-]tagn]")
                 .Do(async e =>
                 {
-                    await client.SendMessage(e.Channel, ImageBooru("konachan", e.ArgText));
+                    await client.SendMessage(e.Channel, ImageBooru("konachan", String.Join("%20", e.Args)));
                 });
 
             group.CreateCommand("yandere")
@@ -678,7 +678,7 @@ Next songs:";
                 .Syntax($"{commands.CommandChar}yandere [[+/-]tag1] [[+/-]tag2] [[+/-]tagn]")
                 .Do(async e =>
                 {
-                    await client.SendMessage(e.Channel, ImageBooru("yandere", e.ArgText));
+                    await client.SendMessage(e.Channel, ImageBooru("yandere", String.Join("%20", e.Args)));
                 });
 
             group.CreateCommand("lolibooru")
@@ -688,7 +688,7 @@ Next songs:";
                 .Syntax($"{commands.CommandChar}lolibooru [[+/-]tag1] [[+/-]tag2] [[+/-]tagn]")
                 .Do(async e =>
                 {
-                    await client.SendMessage(e.Channel, ImageBooru("lolibooru", e.ArgText));
+                    await client.SendMessage(e.Channel, ImageBooru("lolibooru", String.Join("%20", e.Args)));
                 });
 
             group.CreateCommand("fortune")
@@ -2288,38 +2288,65 @@ Type '**{commands.CommandChar}help [command]**' for more specific help on a part
 
         private static string ImageBooru(string booru, string tags)
         {
-            string safebooru = $"http://safebooru.org/index.php?page=dapi&s=post&q=index&limit=1&tags={tags}&pid=";
-            string gelbooru = $"http://gelbooru.com/index.php?page=dapi&s=post&q=index&limit=1&tags={tags}&pid=";
-            string rule34 = $"http://rule34.xxx/index.php?page=dapi&s=post&q=index&limit=1&tags={tags}&pid=";
-            string konachan = $"http://konachan.com/post.xml?limit=1&tags={tags}&page=";
-            string yandere = $"https://yande.re/post.xml?limit=1&tags={tags}&page=";
-            string lolibooru = $"http://lolibooru.moe/post/index.xml?limit=1&tags={tags}&page=";
+            string safebooru = $"http://safebooru.org";
+            string saferes = $"index.php?page=dapi&s=post&q=index&limit=1&tags={tags}&pid=";
+            string gelbooru = $"http://gelbooru.com";
+            string gelres = $"index.php?page=dapi&s=post&q=index&limit=1&tags={tags}&pid=";
+            string rule34 = $"http://rule34.xxx";
+            string r34res = $"index.php?page=dapi&s=post&q=index&limit=1&tags={tags}&pid=";
+            string konachan = $"http://konachan.com";
+            string konares = $"post.xml?limit=1&tags={tags}&page=";
+            string yandere = $"https://yande.re";
+            string yanres = $"post.xml?limit=1&tags={tags}&page=";
+            string lolibooru = $"http://lolibooru.moe/post";
+            string lolires = $"index.xml?limit=1&tags={tags}&page=";
             string link = "";
+            string resource = "";
             if (booru == "safebooru")
+            {
                 link = safebooru;
+                resource = saferes;
+            }
             if (booru == "gelbooru")
+            {
                 link = gelbooru;
+                resource = gelres;
+            }
             if (booru == "rule34")
+            {
                 link = rule34;
+                resource = r34res;
+            }
             if (booru == "konachan")
+            {
                 link = konachan;
+                resource = konares;
+            }
             if (booru == "yandere")
+            {
                 link = yandere;
+                resource = yanres;
+            }
             if (booru == "lolibooru")
+            {
                 link = lolibooru;
-            int posts = GetBooruPostCount($"{link}");
+                resource = lolires;
+            }
+            int posts = GetBooruPostCount($"{link}", $"{resource}");
             if (posts == 0)
                 return $@"There is nothing under the tag(s):
 {tags}
 on {booru}. Please try something else.";
+            if (posts == 1)
+                return GetBooruImageLink($"{link}", $"{resource}{0.ToString()}");
             Random rnd = new Random();
-            return GetBooruImageLink($"{link}", rnd.Next(1, posts-1));
+            return GetBooruImageLink($"{link}", $"{resource}{rnd.Next(1, posts-1).ToString()}");
         }
 
-        private static string GetBooruImageLink(string link, int postid)
+        private static string GetBooruImageLink(string link, string resource)
         {
             rclient.BaseUrl = new System.Uri(link);
-            var request = new RestRequest(postid.ToString(), Method.GET);
+            var request = new RestRequest(resource, Method.GET);
             var result = rclient.Execute(request);
             XmlDocument xml = new XmlDocument();
             xml.LoadXml(result.Content);
@@ -2328,10 +2355,10 @@ on {booru}. Please try something else.";
             return res["posts"]["post"]["@file_url"].ToString().Replace(" ", "%20");
         }
 
-        private static int GetBooruPostCount(string link)
+        private static int GetBooruPostCount(string link, string resource)
         {
             rclient.BaseUrl = new System.Uri(link);
-            var request = new RestRequest("0", Method.GET);
+            var request = new RestRequest($"{resource}0", Method.GET);
             var result = rclient.Execute(request);
             XmlDocument xml = new XmlDocument();
             xml.LoadXml(result.Content);
