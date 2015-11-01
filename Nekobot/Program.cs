@@ -966,7 +966,7 @@ The current topic is: {e.Channel.Topic}";
                             if (u.AvatarUrl == null)
                                 await client.SendMessage(e.Channel, $"<@{u.Id}> has no avatar.");
                             else
-                                await client.SendMessage(e.Channel, $"<@{u.Id}>'s avatar is: {u.AvatarUrl}");
+                                await client.SendMessage(e.Channel, $"<@{u.Id}>'s avatar is: https://discordapp.com/api/{u.AvatarUrl}");
                         }
                     }
                     else
