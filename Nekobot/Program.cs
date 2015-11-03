@@ -303,7 +303,7 @@ Next songs:";
                     var files = from file in System.IO.Directory.EnumerateFiles($"{musicFolder}", "*.*").Where(s => musicexts.Contains(System.IO.Path.GetExtension(s))) select new { File = file };
                     for (int j = 0; j < files.Count(); j++)
                     {
-                        if (System.IO.Path.GetFileNameWithoutExtension(files.ElementAt(j).File).ToLower().Contains(e.ArgText.ToLower()))
+                        if (System.IO.Path.GetFileNameWithoutExtension(files.ElementAt(j).File).ToLower().Contains(String.Join(" ", e.Args).ToLower()))
                         {
                             int index = 1;
                             for (int i = 1; i < playlist[e.User.VoiceChannel.Id].Count; i++)
@@ -865,7 +865,7 @@ Next songs:";
                 .Syntax($"{commands.CommandChar}say [text...]")
                 .Do(async e =>
                 {
-                    await client.SendMessage(e.Channel, e.Message.RawText.Substring(5));
+                    await client.SendMessage(e.Channel, String.Join(" ", e.Args));
                 });
 
             group.CreateCommand("forward")
@@ -874,7 +874,7 @@ Next songs:";
                 .Syntax($"{commands.CommandChar}forward [text...]")
                 .Do(async e =>
                 {
-                    await client.SendMessage(e.Channel, e.Message.RawText.Substring(9));
+                    await client.SendMessage(e.Channel, String.Join(" ", e.Args));
                 });
 
             group.CreateCommand("reverse")
@@ -883,7 +883,7 @@ Next songs:";
                 .Syntax($"{commands.CommandChar}reverse [text...]")
                 .Do(async e =>
                 {
-                    string message = e.ArgText;
+                    string message = String.Join(" ", e.Args);
                     char[] chars = message.ToArray();
                     char[] result = new char[chars.Length];
                     for (int i = 0, j = message.Length - 1; i < message.Length; i++, j--)
@@ -1279,7 +1279,7 @@ The current topic is: {e.Channel.Topic}";
                 {
                     string[] eightball = new string[] { "It is certain.", "It is decidedly so.", "Without a doubt.", "Yes, definitely.", "You may rely on it.", "As I see it, yes.", "Most likely.", "Outlook good.", "Yes.", "Signs point to yes.", "Reply hazy try again...", "Ask again later...", "Better not tell you now...", "Cannot predict now...", "Concentrate and ask again...", "Don't count on it.", "My reply is no.", "My sources say no.", "Outlook not so good.", "Very doubtful.", "Nyas.", "Why not?", "zzzzz...", "No."};
                     Random rnd = new Random();
-                    if (e.ArgText[e.ArgText.Length - 1] != '?')
+                    if (String.Join(" ", e.Args)[String.Join(" ", e.Args).Length - 1] != '?')
                         await client.SendMessage(e.Channel, "You must ask a proper question!");
                     else
                         await client.SendMessage(e.Channel, $"*{eightball[rnd.Next(eightball.Length)]}*");
@@ -1293,7 +1293,7 @@ The current topic is: {e.Channel.Topic}";
                 {
                     Random rnd = new Random();
                     rclient.BaseUrl = new Uri("https://ajax.googleapis.com/ajax/services/search");
-                    var request = new RestRequest($"images?v=1.0&q={e.ArgText}&rsz=8&start={rnd.Next(1, 12).ToString()}&safe=active", Method.GET);
+                    var request = new RestRequest($"images?v=1.0&q={String.Join(" ", e.Args)}&rsz=8&start={rnd.Next(1, 12).ToString()}&safe=active", Method.GET);
                     JObject result = JObject.Parse(rclient.Execute(request).Content);
                     List<string> images = new List<string>();
                     foreach (var element in result["responseData"]["results"])
@@ -1492,7 +1492,7 @@ The current topic is: {e.Channel.Topic}";
                     }
                     else
                     {
-                        await client.SendMessage(e.Channel, $"<@{e.User.Id}>, '{e.ArgText}' isn't a valid argument. Please use on or off instead.");
+                        await client.SendMessage(e.Channel, $"<@{e.User.Id}>, '{String.Join(" ", e.Args)}' isn't a valid argument. Please use on or off instead.");
                     }
                 });
 
@@ -1544,7 +1544,7 @@ The current topic is: {e.Channel.Topic}";
                     }
                     else
                     {
-                        await client.SendMessage(e.Channel, $"<@{e.User.Id}>, '{e.ArgText}' isn't a valid argument. Please use on or off instead.");
+                        await client.SendMessage(e.Channel, $"<@{e.User.Id}>, '{String.Join(" ", e.Args)}' isn't a valid argument. Please use on or off instead.");
                     }
                 });
 
