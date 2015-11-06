@@ -865,7 +865,7 @@ Next songs:";
                 .Syntax($"{commands.CommandChar}say [text...]")
                 .Do(async e =>
                 {
-                    await client.SendMessage(e.Channel, String.Join(" ", e.Args));
+                    await client.SendMessage(e.Channel, e.Message.RawText.Substring(4));
                 });
 
             group.CreateCommand("forward")
@@ -874,7 +874,7 @@ Next songs:";
                 .Syntax($"{commands.CommandChar}forward [text...]")
                 .Do(async e =>
                 {
-                    await client.SendMessage(e.Channel, String.Join(" ", e.Args));
+                    await client.SendMessage(e.Channel, e.Message.RawText.Substring(8));
                 });
 
             group.CreateCommand("reverse")
