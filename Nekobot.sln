@@ -4,10 +4,16 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 VisualStudioVersion = 14.0.23107.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nekobot", "Nekobot\Nekobot.csproj", "{E2CB1AB4-C221-4948-B1B8-2BF684502B5F}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Discord.Net", "..\Discord.Net\src\Discord.Net.Net45\Discord.Net.csproj", "{8D71A857-879A-4A10-859E-5FF824ED6688}"
+	ProjectSection(ProjectDependencies) = postProject
+		{8D71A857-879A-4A10-859E-5FF824ED6688} = {8D71A857-879A-4A10-859E-5FF824ED6688}
+	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nekobot.Commands", "Nekobot.Commands\Nekobot.Commands.csproj", "{4C109E0E-5837-4A2E-8AB4-AB1F5CEAAC2D}"
+	ProjectSection(ProjectDependencies) = postProject
+		{8D71A857-879A-4A10-859E-5FF824ED6688} = {8D71A857-879A-4A10-859E-5FF824ED6688}
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Discord.Net", "Discord.Net\src\Discord.Net.Net45\Discord.Net.csproj", "{8D71A857-879A-4A10-859E-5FF824ED6688}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -22,18 +28,18 @@ Global
 		{E2CB1AB4-C221-4948-B1B8-2BF684502B5F}.FullDebug|Any CPU.Build.0 = Debug|Any CPU
 		{E2CB1AB4-C221-4948-B1B8-2BF684502B5F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E2CB1AB4-C221-4948-B1B8-2BF684502B5F}.Release|Any CPU.Build.0 = Release|Any CPU
-		{8D71A857-879A-4A10-859E-5FF824ED6688}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{8D71A857-879A-4A10-859E-5FF824ED6688}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{8D71A857-879A-4A10-859E-5FF824ED6688}.FullDebug|Any CPU.ActiveCfg = FullDebug|Any CPU
-		{8D71A857-879A-4A10-859E-5FF824ED6688}.FullDebug|Any CPU.Build.0 = FullDebug|Any CPU
-		{8D71A857-879A-4A10-859E-5FF824ED6688}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{8D71A857-879A-4A10-859E-5FF824ED6688}.Release|Any CPU.Build.0 = Release|Any CPU
 		{4C109E0E-5837-4A2E-8AB4-AB1F5CEAAC2D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{4C109E0E-5837-4A2E-8AB4-AB1F5CEAAC2D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4C109E0E-5837-4A2E-8AB4-AB1F5CEAAC2D}.FullDebug|Any CPU.ActiveCfg = Debug|Any CPU
 		{4C109E0E-5837-4A2E-8AB4-AB1F5CEAAC2D}.FullDebug|Any CPU.Build.0 = Debug|Any CPU
 		{4C109E0E-5837-4A2E-8AB4-AB1F5CEAAC2D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4C109E0E-5837-4A2E-8AB4-AB1F5CEAAC2D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8D71A857-879A-4A10-859E-5FF824ED6688}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8D71A857-879A-4A10-859E-5FF824ED6688}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8D71A857-879A-4A10-859E-5FF824ED6688}.FullDebug|Any CPU.ActiveCfg = FullDebug|Any CPU
+		{8D71A857-879A-4A10-859E-5FF824ED6688}.FullDebug|Any CPU.Build.0 = FullDebug|Any CPU
+		{8D71A857-879A-4A10-859E-5FF824ED6688}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8D71A857-879A-4A10-859E-5FF824ED6688}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
