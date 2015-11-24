@@ -2436,8 +2436,8 @@ on {booru}. Please try something else.";
             gold = config["gold"].ToString();
             cosplay = config["cosplay"].ToString();
             commands.CommandChar = config["prefix"].ToString()[0];
-            if (System.IO.File.Exists(@"..\..\..\version.json"))
-                versionfile = JObject.Parse(System.IO.File.ReadAllText(@"..\..\..\version.json"));
+            if (System.IO.File.Exists(@"version.json"))
+                versionfile = JObject.Parse(System.IO.File.ReadAllText(@"version.json"));
             version = versionfile["version"].ToString();
         }
 
