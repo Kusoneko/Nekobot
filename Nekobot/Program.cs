@@ -2335,6 +2335,7 @@ on {booru}. Please try something else.";
                 }
                 catch (Exception) {}
             }
+            return $"Failed ten times, something must be broken with {booru}'s API.";
         }
 
         private static JObject GetBooruCommon(ImageBoard board, int rnd)
