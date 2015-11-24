@@ -2312,7 +2312,7 @@ Type '**{commands.CommandChar}help [command]**' for more specific help on a part
                 board = new ImageBoard("http://lolibooru.moe/post", res2, post2);
             else if (booru == "e621")
                 board = new ImageBoard("https://e621.net/post", res2, post2);
-            for (;;)
+            for (int i = 10; i != 0; --i)
             {
                 try
                 {
