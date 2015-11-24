@@ -691,6 +691,16 @@ Next songs:";
                     await client.SendMessage(e.Channel, ImageBooru("lolibooru", String.Join("%20", e.Args)));
                 });
 
+            group.CreateCommand("e621")
+                .AnyArgs()
+                .FlagNsfw(true)
+                .Description("I'll give you a random image from e621 (optionally with tags)")
+                .Syntax($"{commands.CommandChar}e621 [[+/-]tagn]")
+                .Do(async e =>
+                {
+                    await client.SendMessage(e.Channel, ImageBooru("e621", String.Join("%20", e.Args)));
+                });
+
             group.CreateCommand("fortune")
                 .NoArgs()
                 .Description("I'll give you a fortune!")
