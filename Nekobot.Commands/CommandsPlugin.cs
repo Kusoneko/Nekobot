@@ -55,11 +55,18 @@ namespace Nekobot.Commands
                         return;
                     bool isPrivate = e.Message.Channel.IsPrivate;
                     bool hasCommandChar = msg[0] == CommandChar;
+                    bool mentions_me = e.Message.IsMentioningMe;
                     if (hasCommandChar)
                         msg = msg.Substring(1);
-                    if (!isPrivate && RequireCommandCharInPublic && !hasCommandChar)
+                    else if (mentions_me)
+                    {
+                        int index = msg.IndexOf("@");
+                        if (index == -1) return;
+                        msg = index == 0 ? msg.Substring(msg.IndexOf(" ")) : msg.Substring(0, index-1);
+                    }
+                    if (!isPrivate && RequireCommandCharInPublic && !hasCommandChar && !mentions_me)
                         return;
-                    if (isPrivate && RequireCommandCharInPrivate && !hasCommandChar)
+                    if (isPrivate && RequireCommandCharInPrivate && !hasCommandChar && !mentions_me)
                         return;
                 }
 
