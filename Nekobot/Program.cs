@@ -2286,84 +2286,65 @@ Type '**{commands.CommandChar}help [command]**' for more specific help on a part
 
         }
 
+        private class ImageBoard : Tuple<string, string, string>
+        {
+            public ImageBoard(string link, string resource, string post) : base(link, resource, post) { }
+            public string link { get { return Item1; } }
+            public string resource { get { return Item2; } }
+            public string post { get { return Item3; } }
+        };
         private static string ImageBooru(string booru, string tags)
         {
-            string safebooru = $"http://safebooru.org";
-            string saferes = $"index.php?page=dapi&s=post&q=index&limit=1&tags={tags}&pid=";
-            string gelbooru = $"http://gelbooru.com";
-            string gelres = $"index.php?page=dapi&s=post&q=index&limit=1&tags={tags}&pid=";
-            string rule34 = $"http://rule34.xxx";
-            string r34res = $"index.php?page=dapi&s=post&q=index&limit=1&tags={tags}&pid=";
-            string konachan = $"http://konachan.com";
-            string konares = $"post.xml?limit=1&tags={tags}&page=";
-            string yandere = $"https://yande.re";
-            string yanres = $"post.xml?limit=1&tags={tags}&page=";
-            string lolibooru = $"http://lolibooru.moe/post";
-            string lolires = $"index.xml?limit=1&tags={tags}&page=";
-            string link = "";
-            string resource = "";
+            string res1 = $"index.php?page=dapi&s=post&q=index&limit=1&tags={tags}&pid=", post1 = $"/index.php?page=post&s=view&id=";
+            string res2 = $"/index.xml?limit=1&tags={tags}&page=", post2 = $"/show/";
+            ImageBoard board = null;
             if (booru == "safebooru")
+                board = new ImageBoard("http://safebooru.org", res1, post1);
+            else if (booru == "gelbooru")
+                board = new ImageBoard("http://gelbooru.com", res1, post1);
+            else if (booru == "rule34")
+                board = new ImageBoard("http://rule34.xxx", res1, post1);
+            else if (booru == "konachan")
+                board = new ImageBoard("http://konachan.com/post", res2, post2);
+            else if (booru == "yandere")
+                board = new ImageBoard("https://yande.re/post", res2, post2);
+            else if (booru == "lolibooru")
+                board = new ImageBoard("http://lolibooru.moe/post", res2, post2);
+            for (;;)
             {
-                link = safebooru;
-                resource = saferes;
-            }
-            if (booru == "gelbooru")
-            {
-                link = gelbooru;
-                resource = gelres;
-            }
-            if (booru == "rule34")
-            {
-                link = rule34;
-                resource = r34res;
-            }
-            if (booru == "konachan")
-            {
-                link = konachan;
-                resource = konares;
-            }
-            if (booru == "yandere")
-            {
-                link = yandere;
-                resource = yanres;
-            }
-            if (booru == "lolibooru")
-            {
-                link = lolibooru;
-                resource = lolires;
-            }
-            int posts = GetBooruPostCount($"{link}", $"{resource}");
-            if (posts == 0)
-                return $@"There is nothing under the tag(s):
-{tags}
+                try
+                {
+                    int posts = GetBooruPostCount(board);
+                    if (posts == 0)
+                        return $@"There is nothing under the tag(s):
+{tags.Replace("%20", " ")}
 on {booru}. Please try something else.";
-            if (posts == 1)
-                return GetBooruImageLink($"{link}", $"{resource}{0.ToString()}");
-            Random rnd = new Random();
-            return GetBooruImageLink($"{link}", $"{resource}{rnd.Next(1, posts-1).ToString()}");
+                    return GetBooruImageLink(board, posts == 1 ? 0 : (new Random()).Next(1, posts - 1));
+                }
+                catch (Exception) {}
+            }
         }
 
-        private static string GetBooruImageLink(string link, string resource)
+        private static JObject GetBooruCommon(ImageBoard board, int rnd)
         {
-            rclient.BaseUrl = new System.Uri(link);
-            var request = new RestRequest(resource, Method.GET);
+            rclient.BaseUrl = new System.Uri(board.link);
+            var request = new RestRequest(board.resource + rnd.ToString(), Method.GET);
             var result = rclient.Execute(request);
             XmlDocument xml = new XmlDocument();
             xml.LoadXml(result.Content);
             string json = JsonConvert.SerializeXmlNode(xml);
-            JObject res = JObject.Parse(json);
-            return res["posts"]["post"]["@file_url"].ToString().Replace(" ", "%20");
+            return JObject.Parse(json);
         }
 
-        private static int GetBooruPostCount(string link, string resource)
+        private static string GetBooruImageLink(ImageBoard board, int rnd)
         {
-            rclient.BaseUrl = new System.Uri(link);
-            var request = new RestRequest($"{resource}0", Method.GET);
-            var result = rclient.Execute(request);
-            XmlDocument xml = new XmlDocument();
-            xml.LoadXml(result.Content);
-            string json = JsonConvert.SerializeXmlNode(xml);
-            JObject res = JObject.Parse(json);
+            JObject res = GetBooruCommon(board, rnd);
+            return "**"+board.link+board.post+res["posts"]["post"]["@id"].ToString()+ "** " + res["posts"]["post"]["@file_url"].ToString().Replace(" ", "%20");
+        }
+
+        private static int GetBooruPostCount(ImageBoard board)
+        {
+            JObject res = GetBooruCommon(board, 0);
             return int.Parse(res["posts"]["@count"].ToString());
         }
 
