@@ -45,11 +45,11 @@ namespace Nekobot
                 .Do(async e =>
                 {
                     string reply = "";
-                    if (e.Message.Mentions.Count() > 0)
+                    if (e.Message.MentionedUsers.Count() > 0)
                     {
-                        foreach (User u in e.Message.Mentions)
+                        foreach (User u in e.Message.MentionedUsers)
                         {
-                            if (u.Id == "63296013791666176" && e.User.Id == "63299786798796800")
+                            if (u.Id == 63296013791666176 && e.User.Id == 63299786798796800)
                             {
                                 reply += $@"
 <@{u.Id}> is your onii-chan <3 and his id is {u.Id} and his permission level is {GetPermissions(u).ToString()}.
@@ -77,11 +77,11 @@ namespace Nekobot
                 .Do(async e =>
                 {
                     string reply = "";
-                    if (e.Message.Mentions.Count() > 0)
+                    if (e.Message.MentionedUsers.Count() > 0)
                     {
-                        foreach (User u in e.Message.Mentions)
+                        foreach (User u in e.Message.MentionedUsers)
                         {
-                            if (u.Id == "63296013791666176" && e.User.Id == "63299786798796800")
+                            if (u.Id == 63296013791666176 && e.User.Id == 63299786798796800)
                             {
                                 reply += $@"
 <@{u.Id}> is your onii-chan <3 and his id is {u.Id} and his permission level is {GetPermissions(u).ToString()}.
@@ -278,7 +278,7 @@ Next songs:";
                                 await client.SendMessage(e.Channel, $"<@{e.User.Id}> Your request is already in the playlist at position {(songindex).ToString()}.");
                                 return;
                             }
-                            playlist[e.User.VoiceChannel.Id].Insert(index, Tuple.Create<string, string, string, string>(video.Uri, "Youtube", e.User.Id, e.Args[0]));
+                            playlist[e.User.VoiceChannel.Id].Insert(index, Tuple.Create<string, string, long, string>(video.Uri, "Youtube", e.User.Id, e.Args[0]));
                             await client.SendMessage(e.Channel, $"{video.Title} added to the playlist.");
                         //}
                         //else
@@ -328,7 +328,7 @@ Next songs:";
                                 await client.SendMessage(e.Channel, $"<@{e.User.Id}> Your request is already in the playlist at position {(songindex).ToString()}.");
                                 return;
                             }
-                            playlist[e.User.VoiceChannel.Id].Insert(index, Tuple.Create<string, string, string, string>(files.ElementAt(j).File, "Request", e.User.Id, null));
+                            playlist[e.User.VoiceChannel.Id].Insert(index, Tuple.Create<string, string, long, string>(files.ElementAt(j).File, "Request", e.User.Id, null));
                             await client.SendMessage(e.Channel, $"<@{e.User.Id}> Your request has been added to the list.");
                             requestfound = true;
                             break;
@@ -969,9 +969,9 @@ The current topic is: {e.Channel.Topic}";
                 .Syntax($"{commands.CommandChar}avatar [@User1] [@User2] [@UserN]")
                 .Do(async e =>
                 {
-                    if (e.Message.Mentions.Count() > 0)
+                    if (e.Message.MentionedUsers.Count() > 0)
                     {
-                        foreach (User u in e.Message.Mentions)
+                        foreach (User u in e.Message.MentionedUsers)
                         {
                             if (u.AvatarUrl == null)
                                 await client.SendMessage(e.Channel, $"<@{u.Id}> has no avatar.");
@@ -1148,13 +1148,13 @@ The current topic is: {e.Channel.Topic}";
                 .Do(async e =>
                 {
                     string message = $"<@{e.User.Id}> pets ";
-                    if (e.Message.Mentions.Count() == 0 && !e.Message.IsMentioningEveryone)
+                    if (e.Message.MentionedUsers.Count() == 0 && !e.Message.MentionedRoles.Contains(e.Server.EveryoneRole))
                         message = "*purrs*";
-                    else if (e.Message.IsMentioningEveryone)
+                    else if (e.Message.MentionedRoles.Contains(e.Server.EveryoneRole))
                         message = message + $"{Mention.Everyone()} *purrs*";
                     else
                     {
-                        foreach (User u in e.Message.Mentions)
+                        foreach (User u in e.Message.MentionedUsers)
                         {
                             message = message + $"<@{u.Id}> ";
                         }
@@ -1173,13 +1173,13 @@ The current topic is: {e.Channel.Topic}";
                 .Do(async e =>
                 {
                     string message = $"<@{e.User.Id}> pets ";
-                    if (e.Message.Mentions.Count() == 0 && !e.Message.IsMentioningEveryone)
+                    if (e.Message.MentionedUsers.Count() == 0 && !e.Message.MentionedRoles.Contains(e.Server.EveryoneRole))
                         message = "*purrs*";
-                    else if (e.Message.IsMentioningEveryone)
+                    else if (e.Message.MentionedRoles.Contains(e.Server.EveryoneRole))
                         message = message + $"{Mention.Everyone()} *purrs*";
                     else
                     {
-                        foreach (User u in e.Message.Mentions)
+                        foreach (User u in e.Message.MentionedUsers)
                         {
                             message = message + $"<@{u.Id}> ";
                         }
@@ -1577,7 +1577,7 @@ The current topic is: {e.Channel.Topic}";
                 .Syntax($"{commands.CommandChar}music [on/off]")
                 .Do(async e =>
                 {
-                    if (e.User.VoiceChannel.Id == null || e.User.VoiceChannel.Id == "")
+                    if (e.User.VoiceChannel?.Id <= 0)
                     {
                         await client.SendMessage(e.Channel, $"<@{e.User.Id}>, you need to be in a voice channel to use this.");
                     }
@@ -1640,7 +1640,7 @@ The current topic is: {e.Channel.Topic}";
                 .Do(async e =>
                 {
                     int newPermLevel = 0;
-                    if (e.Args.Count() < 2 || e.Message.Mentions.Count() < 1)
+                    if (e.Args.Count() < 2 || e.Message.MentionedUsers.Count() < 1)
                         await client.SendMessage(e.Channel, "You need to at least specify a permission level and mention one user.");
                     else if (!int.TryParse(e.Args[0], out newPermLevel))
                         await client.SendMessage(e.Channel, "The first argument needs to be the new permission level.");
@@ -1649,7 +1649,7 @@ The current topic is: {e.Channel.Topic}";
                     else
                     {
                         string reply = "";
-                        foreach (User u in e.Message.Mentions)
+                        foreach (User u in e.Message.MentionedUsers)
                         {
                             if (GetPermissions(u) != newPermLevel)
                             {
@@ -1699,7 +1699,7 @@ The current topic is: {e.Channel.Topic}";
                 .Do(async e =>
                 {
                     int newPermLevel = 0;
-                    if (e.Args.Count() < 2 || e.Message.Mentions.Count() < 1)
+                    if (e.Args.Count() < 2 || e.Message.MentionedUsers.Count() < 1)
                         await client.SendMessage(e.Channel, "You need to at least specify a permission level and mention one user.");
                     else if (!int.TryParse(e.Args[0], out newPermLevel))
                         await client.SendMessage(e.Channel, "The first argument needs to be the new permission level.");
@@ -1708,7 +1708,7 @@ The current topic is: {e.Channel.Topic}";
                     else
                     {
                         string reply = "";
-                        foreach (User u in e.Message.Mentions)
+                        foreach (User u in e.Message.MentionedUsers)
                         {
                             if (GetPermissions(u) != newPermLevel)
                             {
@@ -1758,7 +1758,7 @@ The current topic is: {e.Channel.Topic}";
                 .Do(async e =>
                 {
                     int newPermLevel = 0;
-                    if (e.Args.Count() < 2 || e.Message.Mentions.Count() < 1)
+                    if (e.Args.Count() < 2 || e.Message.MentionedUsers.Count() < 1)
                         await client.SendMessage(e.Channel, "You need to at least specify a permission level and mention one user.");
                     else if (!int.TryParse(e.Args[0], out newPermLevel))
                         await client.SendMessage(e.Channel, "The first argument needs to be the new permission level.");
@@ -1767,7 +1767,7 @@ The current topic is: {e.Channel.Topic}";
                     else
                     {
                         string reply = "";
-                        foreach (User u in e.Message.Mentions)
+                        foreach (User u in e.Message.MentionedUsers)
                         {
                             if (GetPermissions(u) != newPermLevel)
                             {
@@ -1872,7 +1872,7 @@ The current topic is: {e.Channel.Topic}";
                 .Do(async e =>
                 {
                     Regex re = new Regex(@"<#([0-9]+?)>");
-                    if (re.Matches(e.Message.RawText).Count > 0 || e.Message.Mentions.Count() > 0)
+                    if (re.Matches(e.Message.RawText).Count > 0 || e.Message.MentionedUsers.Count() > 0)
                     {
                         string reply = "";
                         if (re.Matches(e.Message.RawText).Count > 0)
@@ -1880,7 +1880,7 @@ The current topic is: {e.Channel.Topic}";
                             // At least one channel was mentioned
                             foreach (Match m in re.Matches(e.Message.RawText))
                             {
-                                Channel c = client.GetChannel(m.Groups[1].Value);
+                                Channel c = client.GetChannel(Convert.ToInt64(m.Groups[1].Value));
                                 sql = $"select count(channel) from flags where channel='{c.Id}'";
                                 query = new SQLiteCommand(sql, connection);
                                 if (Convert.ToInt32(query.ExecuteScalar()) > 0)
@@ -1919,10 +1919,10 @@ The current topic is: {e.Channel.Topic}";
                                 }
                             }
                         }
-                        if (e.Message.Mentions.Count() > 0)
+                        if (e.Message.MentionedUsers.Count() > 0)
                         {
                             // At least one user is mentioned
-                            foreach (User u in e.Message.Mentions)
+                            foreach (User u in e.Message.MentionedUsers)
                             {
                                 sql = $"select count(user) from users where user='{u.Id}'";
                                 query = new SQLiteCommand(sql, connection);
@@ -2068,7 +2068,7 @@ Type '**{commands.CommandChar}help [command]**' for more specific help on a part
         static JObject config;
         static JObject versionfile;
         static string sql;
-        static string masterId;
+        static long masterId;
         static string email;
         static string password;
         static string musicFolder;
@@ -2077,16 +2077,16 @@ Type '**{commands.CommandChar}help [command]**' for more specific help on a part
         static string cosplay;
         static string version;
         // Music-related variables
-        static List<string> streams = new List<string>();
-        public static Dictionary<string, List<Tuple<string, string, string, string>>> playlist = new Dictionary<string, List<Tuple<string, string, string, string>>>();
-        public static Dictionary<string, bool> skip = new Dictionary<string, bool>();
-        public static Dictionary<string, bool> reset = new Dictionary<string, bool>();
-        public static Dictionary<string, List<string>> voteskip = new Dictionary<string, List<string>>();
-        public static Dictionary<string, List<string>> votereset = new Dictionary<string, List<string>>();
-        public static Dictionary<string, List<string>> voteencore = new Dictionary<string, List<string>>();
+        static List<long> streams = new List<long>();
+        public static Dictionary<long, List<Tuple<string, string, long, string>>> playlist = new Dictionary<long, List<Tuple<string, string, long, string>>>();
+        public static Dictionary<long, bool> skip = new Dictionary<long, bool>();
+        public static Dictionary<long, bool> reset = new Dictionary<long, bool>();
+        public static Dictionary<long, List<long>> voteskip = new Dictionary<long, List<long>>();
+        public static Dictionary<long, List<long>> votereset = new Dictionary<long, List<long>>();
+        public static Dictionary<long, List<long>> voteencore = new Dictionary<long, List<long>>();
         public static string[] musicexts = { ".wma", ".aac", ".mp3", ".m4a", ".wav", ".flac" };
 
-        private static async Task StreamMusic(string cid)
+        private static async Task StreamMusic(long cid)
         {
             Channel c = client.GetChannel(cid);
             IDiscordVoiceClient _client = null;
@@ -2102,7 +2102,7 @@ Type '**{commands.CommandChar}help [command]**' for more specific help on a part
             Random rnd = new Random();
             if (!playlist.ContainsKey(cid))
             {
-                playlist.Add(cid, new List<Tuple<string, string, string, string>>());
+                playlist.Add(cid, new List<Tuple<string, string, long, string>>());
             }
             if (!skip.ContainsKey(cid))
             {
@@ -2114,9 +2114,9 @@ Type '**{commands.CommandChar}help [command]**' for more specific help on a part
             }
             while (streams.Contains(cid))
             {
-                voteskip[cid] = new List<string>();
-                votereset[cid] = new List<string>();
-                voteencore[cid] = new List<string>();
+                voteskip[cid] = new List<long>();
+                votereset[cid] = new List<long>();
+                voteencore[cid] = new List<long>();
                 var files = from file in System.IO.Directory.EnumerateFiles(musicFolder, "*.*").Where(s => musicexts.Contains(System.IO.Path.GetExtension(s))) select new { File = file };
                 int mp3 = 0;
                 while (playlist[cid].Count() < 11)
@@ -2130,7 +2130,7 @@ Type '**{commands.CommandChar}help [command]**' for more specific help on a part
                     }
                     if (isAlreadyInPlaylist)
                         break;
-                    playlist[cid].Add(Tuple.Create<string, string, string, string>(files.ElementAt(mp3).File, "Playlist", null, null));
+                    playlist[cid].Add(Tuple.Create<string, string, long, string>(files.ElementAt(mp3).File, "Playlist", 0, null));
                 }
                 await Task.Run(async () =>
                 {
@@ -2195,7 +2195,7 @@ Type '**{commands.CommandChar}help [command]**' for more specific help on a part
             commands.UnknownCommand += UnknownCommand;
             client.Connected += Connected;
             client.Disconnected += Disconnected;
-            client.UserAdded += UserAdded;
+            client.UserJoined += UserJoined;
             client.LogMessage += LogMessage;
             commands.CreateCommandGroup("", group => GenerateCommands(group));
             // Keep the window open in case of crashes elsewhere... (hopefully)
@@ -2424,7 +2424,7 @@ on {booru}. Please try something else.";
             }
             email = config["email"].ToString();
             password = config["password"].ToString();
-            masterId = config["master"].ToString();
+            masterId = Convert.ToInt64(config["master"].ToString());
             musicFolder = config["musicFolder"].ToString();
             pitur = config["pitur"].ToString();
             gold = config["gold"].ToString();
@@ -2451,7 +2451,7 @@ on {booru}. Please try something else.";
             query.ExecuteNonQuery();
         }
 
-        private static void UserAdded(object sender, UserEventArgs e)
+        private static void UserJoined(object sender, UserEventArgs e)
         {
             client.SendMessage(e.Server.DefaultChannel, $"Welcome to {e.Server.Name}, <@{e.User.Id}>!");
         }
@@ -2499,7 +2499,7 @@ on {booru}. Please try something else.";
             SQLiteDataReader reader = query.ExecuteReader();
             while (reader.Read())
             {
-                streams.Add(reader["channel"].ToString());
+                streams.Add(Convert.ToInt64(reader["channel"].ToString()));
             }
         }
 
@@ -2572,10 +2572,10 @@ on {booru}. Please try something else.";
             query = new SQLiteCommand(sql, connection);
             SQLiteDataReader reader = query.ExecuteReader();
             bool isInMusicChannel = false;
-            List<string> streams = new List<string>();
+            List<long> streams = new List<long>();
             while (reader.Read())
             {
-                streams.Add(reader["channel"].ToString());
+                streams.Add(Convert.ToInt64(reader["channel"].ToString()));
             }
             if (user.VoiceChannel != null)
             {
