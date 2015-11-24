@@ -2107,7 +2107,7 @@ Type '**{commands.CommandChar}help [command]**' for more specific help on a part
                 voteskip[cid] = new List<string>();
                 votereset[cid] = new List<string>();
                 voteencore[cid] = new List<string>();
-                var files = from file in System.IO.Directory.EnumerateFiles($@"E:\Sync\Music", "*.*").Where(s => musicexts.Contains(System.IO.Path.GetExtension(s))) select new { File = file };
+                var files = from file in System.IO.Directory.EnumerateFiles(musicFolder, "*.*").Where(s => musicexts.Contains(System.IO.Path.GetExtension(s))) select new { File = file };
                 int mp3 = 0;
                 while (playlist[cid].Count() < 11)
                 {
