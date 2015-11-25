@@ -106,8 +106,10 @@ namespace Nekobot.Commands
                 CommandParser.ParseCommand(msg, _map, out commands, out argPos);                
                 if (commands == null)
                 {
+                    /* This command just wasn't for Neko, don't interrupt!
                     CommandEventArgs errorArgs = new CommandEventArgs(e.Message, null, null);
-                    RaiseCommandError(CommandErrorType.UnknownCommand, errorArgs);
+                    RaiseCommandError(CommandErrorType.UnknownCommand, errorArgs, new Exception("Error parsing command"));
+                    */
                     return;
                 }
                 else
