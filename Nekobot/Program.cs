@@ -1348,96 +1348,17 @@ The current topic is: {e.Channel.Topic}";
                 .Description("I'll ignore commands coming from a particular channel or user")
                 .Do(async e =>
                 {
-                    Regex re = new Regex(@"<#([0-9]+?)>");
-                    if (re.Matches(e.Message.RawText).Count > 0 || e.Message.MentionedUsers.Count() > 0)
+                    if (e.Message.MentionedChannels.Count() > 0 || e.Message.MentionedUsers.Count() > 0)
                     {
                         string reply = "";
-                        if (re.Matches(e.Message.RawText).Count > 0)
+                        Action<string> setreply = x => reply = x;
+                        foreach (Channel c in e.Message.MentionedChannels)
                         {
-                            // At least one channel was mentioned
-                            foreach (Match m in re.Matches(e.Message.RawText))
-                            {
-                                Channel c = client.GetChannel(Convert.ToInt64(m.Groups[1].Value));
-                                sql = $"select count(channel) from flags where channel='{c.Id}'";
-                                query = new SQLiteCommand(sql, connection);
-                                if (Convert.ToInt32(query.ExecuteScalar()) > 0)
-                                {
-                                    bool isIgnored = GetIgnoredFlag(c);
-                                    sql = $"update flags set ignored={Convert.ToInt32(!isIgnored)} where channel='{c.Id}'";
-                                    query = new SQLiteCommand(sql, connection);
-                                    await query.ExecuteNonQueryAsync();
-                                    if (!isIgnored)
-                                    {
-                                        if (reply == "")
-                                            reply = reply + $@"<#{c.Id}> is now ignored.";
-                                        else
-                                            reply = reply + $@"
-<#{c.Id}> is now ignored.";
-                                    }
-                                    else
-                                    {
-                                        if (reply == "")
-                                            reply = reply + $@"<#{c.Id}> is no longer ignored.";
-                                        else
-                                            reply = reply + $@"
-<#{c.Id}> is no longer ignored.";
-                                    }
-                                }
-                                else
-                                {
-                                    sql = $"insert into falgs values ('{c.Id}', 0, 0, 1)";
-                                    query = new SQLiteCommand(sql, connection);
-                                    await query.ExecuteNonQueryAsync();
-                                    if (reply == "")
-                                        reply = reply + $@"<#{c.Id}> is now ignored.";
-                                    else
-                                        reply = reply + $@"
-<#{c.Id}> is now ignored.";
-                                }
-                            }
+                            await SetIgnoredFlag("channel", "flags", c.Id, "0, 0, 1", '#', reply, setreply);
                         }
-                        if (e.Message.MentionedUsers.Count() > 0)
+                        foreach (User u in e.Message.MentionedUsers)
                         {
-                            // At least one user is mentioned
-                            foreach (User u in e.Message.MentionedUsers)
-                            {
-                                sql = $"select count(user) from users where user='{u.Id}'";
-                                query = new SQLiteCommand(sql, connection);
-                                if (Convert.ToInt32(query.ExecuteScalar()) > 0)
-                                {
-                                    bool isIgnored = GetIgnoredFlag(u);
-                                    sql = $"update users set ignored={Convert.ToInt32(!isIgnored)} where user='{u.Id}'";
-                                    query = new SQLiteCommand(sql, connection);
-                                    await query.ExecuteNonQueryAsync();
-                                    if (!isIgnored)
-                                    {
-                                        if (reply == "")
-                                            reply = reply + $@"<@{u.Id}> is now ignored.";
-                                        else
-                                            reply = reply + $@"
-<@{u.Id}> is now ignored.";
-                                    }
-                                    else
-                                    {
-                                        if (reply == "")
-                                            reply = reply + $@"<@{u.Id}> is no longer ignored.";
-                                        else
-                                            reply = reply + $@"
-<@{u.Id}> is no longer ignored.";
-                                    }
-                                }
-                                else
-                                {
-                                    sql = $"insert into users values ('{u.Id}', 0, 1)";
-                                    query = new SQLiteCommand(sql, connection);
-                                    await query.ExecuteNonQueryAsync();
-                                    if (reply == "")
-                                        reply = reply + $@"<@{u.Id}> is now ignored.";
-                                    else
-                                        reply = reply + $@"
-<@{u.Id}> is now ignored.";
-                                }
-                            }
+                            await SetIgnoredFlag("user", "users", u.Id, ", 0, 1", '@', reply, setreply);
                         }
                         await client.SendMessage(e.Channel, reply);
                     }
@@ -1608,6 +1529,7 @@ The current topic is: {e.Channel.Topic}";
                 Console.WriteLine($"Error: {e.GetBaseException().Message}");
             }
         }
+
 
         protected static string CalculateTime(int minutes)
         {
@@ -1908,30 +1830,22 @@ on {booru}. Please try something else.";
 
         private static bool GetIgnoredFlag(Channel chan, User user)
         {
-            sql = $"select ignored from flags where channel = '{chan.Id}'";
-            query = new SQLiteCommand(sql, connection);
-            SQLiteDataReader reader = query.ExecuteReader();
-            bool isIgnored = false;
-            while (reader.Read())
-            {
-                if (int.Parse(reader["ignored"].ToString()) == 1)
-                    isIgnored = true;
-            }
-            sql = $"select ignored from users where user = '{user.Id}'";
-            query = new SQLiteCommand(sql, connection);
-            reader = query.ExecuteReader();
-            bool userIsIgnored = false;
-            while (reader.Read())
-            {
-                if (int.Parse(reader["ignored"].ToString()) == 1)
-                    userIsIgnored = true;
-            }
-            return isIgnored || userIsIgnored;
+            return GetIgnoredFlag(chan) || GetIgnoredFlag(user);
+        }
+
+        private static bool GetIgnoredFlag(User user)
+        {
+            return GetIgnoredFlag("user", "users", user.Id);
         }
 
         private static bool GetIgnoredFlag(Channel chan)
         {
-            sql = $"select ignored from flags where channel = '{chan.Id}'";
+            return GetIgnoredFlag("channel", "flags", chan.Id);
+        }
+
+        private static bool GetIgnoredFlag(string row, string table, long id)
+        {
+            sql = $"select ignored from {table} where {row} = '{id}'";
             query = new SQLiteCommand(sql, connection);
             SQLiteDataReader reader = query.ExecuteReader();
             bool isIgnored = false;
@@ -1943,18 +1857,30 @@ on {booru}. Please try something else.";
             return isIgnored;
         }
 
-        private static bool GetIgnoredFlag(User user)
+        protected static async Task SetIgnoredFlag(string row, string table, long id, string insertdata, char symbol, string reply, Action<string> setreply)
         {
-            sql = $"select ignored from users where user = '{user.Id}'";
+            sql = $"select count({row}) from {table} where {row}='{id}'";
             query = new SQLiteCommand(sql, connection);
-            SQLiteDataReader reader = query.ExecuteReader();
-            bool userIsIgnored = false;
-            while (reader.Read())
+            if (reply != "")
+                reply += '\n';
+            if (Convert.ToInt32(query.ExecuteScalar()) > 0)
             {
-                if (int.Parse(reader["ignored"].ToString()) == 1)
-                    userIsIgnored = true;
+                bool isIgnored = GetIgnoredFlag(row, table, id);
+                sql = $"update {table} set ignored={Convert.ToInt32(!isIgnored)} where {row}='{id}'";
+                query = new SQLiteCommand(sql, connection);
+                await query.ExecuteNonQueryAsync();
+
+                string ignoredstatus = !isIgnored ? "now" : "no longer";
+                reply += $"<{symbol}{id}> is {ignoredstatus} ignored.";
             }
-            return userIsIgnored;
+            else
+            {
+                sql = $"insert into {table} values ('{id}'{insertdata})";
+                query = new SQLiteCommand(sql, connection);
+                await query.ExecuteNonQueryAsync();
+                reply += $"<{symbol}{id}> is now ignored.";
+            }
+            setreply(reply);
         }
 
         private static bool GetMusicFlag(User user)
