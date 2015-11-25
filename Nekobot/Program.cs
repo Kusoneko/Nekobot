@@ -669,7 +669,7 @@ Next songs:";
                 .Description("I'll repeat what you said.")
                 .Do(async e =>
                 {
-                    await client.SendMessage(e.Channel, e.Message.RawText.Substring(8));
+                    await client.SendMessage(e.Channel, String.Join(" ", e.Args));
                 });
 
             group.CreateCommand("reverse")
@@ -677,14 +677,9 @@ Next songs:";
                 .Description("I'll repeat what you said, in reverse!")
                 .Do(async e =>
                 {
-                    string message = String.Join(" ", e.Args);
-                    char[] chars = message.ToArray();
-                    char[] result = new char[chars.Length];
-                    for (int i = 0, j = message.Length - 1; i < message.Length; i++, j--)
-                    {
-                        result[i] = chars[j];
-                    }
-                    await client.SendMessage(e.Channel, new string(result));
+                    char[] chars = String.Join(" ", e.Args).ToArray();
+                    Array.Reverse(chars);
+                    await client.SendMessage(e.Channel, new string(chars));
                 });
 
             group.CreateCommand("whereami")
