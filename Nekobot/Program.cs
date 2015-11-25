@@ -1869,17 +1869,23 @@ on {booru}. Please try something else.";
 
         private static void CommandError(object sender, CommandErrorEventArgs e)
         {
-            string error = $"Command Error : {e.Exception.GetBaseException().Message}";
-            if (e.Exception.GetType() == typeof(NsfwFlagException))
+            string error = "Command Error : ";
+            if (e.Exception == null)
+                error += "No Exception, this should be fixed!";
+            else
             {
-                error = "This channel doesn't allow nsfw commands.";
-            }
-            else if (e.Exception.GetType() == typeof(MusicFlagException))
-            {
-                error = "You need to be in a music streaming channel to use this command.";
+                if (e.Exception.GetType() == typeof(NsfwFlagException))
+                {
+                    error = "This channel doesn't allow nsfw commands.";
+                }
+                else if (e.Exception.GetType() == typeof(MusicFlagException))
+                {
+                    error = "You need to be in a music streaming channel to use this command.";
+                }
+                else error += e.Exception.GetBaseException().Message;
             }
             client.SendMessage(e.Channel, error);
-            //Console.WriteLine($"Command Error {e.Exception.GetBaseException().StackTrace} : {e.Exception.GetBaseException().Message}");
+            //Console.WriteLine(error);
         }
 
         private static void LoadStreams()

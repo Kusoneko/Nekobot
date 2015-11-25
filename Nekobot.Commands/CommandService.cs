@@ -132,7 +132,7 @@ namespace Nekobot.Commands
                             else
                             {
                                 var errorArgs = new CommandEventArgs(e.Message, command, null);
-                                RaiseCommandError(error.Value, errorArgs);
+                                RaiseCommandError(error.Value, errorArgs, new Exception("Error parsing args"));
                                 return;
                             }
                         }
@@ -173,7 +173,7 @@ namespace Nekobot.Commands
                         return;
                     }
                     var errorArgs2 = new CommandEventArgs(e.Message, null, null);
-                    RaiseCommandError(CommandErrorType.BadArgCount, errorArgs2);
+                    RaiseCommandError(CommandErrorType.BadArgCount, errorArgs2, new Exception("Bad number of args!"));
                 }
             };
         }
