@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Discord;
 using Nekobot.Commands;
+using Nekobot.Commands.Permissions.Levels;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using RestSharp;
@@ -24,88 +24,46 @@ namespace Nekobot
         // Commands first to help with adding new commands
         static void GenerateCommands(CommandGroupBuilder group)
         {
-            group.DefaultMinPermissions(0);
             group.DefaultMusicFlag(false);
             group.DefaultNsfwFlag(false);
 
             // User commands
             group.CreateCommand("ping")
-                .NoArgs()
                 .Description("I'll reply with 'Pong!'")
-                .Syntax($"{commands.CommandChar}ping")
                 .Do(async e =>
                 {
                     await client.SendMessage(e.Channel, $"<@{e.User.Id}>, Pong!");
                 });
 
             group.CreateCommand("whois")
-                .AnyArgs()
+                .Alias("getinfo")
+                .Parameter("@User1", Commands.ParameterType.Required)
+                .Parameter("@User2", Commands.ParameterType.Optional)
+                .Parameter("@UserN", Commands.ParameterType.Multiple)
                 .Description("I'll give you information about the mentioned user(s).")
-                .Syntax($"{commands.CommandChar}whois [@User1] [@User2] [@UserN]")
                 .Do(async e =>
                 {
                     string reply = "";
-                    if (e.Message.MentionedUsers.Count() > 0)
+                    foreach (User u in e.Message.MentionedUsers)
                     {
-                        foreach (User u in e.Message.MentionedUsers)
+                        if (u.Id == 63296013791666176 && e.User.Id == 63299786798796800)
                         {
-                            if (u.Id == 63296013791666176 && e.User.Id == 63299786798796800)
-                            {
-                                reply += $@"
-<@{u.Id}> is your onii-chan <3 and his id is {u.Id} and his permission level is {GetPermissions(u).ToString()}.
+                            reply += $@"
+<@{u.Id}> is your onii-chan <3 and his id is {u.Id} and his permission level is {GetPermissions(u, e.Channel).ToString()}.
 ";
-                            }
-                            else
-                            {
-                                reply += $@"
-<@{u.Id}>'s id is {u.Id} and their permission level is {GetPermissions(u).ToString()}.
-";
-                            }
                         }
-                    }
-                    else
-                    {
-                        reply += $"<@{e.User.Id}>, please mention the user(s) you want to get the info of.";
-                    }
-                    await client.SendMessage(e.Channel, reply);
-                });
-
-            group.CreateCommand("getinfo")
-                .AnyArgs()
-                .Description("I'll give you information about the mentioned user(s).")
-                .Syntax($"{commands.CommandChar}getinfo [@User1] [@User2] [@UserN]")
-                .Do(async e =>
-                {
-                    string reply = "";
-                    if (e.Message.MentionedUsers.Count() > 0)
-                    {
-                        foreach (User u in e.Message.MentionedUsers)
+                        else
                         {
-                            if (u.Id == 63296013791666176 && e.User.Id == 63299786798796800)
-                            {
-                                reply += $@"
-<@{u.Id}> is your onii-chan <3 and his id is {u.Id} and his permission level is {GetPermissions(u).ToString()}.
+                            reply += $@"
+<@{u.Id}>'s id is {u.Id} and their permission level is {GetPermissions(u, e.Channel).ToString()}.
 ";
-                            }
-                            else
-                            {
-                                reply += $@"
-<@{u.Id}>'s id is {u.Id} and their permission level is {GetPermissions(u).ToString()}.
-";
-                            }
                         }
-                    }
-                    else
-                    {
-                        reply += $"<@{e.User.Id}>, please mention the user(s) you want to get the info of.";
                     }
                     await client.SendMessage(e.Channel, reply);
                 });
 
             group.CreateCommand("playlist")
-                .NoArgs()
                 .Description("I'll give you the list of songs in the playlist.")
-                .Syntax($"{commands.CommandChar}playlist")
                 .FlagMusic(true)
                 .Do(async e =>
                 {
@@ -203,9 +161,7 @@ Next songs:";
                 });
 
             group.CreateCommand("song")
-                .NoArgs()
                 .Description("I'll tell you the song I'm currently playing.")
-                .Syntax($"{commands.CommandChar}song")
                 .FlagMusic(true)
                 .Do(async e =>
                 {
@@ -242,9 +198,8 @@ Next songs:";
                 });
 
             group.CreateCommand("ytrequest")
-                .ArgsEqual(1)
+                .Parameter("youtube video link", Commands.ParameterType.Required)
                 .Description("I'll add a youtube video to the playlist")
-                .Syntax($"{commands.CommandChar}ytrequest [youtube video link]")
                 .FlagMusic(true)
                 .Do(async e =>
                 {
@@ -293,9 +248,9 @@ Next songs:";
                 });
 
             group.CreateCommand("request")
-                .AnyArgs()
+                .Parameter("song to find", Commands.ParameterType.Required)
+                .Parameter("...", Commands.ParameterType.Multiple)
                 .Description("I'll try to add your request to the playlist!")
-                .Syntax($"{commands.CommandChar}request [song to find]")
                 .FlagMusic(true)
                 .Do(async e =>
                 {
@@ -341,9 +296,7 @@ Next songs:";
                 });
 
             group.CreateCommand("skip")
-                .NoArgs()
                 .Description("Vote to skip the current song. (Will skip at 50% or more)")
-                .Syntax($"{commands.CommandChar}skip")
                 .FlagMusic(true)
                 .Do(async e =>
                 {
@@ -363,9 +316,7 @@ Next songs:";
                 });
 
             group.CreateCommand("reset")
-                .NoArgs()
                 .Description("Vote to reset the stream. (Will reset at 50% or more)")
-                .Syntax($"{commands.CommandChar}reset")
                 .FlagMusic(true)
                 .Do(async e =>
                 {
@@ -387,53 +338,9 @@ Next songs:";
                 });
 
             group.CreateCommand("encore")
-                .NoArgs()
+                .Alias("replay")
+                .Alias("ankoru")
                 .Description("Vote to replay the current song. (Will replay at 50% or more)")
-                .Syntax($"{commands.CommandChar}encore")
-                .FlagMusic(true)
-                .Do(async e =>
-                {
-                    if (!voteencore[e.User.VoiceChannel.Id].Contains(e.User.Id))
-                    {
-                        voteencore[e.User.VoiceChannel.Id].Add(e.User.Id);
-                        if (voteencore[e.User.VoiceChannel.Id].Count >= Math.Ceiling((decimal)CountVoiceChannelMembers(e.User.VoiceChannel) / 2))
-                        {
-                            await client.SendMessage(e.Channel, $"{voteencore[e.User.VoiceChannel.Id].Count}/{CountVoiceChannelMembers(e.User.VoiceChannel)} votes to replay current song. 50%+ achieved, song will be replayed...");
-                            playlist[e.User.VoiceChannel.Id].Insert(1, Tuple.Create(playlist[e.User.VoiceChannel.Id][0].Item1, "Encore", playlist[e.User.VoiceChannel.Id][0].Item3, playlist[e.User.VoiceChannel.Id][0].Item4));
-                        }
-                        else
-                        {
-                            await client.SendMessage(e.Channel, $"{voteencore[e.User.VoiceChannel.Id].Count}/{CountVoiceChannelMembers(e.User.VoiceChannel)} votes to replay current song. (Needs 50% or more to replay)");
-                        }
-                    }
-                });
-
-            group.CreateCommand("replay")
-                .NoArgs()
-                .Description("Vote to replay the current song. (Will replay at 50% or more)")
-                .Syntax($"{commands.CommandChar}encore")
-                .FlagMusic(true)
-                .Do(async e =>
-                {
-                    if (!voteencore[e.User.VoiceChannel.Id].Contains(e.User.Id))
-                    {
-                        voteencore[e.User.VoiceChannel.Id].Add(e.User.Id);
-                        if (voteencore[e.User.VoiceChannel.Id].Count >= Math.Ceiling((decimal)CountVoiceChannelMembers(e.User.VoiceChannel) / 2))
-                        {
-                            await client.SendMessage(e.Channel, $"{voteencore[e.User.VoiceChannel.Id].Count}/{CountVoiceChannelMembers(e.User.VoiceChannel)} votes to replay current song. 50%+ achieved, song will be replayed...");
-                            playlist[e.User.VoiceChannel.Id].Insert(1, Tuple.Create(playlist[e.User.VoiceChannel.Id][0].Item1, "Encore", playlist[e.User.VoiceChannel.Id][0].Item3, playlist[e.User.VoiceChannel.Id][0].Item4));
-                        }
-                        else
-                        {
-                            await client.SendMessage(e.Channel, $"{voteencore[e.User.VoiceChannel.Id].Count}/{CountVoiceChannelMembers(e.User.VoiceChannel)} votes to replay current song. (Needs 50% or more to replay)");
-                        }
-                    }
-                });
-
-            group.CreateCommand("ankoru")
-                .NoArgs()
-                .Description("Vote to replay the current song. (Will replay at 50% or more)")
-                .Syntax($"{commands.CommandChar}encore")
                 .FlagMusic(true)
                 .Do(async e =>
                 {
@@ -453,22 +360,8 @@ Next songs:";
                 });
 
             group.CreateCommand("nsfw status")
-                .NoArgs()
+                .Alias("canlewd status")
                 .Description("I'll tell you if this channel allows nsfw commands.")
-                .Syntax($"{commands.CommandChar}nsfw status")
-                .Do(async e =>
-                {
-                    bool nsfw = GetNsfwFlag(e.Channel);
-                    if (nsfw)
-                        await client.SendMessage(e.Channel, "This channel allows nsfw commands.");
-                    else
-                        await client.SendMessage(e.Channel, "This channel doesn't allow nsfw commands.");
-                });
-
-            group.CreateCommand("canlewd status")
-                .NoArgs()
-                .Description("I'll tell you if this channel allows nsfw commands.")
-                .Syntax($"{commands.CommandChar}canlewd status")
                 .Do(async e =>
                 {
                     bool nsfw = GetNsfwFlag(e.Channel);
@@ -479,9 +372,7 @@ Next songs:";
                 });
 
             group.CreateCommand("quote")
-                .NoArgs()
                 .Description("I'll give you a random quote from https://inspiration.julxzs.website/quotes")
-                .Syntax($"{commands.CommandChar}quote")
                 .Do(async e =>
                 {
                     rclient.BaseUrl = new Uri("https://inspiration.julxzs.website");
@@ -494,9 +385,7 @@ Next songs:";
                 });
 
             group.CreateCommand("version")
-                .NoArgs()
                 .Description("I'll tell you the current version and check if a newer version is available.")
-                .Syntax($"{commands.CommandChar}version")
                 .Do(async e =>
                 {
                     string[] versions = version.Split('.');
@@ -542,40 +431,32 @@ Next songs:";
                 });
 
             group.CreateCommand("neko")
-                .NoArgs()
                 .FlagNsfw(true)
                 .Description("I'll give you a random image from https://lewdchan.com/neko/")
-                .Syntax($"{commands.CommandChar}neko")
                 .Do(async e =>
                 {
                     await client.SendMessage(e.Channel, LewdSX("neko"));
                 });
 
             group.CreateCommand("qt")
-                .NoArgs()
                 .FlagNsfw(true)
                 .Description("I'll give you a random image from https://lewdchan.com/qt/")
-                .Syntax($"{commands.CommandChar}qt")
                 .Do(async e =>
                 {
                     await client.SendMessage(e.Channel, LewdSX("qt"));
                 });
 
             group.CreateCommand("kitsune")
-                .NoArgs()
                 .FlagNsfw(true)
                 .Description("I'll give you a random image from https://lewdchan.com/kitsune/")
-                .Syntax($"{commands.CommandChar}kitsune")
                 .Do(async e =>
                 {
                     await client.SendMessage(e.Channel, LewdSX("kitsune"));
                 });
 
             group.CreateCommand("lewd")
-                .NoArgs()
                 .FlagNsfw(true)
                 .Description("I'll give you a random image from https://lewdchan.com/lewd/")
-                .Syntax($"{commands.CommandChar}lewd")
                 .Do(async e =>
                 {
                     await client.SendMessage(e.Channel, LewdSX("lewd"));
@@ -584,10 +465,8 @@ Next songs:";
             if (pitur != "")
             {
                 group.CreateCommand("pitur")
-                    .NoArgs()
                     .FlagNsfw(true)
                     .Description("I'll give you a random lewd image from pitur's hentai collection")
-                    .Syntax($"{commands.CommandChar}pitur")
                     .Do(async e =>
                     {
                         await client.SendFile(e.Channel, ImageFolders(pitur));
@@ -597,10 +476,8 @@ Next songs:";
             if (gold != "")
             {
                 group.CreateCommand("gold")
-                    .NoArgs()
                     .FlagNsfw(true)
                     .Description("I'll give you a random kancolle image from gold's collection")
-                    .Syntax($"{commands.CommandChar}gold")
                     .Do(async e =>
                     {
                         await client.SendFile(e.Channel, ImageFolders(gold));
@@ -610,10 +487,8 @@ Next songs:";
             if (cosplay != "")
             {
                 group.CreateCommand("cosplay")
-                    .NoArgs()
                     .FlagNsfw(true)
                     .Description("I'll give you a random cosplay image from Salvy's collection")
-                    .Syntax($"{commands.CommandChar}cosplay")
                     .Do(async e =>
                     {
                         await client.SendFile(e.Channel, ImageFolders(cosplay));
@@ -621,90 +496,86 @@ Next songs:";
             }
 
             group.CreateCommand("safebooru")
-                .AnyArgs()
+                .Parameter("[-]tag1", Commands.ParameterType.Optional)
+                .Parameter("[-]tag2", Commands.ParameterType.Optional)
+                .Parameter("[-]tagn", Commands.ParameterType.Multiple)
                 .FlagNsfw(true)
                 .Description("I'll give you a random image of the tags you entered from safebooru.")
-                .Syntax($"{commands.CommandChar}safebooru [[+/-]tag1] [[+/-]tag2] [[+/-]tagn]")
                 .Do(async e =>
                 {
                     await client.SendMessage(e.Channel, ImageBooru("safebooru", String.Join("%20", e.Args)));
                 });
 
             group.CreateCommand("gelbooru")
-                .AnyArgs()
+                .Parameter("[-]tag1", Commands.ParameterType.Optional)
+                .Parameter("[-]tag2", Commands.ParameterType.Optional)
+                .Parameter("[-]tagn", Commands.ParameterType.Multiple)
                 .FlagNsfw(true)
-                .MinPermissions(11) // Disabled with this outrageous permission because of them disabling their API
+                .Hide() // Disabled because of them disabling their API
                 .Description("I'll give you a random image of the tags you entered from gelbooru.")
-                .Syntax($"{commands.CommandChar}gelbooru [[+/-]tag1] [[+/-]tag2] [[+/-]tagn]")
                 .Do(async e =>
                 {
                     await client.SendMessage(e.Channel, ImageBooru("gelbooru", String.Join("%20", e.Args)));
                 });
 
             group.CreateCommand("rule34")
-                .AnyArgs()
+                .Parameter("[-]tag1", Commands.ParameterType.Optional)
+                .Parameter("[-]tag2", Commands.ParameterType.Optional)
+                .Parameter("[-]tagn", Commands.ParameterType.Multiple)
                 .FlagNsfw(true)
                 .Description("I'll give you a random image of the tags you entered from rule34.")
-                .Syntax($"{commands.CommandChar}rule34 [[+/-]tag1] [[+/-]tag2] [[+/-]tagn]")
                 .Do(async e =>
                 {
                     await client.SendMessage(e.Channel, ImageBooru("rule34", String.Join("%20", e.Args)));
                 });
 
             group.CreateCommand("konachan")
-                .AnyArgs()
+                .Alias("kona")
+                .Parameter("[-]tag1", Commands.ParameterType.Optional)
+                .Parameter("[-]tag2", Commands.ParameterType.Optional)
+                .Parameter("[-]tagn", Commands.ParameterType.Multiple)
                 .FlagNsfw(true)
                 .Description("I'll give you a random image of the tags you entered from konachan.")
-                .Syntax($"{commands.CommandChar}konachan [[+/-]tag1] [[+/-]tag2] [[+/-]tagn]")
-                .Do(async e =>
-                {
-                    await client.SendMessage(e.Channel, ImageBooru("konachan", String.Join("%20", e.Args)));
-                });
-
-            group.CreateCommand("kona")
-                .AnyArgs()
-                .FlagNsfw(true)
-                .Description("I'll give you a random image of the tags you entered from konachan.")
-                .Syntax($"{commands.CommandChar}kona [[+/-]tag1] [[+/-]tag2] [[+/-]tagn]")
                 .Do(async e =>
                 {
                     await client.SendMessage(e.Channel, ImageBooru("konachan", String.Join("%20", e.Args)));
                 });
 
             group.CreateCommand("yandere")
-                .AnyArgs()
+                .Parameter("[-]tag1", Commands.ParameterType.Optional)
+                .Parameter("[-]tag2", Commands.ParameterType.Optional)
+                .Parameter("[-]tagn", Commands.ParameterType.Multiple)
                 .FlagNsfw(true)
                 .Description("I'll give you a random image of the tags you entered from yandere.")
-                .Syntax($"{commands.CommandChar}yandere [[+/-]tag1] [[+/-]tag2] [[+/-]tagn]")
                 .Do(async e =>
                 {
                     await client.SendMessage(e.Channel, ImageBooru("yandere", String.Join("%20", e.Args)));
                 });
 
             group.CreateCommand("lolibooru")
-                .AnyArgs()
+                .Parameter("[-]tag1", Commands.ParameterType.Optional)
+                .Parameter("[-]tag2", Commands.ParameterType.Optional)
+                .Parameter("[-]tagn", Commands.ParameterType.Multiple)
                 .FlagNsfw(true)
                 .Description("I'll give you a random image of the tags you entered from lolibooru.")
-                .Syntax($"{commands.CommandChar}lolibooru [[+/-]tag1] [[+/-]tag2] [[+/-]tagn]")
                 .Do(async e =>
                 {
                     await client.SendMessage(e.Channel, ImageBooru("lolibooru", String.Join("%20", e.Args)));
                 });
 
             group.CreateCommand("e621")
-                .AnyArgs()
+                .Parameter("[-]tag1", Commands.ParameterType.Optional)
+                .Parameter("[-]tag2", Commands.ParameterType.Optional)
+                .Parameter("[-]tagn", Commands.ParameterType.Multiple)
                 .FlagNsfw(true)
                 .Description("I'll give you a random image from e621 (optionally with tags)")
-                .Syntax($"{commands.CommandChar}e621 [[+/-]tagn]")
                 .Do(async e =>
                 {
                     await client.SendMessage(e.Channel, ImageBooru("e621", String.Join("%20", e.Args)));
                 });
 
             group.CreateCommand("fortune")
-                .NoArgs()
                 .Description("I'll give you a fortune!")
-                .Syntax($"{commands.CommandChar}fortune")
                 .Do(async e =>
                 {
                     string[] fortunes = new string[] { "Don't sleep for too long, or you'll miss naptime!", "Before crying over spilt milk, remember it can still be delicious without a bowl.", "A bird in the paw is worth nom nom nom...", "Let no surface, no matter how high or cluttered, go unexplored.", "Neko never catches the laser if neko never tries.", "Our greatest glory is not in never falling, but in making sure master doesn't find the mess.", "A mouse shared halves the food but doubles the happiness.", "There exists nary a toy as pertinent as the box from whence that toy came.", "Neko will never be fed if neko does not meow all day!", "Ignore physics, and physics will ignore you.", "Never bite the hand that feeds you!", "Before finding the red dot, you must first find yourself.", "Some see the glass half empty. Some see the glass half full. Neko sees the glass and knocks it over.", "Make purrs not war.", "Give a neko fish and you feed them for a day; Teach a neko to fish and... mmmm fish.", "Wheresoever you go, go with all of master's things.", "Live your dreams every day! Why do you think neko naps so much?", "The hardest thing of all is to find a black cat in a dark room, especially if there is no cat.", "Meow meow meow meow, meow meow. Meow meow meow." };
@@ -713,9 +584,10 @@ Next songs:";
                 });
 
             group.CreateCommand("playeravatar")
-                .AnyArgs()
+                .Parameter("username1", Commands.ParameterType.Required)
+                .Parameter("username2", Commands.ParameterType.Optional)
+                .Parameter("username3", Commands.ParameterType.Multiple)
                 .Description("I'll get you the avatar of each Player.me username provided.")
-                .Syntax($"{commands.CommandChar}playeravatar [username1] [username2] [usernamen]")
                 .Do(async e =>
                 {
                     rclient.BaseUrl = new System.Uri("https://player.me/api/v1/auth");
@@ -735,162 +607,74 @@ Next songs:";
                 });
 
             group.CreateCommand("nya")
-                .NoArgs()
                 .Description("I'll say 'Nyaa~'")
-                .Syntax($"{commands.CommandChar}nya")
                 .Do(async e =>
                 {
                     await client.SendMessage(e.Channel, "Nyaa~");
                 });
 
             group.CreateCommand("poi")
-                .NoArgs()
                 .Description("I'll say 'Poi!'")
-                .Syntax($"{commands.CommandChar}poi")
                 .Do(async e =>
                 {
                     await client.SendMessage(e.Channel, "Poi!");
                 });
 
             group.CreateCommand("aicrai")
-                .NoArgs()
+                .Alias("aicraievritiem")
+                .Alias("aicraievritaim")
+                .Alias("sadhorn")
+                .Alias("icri")
                 .Description("When sad things happen...")
-                .Syntax($"{commands.CommandChar}aicrai")
-                .Do(async e =>
-                {
-                    await client.SendMessage(e.Channel, "https://www.youtube.com/watch?v=0JAn8eShOo8");
-                });
-
-            group.CreateCommand("aicraievritiem")
-                .NoArgs()
-                .Description("When sad things happen...")
-                .Syntax($"{commands.CommandChar}aicraievritiem")
-                .Do(async e =>
-                {
-                    await client.SendMessage(e.Channel, "https://www.youtube.com/watch?v=0JAn8eShOo8");
-                });
-
-            group.CreateCommand("aicraievritaim")
-                .NoArgs()
-                .Description("When sad things happen...")
-                .Syntax($"{commands.CommandChar}aicraievritaim")
-                .Do(async e =>
-                {
-                    await client.SendMessage(e.Channel, "https://www.youtube.com/watch?v=0JAn8eShOo8");
-                });
-
-            group.CreateCommand("sadhorn")
-                .NoArgs()
-                .Description("When sad things happen...")
-                .Syntax($"{commands.CommandChar}sadhorn")
-                .Do(async e =>
-                {
-                    await client.SendMessage(e.Channel, "https://www.youtube.com/watch?v=0JAn8eShOo8");
-                });
-
-            group.CreateCommand("icri")
-                .NoArgs()
-                .Description("When sad things happen...")
-                .Syntax($"{commands.CommandChar}icri")
                 .Do(async e =>
                 {
                     await client.SendMessage(e.Channel, "https://www.youtube.com/watch?v=0JAn8eShOo8");
                 });
 
             group.CreateCommand("notnow")
-                .NoArgs()
+                .Alias("rinpls")
                 .Description("How to Rekt: Rin 101")
-                .Syntax($"{commands.CommandChar}notnow")
-                .Do(async e =>
-                {
-                    await client.SendMessage(e.Channel, "https://www.youtube.com/watch?v=2BZUzJfKFwM");
-                });
-
-            group.CreateCommand("rinpls")
-                .NoArgs()
-                .Description("How to Rekt: Rin 101")
-                .Syntax($"{commands.CommandChar}rinpls")
                 .Do(async e =>
                 {
                     await client.SendMessage(e.Channel, "https://www.youtube.com/watch?v=2BZUzJfKFwM");
                 });
 
             group.CreateCommand("uninstall")
-                .NoArgs()
                 .Description("A great advice in any situation.")
-                .Syntax($"{commands.CommandChar}uninstall")
                 .Do(async e =>
                 {
                     await client.SendMessage(e.Channel, "https://www.youtube.com/watch?v=iNCXiMt1bR4");
                 });
 
             group.CreateCommand("killyourself")
-                .NoArgs()
+                .Alias("kys")
                 .Description("Another great advice.")
-                .Syntax($"{commands.CommandChar}killyourself")
-                .Do(async e =>
-                {
-                    await client.SendMessage(e.Channel, "https://www.youtube.com/watch?v=2dbR2JZmlWo");
-                });
-
-            group.CreateCommand("kys")
-                .NoArgs()
-                .Description("Another great advice.")
-                .Syntax($"{commands.CommandChar}kys")
                 .Do(async e =>
                 {
                     await client.SendMessage(e.Channel, "https://www.youtube.com/watch?v=2dbR2JZmlWo");
                 });
 
             group.CreateCommand("congratulations")
-                .NoArgs()
+                .Alias("congrats")
+                .Alias("grats")
                 .Description("Congratulate someone for whatever reason.")
-                .Syntax($"{commands.CommandChar}congratulations")
-                .Do(async e =>
-                {
-                    await client.SendMessage(e.Channel, "https://www.youtube.com/watch?v=oyFQVZ2h0V8");
-                });
-
-            group.CreateCommand("congrats")
-                .NoArgs()
-                .Description("Congratulate someone for whatever reason.")
-                .Syntax($"{commands.CommandChar}congrats")
-                .Do(async e =>
-                {
-                    await client.SendMessage(e.Channel, "https://www.youtube.com/watch?v=oyFQVZ2h0V8");
-                });
-
-            group.CreateCommand("grats")
-                .NoArgs()
-                .Description("Congratulate someone for whatever reason.")
-                .Syntax($"{commands.CommandChar}grats")
                 .Do(async e =>
                 {
                     await client.SendMessage(e.Channel, "https://www.youtube.com/watch?v=oyFQVZ2h0V8");
                 });
 
             group.CreateCommand("say")
-                .AnyArgs()
+                .Alias("forward")
+                .Parameter("text...", Commands.ParameterType.Multiple)
                 .Description("I'll repeat what you said.")
-                .Syntax($"{commands.CommandChar}say [text...]")
-                .Do(async e =>
-                {
-                    await client.SendMessage(e.Channel, e.Message.RawText.Substring(4));
-                });
-
-            group.CreateCommand("forward")
-                .AnyArgs()
-                .Description("I'll repeat what you said.")
-                .Syntax($"{commands.CommandChar}forward [text...]")
                 .Do(async e =>
                 {
                     await client.SendMessage(e.Channel, e.Message.RawText.Substring(8));
                 });
 
             group.CreateCommand("reverse")
-                .AnyArgs()
+                .Parameter("text...", Commands.ParameterType.Multiple)
                 .Description("I'll repeat what you said, in reverse!")
-                .Syntax($"{commands.CommandChar}reverse [text...]")
                 .Do(async e =>
                 {
                     string message = String.Join(" ", e.Args);
@@ -904,49 +688,9 @@ Next songs:";
                 });
 
             group.CreateCommand("whereami")
-                .NoArgs()
+                .Alias("channelinfo")
+                .Alias("location")
                 .Description("I'll tell you information about the channel and server you're asking me this from.")
-                .Syntax($"{commands.CommandChar}whereami")
-                .Do(async e =>
-                {
-                    if (e.Channel.IsPrivate)
-                        await client.SendMessage(e.Channel, "You're in a private message with me, baka.");
-                    else
-                    {
-                        string message = $@"You are currently in {e.Channel.Name} (id: {e.Channel.Id})
-on server **{e.Server.Name}** (id: {e.Server.Id}) (region: {e.Server.Region})
-owned by {e.Server.Owner.Name} (id {e.Server.Owner.Id}).";
-                        if (e.Channel.Topic != "" || e.Channel.Topic != null)
-                            message = message + $@"
-The current topic is: {e.Channel.Topic}";
-                        await client.SendMessage(e.Channel, message);
-                    }
-                });
-
-            group.CreateCommand("channelinfo")
-                .NoArgs()
-                .Description("I'll tell you information about the channel and server you're asking me this from.")
-                .Syntax($"{commands.CommandChar}channelinfo")
-                .Do(async e =>
-                {
-                    if (e.Channel.IsPrivate)
-                        await client.SendMessage(e.Channel, "You're in a private message with me, baka.");
-                    else
-                    {
-                        string message = $@"You are currently in {e.Channel.Name} (id: {e.Channel.Id})
-on server **{e.Server.Name}** (id: {e.Server.Id}) (region: {e.Server.Region})
-owned by {e.Server.Owner.Name} (id {e.Server.Owner.Id}).";
-                        if (e.Channel.Topic != "" || e.Channel.Topic != null)
-                            message = message + $@"
-The current topic is: {e.Channel.Topic}";
-                        await client.SendMessage(e.Channel, message);
-                    }
-                });
-
-            group.CreateCommand("location")
-                .NoArgs()
-                .Description("I'll tell you information about the channel and server you're asking me this from.")
-                .Syntax($"{commands.CommandChar}location")
                 .Do(async e =>
                 {
                     if (e.Channel.IsPrivate)
@@ -964,31 +708,25 @@ The current topic is: {e.Channel.Topic}";
                 });
 
             group.CreateCommand("avatar")
-                .AnyArgs()
+                .Parameter("@User1", Commands.ParameterType.Required)
+                .Parameter("@User2", Commands.ParameterType.Optional)
+                .Parameter("@UserN", Commands.ParameterType.Multiple)
                 .Description("I'll give you the avatars of every mentioned users.")
-                .Syntax($"{commands.CommandChar}avatar [@User1] [@User2] [@UserN]")
                 .Do(async e =>
                 {
-                    if (e.Message.MentionedUsers.Count() > 0)
+                    foreach (User u in e.Message.MentionedUsers)
                     {
-                        foreach (User u in e.Message.MentionedUsers)
-                        {
-                            if (u.AvatarUrl == null)
-                                await client.SendMessage(e.Channel, $"<@{u.Id}> has no avatar.");
-                            else
-                                await client.SendMessage(e.Channel, $"<@{u.Id}>'s avatar is: https://discordapp.com/api/{u.AvatarUrl}");
-                        }
-                    }
-                    else
-                    {
-                        await client.SendMessage(e.Channel, "You need to mention at least one person!");
+                        if (u.AvatarUrl == null)
+                            await client.SendMessage(e.Channel, $"<@{u.Id}> has no avatar.");
+                        else
+                            await client.SendMessage(e.Channel, $"<@{u.Id}>'s avatar is: https://discordapp.com/api/{u.AvatarUrl}");
                     }
                 });
 
             group.CreateCommand("rand")
-                .ArgsAtMost(2)
+                .Parameter("min", Commands.ParameterType.Optional)
+                .Parameter("max", Commands.ParameterType.Optional)
                 .Description("I'll give you a random number between *min* and *max*. Both are optional. If only one is given, it's *max*. (defaults: 1-100)")
-                .Syntax($"{commands.CommandChar}rand [min] [max] // {commands.CommandChar}rand [max] // {commands.CommandChar}rand")
                 .Do(async e =>
                 {
                     int min = 1;
@@ -1060,9 +798,10 @@ The current topic is: {e.Channel.Topic}";
                 });
 
             group.CreateCommand("roll")
-                .ArgsAtMost(3)
+                .Parameter("dice", Commands.ParameterType.Optional)
+                .Parameter("sides", Commands.ParameterType.Optional)
+                .Parameter("times", Commands.ParameterType.Optional)
                 .Description("I'll roll a few sided dice for a given number of times. All params are optional. (defaults: 1 *dice*, 6 *sides*, 1 *times*)")
-                .Syntax($"{commands.CommandChar}roll [dice] [sides] [times] // {commands.CommandChar}roll [dice] [sides] // {commands.CommandChar}roll [dice] // {commands.CommandChar}roll")
                 .Do(async e =>
                 {
                     bool rick = false;
@@ -1118,9 +857,7 @@ The current topic is: {e.Channel.Topic}";
                 });
 
             group.CreateCommand("lotto")
-                .NoArgs()
                 .Description("I'll give you a set of 6 lucky numbers!")
-                .Syntax($"{commands.CommandChar}lotto")
                 .Do(async e =>
                 {
                     List<int> lotto = new List<int>();
@@ -1142,34 +879,11 @@ The current topic is: {e.Channel.Topic}";
                 });
 
             group.CreateCommand("pet")
-                .AnyArgs()
+                .Alias("pets")
+                .Parameter("@User1", Commands.ParameterType.Optional)
+                .Parameter("@User2", Commands.ParameterType.Optional)
+                .Parameter("@UserN", Commands.ParameterType.Multiple)
                 .Description("Everyone loves being pet, right!?! Pets each *@user*. Leave empty (or mention me too) to pet me!")
-                .Syntax($"{commands.CommandChar}pet [@User1] [@User2] [@UserN] // {commands.CommandChar}pet @everyone")
-                .Do(async e =>
-                {
-                    string message = $"<@{e.User.Id}> pets ";
-                    if (e.Message.MentionedUsers.Count() == 0 && !e.Message.MentionedRoles.Contains(e.Server.EveryoneRole))
-                        message = "*purrs*";
-                    else if (e.Message.MentionedRoles.Contains(e.Server.EveryoneRole))
-                        message = message + $"{Mention.Everyone()} *purrs*";
-                    else
-                    {
-                        foreach (User u in e.Message.MentionedUsers)
-                        {
-                            message = message + $"<@{u.Id}> ";
-                        }
-                        if (e.Message.IsMentioningMe)
-                        {
-                            message = message + "*purrs*";
-                        }
-                    }
-                    await client.SendMessage(e.Channel, message);
-                });
-
-            group.CreateCommand("pets")
-                .AnyArgs()
-                .Description("Everyone loves being pet, right!?! Pets each *@user*. Leave empty (or mention me too) to pet me!")
-                .Syntax($"{commands.CommandChar}pet [@User1] [@User2] [@UserN] // {commands.CommandChar}pet @everyone")
                 .Do(async e =>
                 {
                     string message = $"<@{e.User.Id}> pets ";
@@ -1192,99 +906,37 @@ The current topic is: {e.Channel.Topic}";
                 });
 
             group.CreateCommand("trash")
-                .NoArgs()
+                .Alias("worstgirl")
+                .Alias("onodera")
                 .Description("I'll upload an image of 'worst girl'. (WARNING: May cause nausea!)")
-                .Syntax($"{commands.CommandChar}trash")
-                .Do(async e =>
-                {
-                    await client.SendFile(e.Channel, "images/trash.png");
-                });
-
-            group.CreateCommand("worstgirl")
-                .NoArgs()
-                .Description("I'll upload an image of 'worst girl'. (WARNING: May cause nausea!)")
-                .Syntax($"{commands.CommandChar}worstgirl")
-                .Do(async e =>
-                {
-                    await client.SendFile(e.Channel, "images/trash.png");
-                });
-
-            group.CreateCommand("onodera")
-                .NoArgs()
-                .Description("I'll upload an image of 'worst girl'. (WARNING: May cause nausea!)")
-                .Syntax($"{commands.CommandChar}onodera")
                 .Do(async e =>
                 {
                     await client.SendFile(e.Channel, "images/trash.png");
                 });
 
             group.CreateCommand("doit")
-                .NoArgs()
+                .Alias("justdoit")
+                .Alias("shia")
                 .Description("DON'T LET YOUR DREAMS JUST BE DREAMS!")
-                .Syntax($"{commands.CommandChar}doit")
-                .Do(async e =>
-                {
-                    await client.SendFile(e.Channel, "images/shia.jpg");
-                });
-
-            group.CreateCommand("justdoit")
-                .NoArgs()
-                .Description("DON'T LET YOUR DREAMS JUST BE DREAMS!")
-                .Syntax($"{commands.CommandChar}justdoit")
-                .Do(async e =>
-                {
-                    await client.SendFile(e.Channel, "images/shia.jpg");
-                });
-
-            group.CreateCommand("shia")
-                .NoArgs()
-                .Description("DON'T LET YOUR DREAMS JUST BE DREAMS!")
-                .Syntax($"{commands.CommandChar}shia")
                 .Do(async e =>
                 {
                     await client.SendFile(e.Channel, "images/shia.jpg");
                 });
 
             group.CreateCommand("bulli")
-                .NoArgs()
+                .Alias("bully")
+                .Alias("dunbulli")
+                .Alias("dontbully")
                 .Description("DON'T BULLY!")
-                .Syntax($"{commands.CommandChar}bulli")
-                .Do(async e =>
-                {
-                    await client.SendFile(e.Channel, "images/bulli.jpg");
-                });
-
-            group.CreateCommand("bully")
-                .NoArgs()
-                .Description("DON'T BULLY!")
-                .Syntax($"{commands.CommandChar}bully")
-                .Do(async e =>
-                {
-                    await client.SendFile(e.Channel, "images/bulli.jpg");
-                });
-
-            group.CreateCommand("dunbulli")
-                .NoArgs()
-                .Description("DON'T BULLY!")
-                .Syntax($"{commands.CommandChar}dunbulli")
-                .Do(async e =>
-                {
-                    await client.SendFile(e.Channel, "images/bulli.jpg");
-                });
-
-            group.CreateCommand("dontbully")
-                .NoArgs()
-                .Description("DON'T BULLY!")
-                .Syntax($"{commands.CommandChar}dontbully")
                 .Do(async e =>
                 {
                     await client.SendFile(e.Channel, "images/bulli.jpg");
                 });
 
             group.CreateCommand("8ball")
-                .AnyArgs()
+                .Parameter("question", Commands.ParameterType.Optional)
+                .Parameter("?", Commands.ParameterType.Multiple)
                 .Description("The magic eightball can answer any question!")
-                .Syntax($"{commands.CommandChar}8ball [question]?")
                 .Do(async e =>
                 {
                     string[] eightball = new string[] { "It is certain.", "It is decidedly so.", "Without a doubt.", "Yes, definitely.", "You may rely on it.", "As I see it, yes.", "Most likely.", "Outlook good.", "Yes.", "Signs point to yes.", "Reply hazy try again...", "Ask again later...", "Better not tell you now...", "Cannot predict now...", "Concentrate and ask again...", "Don't count on it.", "My reply is no.", "My sources say no.", "Outlook not so good.", "Very doubtful.", "Nyas.", "Why not?", "zzzzz...", "No." };
@@ -1296,9 +948,9 @@ The current topic is: {e.Channel.Topic}";
                 });
 
             group.CreateCommand("img")
-                .ArgsAtLeast(1)
+                .Parameter("search query", Commands.ParameterType.Required)
+                .Parameter("extended query", Commands.ParameterType.Multiple)
                 .Description("I'll get a random image from Google!")
-                .Syntax($"{commands.CommandChar}img [search query]")
                 .Do(async e =>
                 {
                     Random rnd = new Random();
@@ -1316,9 +968,10 @@ The current topic is: {e.Channel.Topic}";
                 });
 
             group.CreateCommand("hbavatar")
-                .ArgsAtLeast(1)
+                .Parameter("username1", Commands.ParameterType.Required)
+                .Parameter("username2", Commands.ParameterType.Optional)
+                .Parameter("username3", Commands.ParameterType.Multiple)
                 .Description("I'll give you the hummingbird avatar of the usernames provided.")
-                .Syntax($"{commands.CommandChar}hbavatar [Username1] [Username2] [UsernameN]")
                 .Do(async e =>
                 {
                     rclient.BaseUrl = new Uri("http://hummingbird.me/api/v1/users");
@@ -1344,9 +997,10 @@ The current topic is: {e.Channel.Topic}";
                 });
 
             group.CreateCommand("hb")
-                .ArgsAtLeast(1)
+                .Parameter("username1", Commands.ParameterType.Required)
+                .Parameter("username2", Commands.ParameterType.Optional)
+                .Parameter("username3", Commands.ParameterType.Multiple)
                 .Description("I'll give you information on the hummingbird accounts of the usernames provided.")
-                .Syntax($"{commands.CommandChar}hb [Username1] [Username2] [UsernameN]")
                 .Do(async e =>
                 {
                     rclient.BaseUrl = new Uri("http://hummingbird.me/api/v1/users");
@@ -1393,9 +1047,10 @@ The current topic is: {e.Channel.Topic}";
                 });
 
             group.CreateCommand("player")
-                .AnyArgs()
+                .Parameter("username1", Commands.ParameterType.Required)
+                .Parameter("username2", Commands.ParameterType.Optional)
+                .Parameter("username3", Commands.ParameterType.Multiple)
                 .Description("I'll give you information on the Player.me of each usernames provided.")
-                .Syntax($"{commands.CommandChar}player [username1] [username2] [usernamen]")
                 .Do(async e =>
                 {
                     rclient.BaseUrl = new System.Uri("https://player.me/api/v1/auth");
@@ -1427,13 +1082,10 @@ The current topic is: {e.Channel.Topic}";
                 });
 
             // Moderator commands
-
             group.CreateCommand("forceskip")
-                .NoArgs()
                 .MinPermissions(1)
                 .FlagMusic(true)
                 .Description("I'll skip the currently playing song.")
-                .Syntax($"{commands.CommandChar}forceskip")
                 .Do(async e =>
                 {
                     skip[e.User.VoiceChannel.Id] = true;
@@ -1441,11 +1093,9 @@ The current topic is: {e.Channel.Topic}";
                 });
 
             group.CreateCommand("forcereset")
-                .NoArgs()
                 .MinPermissions(1)
                 .FlagMusic(true)
                 .Description("I'll reset the stream in case of bugs, while keeping the playlist intact.")
-                .Syntax($"{commands.CommandChar}forcereset")
                 .Do(async e =>
                 {
                     reset[e.User.VoiceChannel.Id] = true;
@@ -1455,62 +1105,10 @@ The current topic is: {e.Channel.Topic}";
                 });
 
             group.CreateCommand("nsfw")
-                .ArgsEqual(1)
+                .Alias("canlewd")
+                .Parameter("on/off", Commands.ParameterType.Required)
                 .MinPermissions(1)
                 .Description("I'll set a channel's nsfw flag to on or off.")
-                .Syntax($"{commands.CommandChar}nsfw [on/off]")
-                .Do(async e =>
-                {
-                    if (e.Args[0] == "on")
-                    {
-                        if (!GetNsfwFlag(e.Channel))
-                        {
-                            sql = $"select count(channel) from flags where channel='{e.Channel.Id}'";
-                            query = new SQLiteCommand(sql, connection);
-                            if (Convert.ToInt32(query.ExecuteScalar()) > 0)
-                            {
-                                sql = $"update flags set nsfw=1 where channel='{e.Channel.Id}'";
-                                query = new SQLiteCommand(sql, connection);
-                                await query.ExecuteNonQueryAsync();
-                            }
-                            else
-                            {
-                                sql = $"insert into flags values ('{e.Channel.Id}', 1, 0, 0)";
-                                query = new SQLiteCommand(sql, connection);
-                                await query.ExecuteNonQueryAsync();
-                            }
-                            await client.SendMessage(e.Channel, "I've set this channel to allow nsfw commands.");
-                        }
-                        else
-                        {
-                            await client.SendMessage(e.Channel, $"<@{e.User.Id}>, this channel is already allowing nsfw commands.");
-                        }
-                    }
-                    else if (e.Args[0] == "off")
-                    {
-                        if (GetNsfwFlag(e.Channel))
-                        {
-                            sql = $"update flags set nsfw=0 where channel='{e.Channel.Id}'";
-                            query = new SQLiteCommand(sql, connection);
-                            await query.ExecuteNonQueryAsync();
-                            await client.SendMessage(e.Channel, "I've set this channel to disallow nsfw commands.");
-                        }
-                        else
-                        {
-                            await client.SendMessage(e.Channel, $"<@{e.User.Id}>, this channel is already disallowing nsfw commands.");
-                        }
-                    }
-                    else
-                    {
-                        await client.SendMessage(e.Channel, $"<@{e.User.Id}>, '{String.Join(" ", e.Args)}' isn't a valid argument. Please use on or off instead.");
-                    }
-                });
-
-            group.CreateCommand("canlewd")
-                .ArgsEqual(1)
-                .MinPermissions(1)
-                .Description("I'll set a channel's nsfw flag to on or off.")
-                .Syntax($"{commands.CommandChar}canlewd [on/off]")
                 .Do(async e =>
                 {
                     if (e.Args[0] == "on")
@@ -1559,10 +1157,9 @@ The current topic is: {e.Channel.Topic}";
                 });
 
             group.CreateCommand("invite")
-                .ArgsEqual(1)
+                .Parameter("invite code or link", Commands.ParameterType.Required)
                 .MinPermissions(1)
                 .Description("I'll join a new server using the provided invite code or link.")
-                .Syntax($"{commands.CommandChar}invite [invite code or link]")
                 .Do(async e =>
                 {
                     await client.AcceptInvite(client.GetInvite(e.Args[0]).Result);
@@ -1571,10 +1168,9 @@ The current topic is: {e.Channel.Topic}";
             // Administrator commands
 
             group.CreateCommand("music")
-                .ArgsEqual(1)
+                .Parameter("on/off", Commands.ParameterType.Required)
                 .Description("I'll start or end a stream in a particular voice channel, which you need to be in.")
                 .MinPermissions(2)
-                .Syntax($"{commands.CommandChar}music [on/off]")
                 .Do(async e =>
                 {
                     if (e.User.VoiceChannel?.Id <= 0)
@@ -1633,10 +1229,14 @@ The current topic is: {e.Channel.Topic}";
                 });
 
             group.CreateCommand("setpermissions")
-                .ArgsAtLeast(2)
+                .Alias("setperms")
+                .Alias("setauth")
+                .Parameter("newPermissionLevel", Commands.ParameterType.Required)
+                .Parameter("@User1", Commands.ParameterType.Required)
+                .Parameter("@User2", Commands.ParameterType.Optional)
+                .Parameter("@UserN", Commands.ParameterType.Multiple)
                 .MinPermissions(2)
                 .Description("I'll set the permission level of the mentioned people to the level mentioned (cannot be higher than or equal to yours).")
-                .Syntax($"{commands.CommandChar}setpermissions [newPermissionLevel] [@User1] [@User2] [@UserN]")
                 .Do(async e =>
                 {
                     int newPermLevel = 0;
@@ -1644,132 +1244,12 @@ The current topic is: {e.Channel.Topic}";
                         await client.SendMessage(e.Channel, "You need to at least specify a permission level and mention one user.");
                     else if (!int.TryParse(e.Args[0], out newPermLevel))
                         await client.SendMessage(e.Channel, "The first argument needs to be the new permission level.");
-                    else if (newPermLevel >= e.Permissions)
-                        await client.SendMessage(e.Channel, "You cannot give someone a permission level higher than or equal to yourself.");
                     else
                     {
                         string reply = "";
                         foreach (User u in e.Message.MentionedUsers)
                         {
-                            if (GetPermissions(u) != newPermLevel)
-                            {
-                                sql = $"select count(user) from users where user='{u.Id}'";
-                                query = new SQLiteCommand(sql, connection);
-                                if (Convert.ToInt32(query.ExecuteScalar()) > 0)
-                                {
-                                    sql = $"update users set perms={newPermLevel} where user='{u.Id}'";
-                                    query = new SQLiteCommand(sql, connection);
-                                    await query.ExecuteNonQueryAsync();
-                                    if (reply == "")
-                                        reply = reply + $@"<@{u.Id}>'s permission level is now {newPermLevel}.";
-                                    else
-                                        reply = reply + $@"
-<@{u.Id}>'s permission level is now {newPermLevel}.";
-                                }
-                                else
-                                {
-                                    sql = $"insert into users values ('{u.Id}', {newPermLevel}, 0)";
-                                    query = new SQLiteCommand(sql, connection);
-                                    await query.ExecuteNonQueryAsync();
-                                    if (reply == "")
-                                        reply = reply + $@"<@{u.Id}>'s permission level is now {newPermLevel}.";
-                                    else
-                                        reply = reply + $@"
-<@{u.Id}>'s permission level is now {newPermLevel}.";
-                                }
-                            }
-                            else
-                            {
-                                if (reply == "")
-                                    reply = reply + $@"<@{u.Id}>'s permission level is already at {newPermLevel}.";
-                                else
-                                    reply = reply + $@"
-<@{u.Id}>'s permission level is already at {newPermLevel}.";
-                            }
-                        }
-                        await client.SendMessage(e.Channel, reply);
-                    }
-                });
-
-            group.CreateCommand("setperms")
-                .ArgsAtLeast(2)
-                .MinPermissions(2)
-                .Description("I'll set the permission level of the mentioned people to the level mentioned (cannot be higher than or equal to yours).")
-                .Syntax($"{commands.CommandChar}setperms [newPermissionLevel] [@User1] [@User2] [@UserN]")
-                .Do(async e =>
-                {
-                    int newPermLevel = 0;
-                    if (e.Args.Count() < 2 || e.Message.MentionedUsers.Count() < 1)
-                        await client.SendMessage(e.Channel, "You need to at least specify a permission level and mention one user.");
-                    else if (!int.TryParse(e.Args[0], out newPermLevel))
-                        await client.SendMessage(e.Channel, "The first argument needs to be the new permission level.");
-                    else if (newPermLevel >= e.Permissions)
-                        await client.SendMessage(e.Channel, "You cannot give someone a permission level higher than or equal to yourself.");
-                    else
-                    {
-                        string reply = "";
-                        foreach (User u in e.Message.MentionedUsers)
-                        {
-                            if (GetPermissions(u) != newPermLevel)
-                            {
-                                sql = $"select count(user) from users where user='{u.Id}'";
-                                query = new SQLiteCommand(sql, connection);
-                                if (Convert.ToInt32(query.ExecuteScalar()) > 0)
-                                {
-                                    sql = $"update users set perms={newPermLevel} where user='{u.Id}'";
-                                    query = new SQLiteCommand(sql, connection);
-                                    await query.ExecuteNonQueryAsync();
-                                    if (reply == "")
-                                        reply = reply + $@"<@{u.Id}>'s permission level is now {newPermLevel}.";
-                                    else
-                                        reply = reply + $@"
-<@{u.Id}>'s permission level is now {newPermLevel}.";
-                                }
-                                else
-                                {
-                                    sql = $"insert into users values ('{u.Id}', {newPermLevel}, 0)";
-                                    query = new SQLiteCommand(sql, connection);
-                                    await query.ExecuteNonQueryAsync();
-                                    if (reply == "")
-                                        reply = reply + $@"<@{u.Id}>'s permission level is now {newPermLevel}.";
-                                    else
-                                        reply = reply + $@"
-<@{u.Id}>'s permission level is now {newPermLevel}.";
-                                }
-                            }
-                            else
-                            {
-                                if (reply == "")
-                                    reply = reply + $@"<@{u.Id}>'s permission level is already at {newPermLevel}.";
-                                else
-                                    reply = reply + $@"
-<@{u.Id}>'s permission level is already at {newPermLevel}.";
-                            }
-                        }
-                        await client.SendMessage(e.Channel, reply);
-                    }
-                });
-
-            group.CreateCommand("setauth")
-                .ArgsAtLeast(2)
-                .MinPermissions(2)
-                .Description("I'll set the permission level of the mentioned people to the level mentioned (cannot be higher than or equal to yours).")
-                .Syntax($"{commands.CommandChar}setauth [newPermissionLevel] [@User1] [@User2] [@UserN]")
-                .Do(async e =>
-                {
-                    int newPermLevel = 0;
-                    if (e.Args.Count() < 2 || e.Message.MentionedUsers.Count() < 1)
-                        await client.SendMessage(e.Channel, "You need to at least specify a permission level and mention one user.");
-                    else if (!int.TryParse(e.Args[0], out newPermLevel))
-                        await client.SendMessage(e.Channel, "The first argument needs to be the new permission level.");
-                    else if (newPermLevel >= e.Permissions)
-                        await client.SendMessage(e.Channel, "You cannot give someone a permission level higher than or equal to yourself.");
-                    else
-                    {
-                        string reply = "";
-                        foreach (User u in e.Message.MentionedUsers)
-                        {
-                            if (GetPermissions(u) != newPermLevel)
+                            if (GetPermissions(u, e.Channel) != newPermLevel)
                             {
                                 sql = $"select count(user) from users where user='{u.Id}'";
                                 query = new SQLiteCommand(sql, connection);
@@ -1812,10 +1292,8 @@ The current topic is: {e.Channel.Topic}";
             // Owner commands
 
             group.CreateCommand("leave")
-                .NoArgs()
                 .MinPermissions(3)
                 .Description("I'll leave the server this command was used in.")
-                .Syntax($"{commands.CommandChar}leave")
                 .Do(async e =>
                 {
                     await client.SendMessage(e.Channel, "Bye bye!");
@@ -1823,10 +1301,13 @@ The current topic is: {e.Channel.Topic}";
                 });
 
             group.CreateCommand("color")
-                .ArgsBetween(2, 4)
+                .Parameter("Rolename", Commands.ParameterType.Required)
+                .Parameter("hex", Commands.ParameterType.Optional)
+                .Parameter("r", Commands.ParameterType.Optional)
+                .Parameter("g", Commands.ParameterType.Optional)
+                .Parameter("b", Commands.ParameterType.Optional)
                 .MinPermissions(3)
-                .Description("I'll set a role's color to the hex or rgb color value provided.")
-                .Syntax($"{commands.CommandChar}color [Rolename] [000000-FFFFFF] // {commands.CommandChar}color [Rolename] [0-255] [0-255] [0-255]")
+                .Description("I'll set a role's color to the hex(000000-FFFFFF) or rgb(0-255 0-255 0-255) color value provided.")
                 .Do(async e =>
                 {
                     if (e.Args.Count() == 2)
@@ -1865,10 +1346,11 @@ The current topic is: {e.Channel.Topic}";
                 });
 
             group.CreateCommand("ignore")
-                .ArgsAtLeast(1)
+                .Parameter("channel", Commands.ParameterType.Optional)
+                .Parameter("user", Commands.ParameterType.Optional)
+                .Parameter("...", Commands.ParameterType.Multiple)
                 .MinPermissions(3)
                 .Description("I'll ignore commands coming from a particular channel or user")
-                .Syntax($"{commands.CommandChar}ignore [@User1 or #Channel1] [@UserN or #ChannelN]")
                 .Do(async e =>
                 {
                     Regex re = new Regex(@"<#([0-9]+?)>");
@@ -1969,99 +1451,11 @@ The current topic is: {e.Channel.Topic}";
                         await client.SendMessage(e.Channel, "You need to mention at least one user or channel!");
                     }
                 });
-
-            // Help command
-            group.CreateCommand("help")
-                .AnyArgs()
-                .Description("I'll give you a list of all available commands or help on specific commands.")
-                .Syntax($"{commands.CommandChar}help // {commands.CommandChar}help [command1] [command2] [commandn]")
-                .Do(async e =>
-                {
-                    string reply = "";
-                    bool list = true;
-                    if (e.Args.Count() > 0)
-                    {
-                        // There is at least 1 provided argument, therefore assume that it's asking for specific help on one or more commands.
-                        foreach (string arg in e.Args)
-                        {
-                            foreach (Command c in commands.Commands)
-                            {
-                                if (c.Text == arg)
-                                {
-                                    if (GetPermissions(e.User) >= c.MinPerms)
-                                    {
-                                        reply = reply + $@"
-**Command**: {c.Text}
-**Description**: {c.Description}
-**Syntax**: {c.Syntax}
-**Permission Level**: {c.MinPerms.ToString()}
-**Nsfw**: {c.NsfwFlag.ToString()}
-**Music**: {c.MusicFlag.ToString()}
-";
-                                        list = false;
-                                    }
-                                    else
-                                    {
-                                        reply = reply + $@"
-You do not have permissions to access help on the command {c.Text}. (Current permissions: {GetPermissions(e.User).ToString()} / Needed permissions: {c.MinPerms.ToString()})
-";
-                                        list = false;
-                                    }
-                                }
-                            }
-                        }
-                        if (reply == "")
-                        {
-                            // If reply is still empty, then the arguments weren't commands, therefore acts as if there was no arguments
-                            list = true;
-                            foreach (Command c in commands.Commands)
-                            {
-                                if (c.MinPerms <= GetPermissions(e.User))
-                                {
-                                    reply = reply + $@", {c.Text}";
-                                }
-                            }
-                            reply = reply.Substring(0, reply.Length - 2);
-                            reply = $@"**List of all currently available commands:**
-
-{reply}
-
-Type '**{commands.CommandChar}help [command]**' for more specific help on a particular command. For suggestions, contact <@63296013791666176> (Kusoneko) or create an issue on the github page: https://github.com/Kusoneko/Nekobot";
-                        }
-                    }
-                    else
-                    {
-                        // There is no arguments, therefore list all commands
-                        list = true;
-                        foreach (Command c in commands.Commands)
-                        {
-                            if (c.MinPerms <= GetPermissions(e.User))
-                            {
-                                reply = reply + $@"{c.Text}, ";
-                            }
-                        }
-                        reply = reply.Substring(0, reply.Length-2);
-                        reply = $@"**List of all currently available commands:**
-
-{reply}
-
-Type '**{commands.CommandChar}help [command]**' for more specific help on a particular command. For suggestions, contact <@63296013791666176> (Kusoneko) or create an issue on the github page: https://github.com/Kusoneko/Nekobot";
-                    }
-                    if (!e.Channel.IsPrivate && list)
-                    {
-                        await client.SendMessage(e.Channel, $"<@{e.User.Id}>, I'm sending you the list of commands in PM. (I don't want to spam.)");
-                        await client.SendPrivateMessage(e.User, reply);
-                    }
-                    else
-                    {
-                        await client.SendMessage(e.Channel, reply);
-                    }
-                });
         }
 
         // Variables
         static DiscordClient client = new DiscordClient(new DiscordClientConfig { AckMessages = true, EnableVoiceMultiserver = true, VoiceMode = DiscordVoiceMode.Outgoing/*, LogLevel = LogMessageSeverity.Debug*/ });
-        static CommandsPlugin commands = new CommandsPlugin(client, GetPermissions, GetNsfwFlag, GetMusicFlag, GetIgnoredFlag);
+        static CommandService commands;
         static RestClient rclient = new RestClient();
         static SQLiteConnection connection;
         static SQLiteCommand query;
@@ -2190,14 +1584,14 @@ Type '**{commands.CommandChar}help [command]**' for more specific help on a part
             // Initialize rest client
             RCInit();
             // Set up the events and enforce use of the command prefix
-            commands.UseCommandChar = true;
             commands.CommandError += CommandError;
-            commands.UnknownCommand += UnknownCommand;
             client.Connected += Connected;
             client.Disconnected += Disconnected;
             client.UserJoined += UserJoined;
             client.LogMessage += LogMessage;
-            commands.CreateCommandGroup("", group => GenerateCommands(group));
+            client.AddService(commands);
+            client.AddService(new PermissionLevelService(GetPermissions));
+            commands.CreateGroup("", group => GenerateCommands(group));
             // Keep the window open in case of crashes elsewhere... (hopefully)
             Thread input = new Thread(InputThread);
             input.Start();
@@ -2429,7 +1823,14 @@ on {booru}. Please try something else.";
             pitur = config["pitur"].ToString();
             gold = config["gold"].ToString();
             cosplay = config["cosplay"].ToString();
-            commands.CommandChar = config["prefix"].ToString()[0];
+            CommandServiceConfig command_config = new CommandServiceConfig();
+            command_config.CommandChars = config["prefix"].ToString().ToCharArray();
+            command_config.RequireCommandCharInPrivate = config["prefixprivate"].ToString().Equals("true");
+            command_config.RequireCommandCharInPublic = config["prefixpublic"].ToString().Equals("true");
+            string helpmode = config["helpmode"].ToString();
+            command_config.HelpMode = helpmode.Equals("public") ? HelpMode.Public : helpmode.Equals("private") ? HelpMode.Private : HelpMode.Disable;
+            commands = new CommandService(command_config, GetNsfwFlag, GetMusicFlag, GetIgnoredFlag);
+
             if (System.IO.File.Exists(@"version.json"))
                 versionfile = JObject.Parse(System.IO.File.ReadAllText(@"version.json"));
             version = versionfile["version"].ToString();
@@ -2466,13 +1867,6 @@ on {booru}. Please try something else.";
             Console.WriteLine("Connected.");
         }
 
-        private static void UnknownCommand(object sender, CommandEventArgs e)
-        {
-            Console.WriteLine(e.CommandText); // Testing if Unknown commands do work
-            // Is not a valid command
-            client.SendMessage(e.Channel, $"{commands.CommandChar}{e.CommandText} is not a valid command.");
-        }
-
         private static void CommandError(object sender, CommandErrorEventArgs e)
         {
             string error = $"Command Error : {e.Exception.GetBaseException().Message}";
@@ -2480,13 +1874,9 @@ on {booru}. Please try something else.";
             {
                 error = "This channel doesn't allow nsfw commands.";
             }
-            if (e.Exception.GetType() == typeof(MusicFlagException))
+            else if (e.Exception.GetType() == typeof(MusicFlagException))
             {
                 error = "You need to be in a music streaming channel to use this command.";
-            }
-            if (e.Exception.GetType() == typeof(PermissionException))
-            {
-                error = "You don't have the permissions to use this command. (Permissions needed: " + e.Command.MinPerms.ToString() + " / Current permissions: " + e.Permissions.Value.ToString() + ")";
             }
             client.SendMessage(e.Channel, error);
             //Console.WriteLine($"Command Error {e.Exception.GetBaseException().StackTrace} : {e.Exception.GetBaseException().Message}");
@@ -2601,7 +1991,7 @@ on {booru}. Please try something else.";
             return isNsfw;
         }
 
-        private static int GetPermissions(User user)
+        private static int GetPermissions(User user, Channel channel)
         {
             int PermissionLevel = 0;
             if (user.Id != masterId)
