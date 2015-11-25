@@ -46,5 +46,3 @@ Requires the following NuGet Packages (Latest official version will do):
 - [NAudio](https://www.nuget.org/packages/NAudio)
 - [Newtonsoft.Json](https://www.nuget.org/packages/Newtonsoft.Json)
 - [TagLib#](https://www.nuget.org/packages/taglib)
-
-Also requires the [Discord.Net](https://github.com/RogueException/Discord.Net) github project to be added to the solution and referred to in the Nekobot project.
