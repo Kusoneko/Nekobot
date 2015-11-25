@@ -868,22 +868,19 @@ The current topic is: {e.Channel.Topic}";
                 .Do(async e =>
                 {
                     string message = $"<@{e.User.Id}> pets ";
-                    if (e.Message.MentionedUsers.Count() == 0 && !e.Message.MentionedRoles.Contains(e.Server.EveryoneRole))
-                        message = "*purrs*";
-                    else if (e.Message.MentionedRoles.Contains(e.Server.EveryoneRole))
-                        message = message + $"{Mention.Everyone()} *purrs*";
+                    bool mentions_everyone = e.Message.MentionedRoles.Contains(e.Server.EveryoneRole);
+                    if (mentions_everyone)
+                        await client.SendMessage(e.Channel, $"{message}{Mention.Everyone()}");
                     else
                     {
                         foreach (User u in e.Message.MentionedUsers)
                         {
-                            message = message + $"<@{u.Id}> ";
+                            message += $"<@{u.Id}> ";
                         }
-                        if (e.Message.IsMentioningMe)
-                        {
-                            message = message + "*purrs*";
-                        }
+                        await client.SendMessage(e.Channel, message);
                     }
-                    await client.SendMessage(e.Channel, message);
+                    if (mentions_everyone || e.Message.IsMentioningMe || e.Message.MentionedUsers.Count() == 0)
+                        await client.SendMessage(e.Channel, "*purrs*");
                 });
 
             group.CreateCommand("trash")
