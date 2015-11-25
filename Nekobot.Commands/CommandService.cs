@@ -88,7 +88,7 @@ namespace Nekobot.Commands
                     bool hasCommandChar = chars.Contains(msg[0]);
                     if (!hasCommandChar && (e.Message.Channel.IsPrivate ? _config.RequireCommandCharInPrivate : _config.RequireCommandCharInPublic))
                     {
-                        if (e.Message.IsMentioningMe)
+                        if (_config.MentionCommandChar && e.Message.IsMentioningMe)
                         {
                             int index = msg.IndexOf("@");
                             if (index == -1) return;

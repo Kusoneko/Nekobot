@@ -1706,6 +1706,7 @@ on {booru}. Please try something else.";
             command_config.CommandChars = config["prefix"].ToString().ToCharArray();
             command_config.RequireCommandCharInPrivate = config["prefixprivate"].ToString().Equals("true");
             command_config.RequireCommandCharInPublic = config["prefixpublic"].ToString().Equals("true");
+            command_config.MentionCommandChar = config["mentioncommand"].ToString().Equals("true");
             string helpmode = config["helpmode"].ToString();
             command_config.HelpMode = helpmode.Equals("public") ? HelpMode.Public : helpmode.Equals("private") ? HelpMode.Private : HelpMode.Disable;
             commands = new CommandService(command_config, GetNsfwFlag, GetMusicFlag, GetIgnoredFlag);
