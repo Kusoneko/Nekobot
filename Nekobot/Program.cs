@@ -815,24 +815,10 @@ The current topic is: {e.Channel.Topic}";
                     {
                         if (valid)
                         {
-                            int dice = 1;
-                            int sides = 6;
-                            int times = 1;
-                            if (e.Args.Count() == 3)
-                            {
-                                dice = int.Parse(e.Args[0]);
-                                sides = int.Parse(e.Args[1]);
-                                times = int.Parse(e.Args[2]);
-                            }
-                            else if (e.Args.Count() == 2)
-                            {
-                                dice = int.Parse(e.Args[0]);
-                                sides = int.Parse(e.Args[1]);
-                            }
-                            else if (e.Args.Count() == 1)
-                            {
-                                dice = int.Parse(e.Args[0]);
-                            }
+                            int dice = e.Args.Count() >= 1 ? int.Parse(e.Args[0]): 1;
+                            int sides = e.Args.Count() >= 2 ? int.Parse(e.Args[1]): 6;
+                            int times = e.Args.Count() >= 3 ? int.Parse(e.Args[2]): 1;
+
                             int roll = 0;
                             Random rnd = new Random();
                             for (int i = times; i > 0; i--)
@@ -1244,41 +1230,20 @@ The current topic is: {e.Channel.Topic}";
                         string reply = "";
                         foreach (User u in e.Message.MentionedUsers)
                         {
-                            if (GetPermissions(u, e.Channel) != newPermLevel)
+                            bool change_needed = GetPermissions(u, e.Channel) != newPermLevel;
+                            if (change_needed)
                             {
                                 sql = $"select count(user) from users where user='{u.Id}'";
                                 query = new SQLiteCommand(sql, connection);
-                                if (Convert.ToInt32(query.ExecuteScalar()) > 0)
-                                {
-                                    sql = $"update users set perms={newPermLevel} where user='{u.Id}'";
-                                    query = new SQLiteCommand(sql, connection);
-                                    await query.ExecuteNonQueryAsync();
-                                    if (reply == "")
-                                        reply = reply + $@"<@{u.Id}>'s permission level is now {newPermLevel}.";
-                                    else
-                                        reply = reply + $@"
-<@{u.Id}>'s permission level is now {newPermLevel}.";
-                                }
-                                else
-                                {
-                                    sql = $"insert into users values ('{u.Id}', {newPermLevel}, 0)";
-                                    query = new SQLiteCommand(sql, connection);
-                                    await query.ExecuteNonQueryAsync();
-                                    if (reply == "")
-                                        reply = reply + $@"<@{u.Id}>'s permission level is now {newPermLevel}.";
-                                    else
-                                        reply = reply + $@"
-<@{u.Id}>'s permission level is now {newPermLevel}.";
-                                }
+                                sql = (Convert.ToInt32(query.ExecuteScalar()) > 0) ?
+                                    $"update users set perms={newPermLevel} where user='{u.Id}'" :
+                                    $"insert into users values ('{u.Id}', {newPermLevel}, 0)";
+                                query = new SQLiteCommand(sql, connection);
+                                await query.ExecuteNonQueryAsync();
                             }
-                            else
-                            {
-                                if (reply == "")
-                                    reply = reply + $@"<@{u.Id}>'s permission level is already at {newPermLevel}.";
-                                else
-                                    reply = reply + $@"
-<@{u.Id}>'s permission level is already at {newPermLevel}.";
-                            }
+                            if (reply != "")
+                                reply += '\n';
+                            reply += $@"<@{u.Id}>'s permission level is "+(change_needed ? "now" : "already at")+$" {newPermLevel}.";
                         }
                         await client.SendMessage(e.Channel, reply);
                     }
