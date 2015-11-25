@@ -287,7 +287,7 @@ namespace Nekobot.Commands
                 if (isFirstSubCmd)
                 {
                     isFirstSubCmd = false;
-                    output.AppendLine("Sub Commands: ");
+                    output.Append("**Sub Commands:** ");
                 }
                 else
                     output.Append(", ");
@@ -342,7 +342,7 @@ namespace Nekobot.Commands
             output.AppendLine($": {command.Description ?? "No description set for this command."}");
 
             if (command.Aliases.Any())
-                output.AppendLine($"Aliases: `" + string.Join("`, `", command.Aliases) + '`');
+                output.AppendLine($"**Aliases:** `" + string.Join("`, `", command.Aliases) + '`');
 
             if (command.NsfwFlag || command.MusicFlag)
             {
