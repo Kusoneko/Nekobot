@@ -155,6 +155,7 @@ namespace Nekobot.Commands
                     case ParameterType.Required:
                         return CommandErrorType.BadArgCount;
                     case ParameterType.Optional:
+                        break; // Optionals shouldn't be added when they're not there!
                     case ParameterType.Unparsed:
                         argList.Add("");
                         break;
