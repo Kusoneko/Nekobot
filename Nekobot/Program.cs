@@ -665,8 +665,7 @@ Next songs:";
 
             group.CreateCommand("say")
                 .Alias("forward")
-                .Parameter("#channel", Commands.ParameterType.Optional)
-                .Parameter("@User", Commands.ParameterType.Optional)
+                .Parameter("#channel or @User", Commands.ParameterType.Optional)
                 .Parameter("text...", Commands.ParameterType.Multiple)
                 .Description("I'll repeat what you said. (To a given user or channel)")
                 .Do(async e =>
