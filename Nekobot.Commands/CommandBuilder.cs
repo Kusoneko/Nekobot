@@ -1,60 +1,51 @@
 ﻿using System;
-using System.Threading.Tasks;
 using Discord;
 using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Nekobot.Commands
 {
+    using Permissions;
     public sealed class CommandBuilder
     {
+        private readonly CommandService _service;
         private readonly Command _command;
-        public CommandBuilder(Command command)
+        private readonly List<CommandParameter> _params;
+        private readonly List<IPermissionChecker> _checks;
+        private readonly List<string> _aliases;
+        private readonly string _prefix;
+        private bool _allowRequiredParams, _areParamsClosed;
+
+        public CommandService Service => _service;
+
+        internal CommandBuilder(CommandService service, Command command, string prefix = "", string category = "", IEnumerable<IPermissionChecker> initialChecks = null)
         {
+            _service = service;
             _command = command;
+            _command.Category = category;
+            _params = new List<CommandParameter>();
+            if (initialChecks != null)
+                _checks = new List<IPermissionChecker>(initialChecks);
+            else
+                _checks = new List<IPermissionChecker>();
+            _prefix = prefix;
+            _aliases = new List<string>();
+
+            _allowRequiredParams = true;
+            _areParamsClosed = false;
         }
 
-        public CommandBuilder ArgsEqual(int argCount)
+        public CommandBuilder Alias(params string[] aliases)
         {
-            _command.MinArgs = argCount;
-            _command.MaxArgs = argCount;
+            _aliases.AddRange(aliases);
             return this;
         }
-        public CommandBuilder ArgsAtLeast(int minArgCount)
+        /*public CommandBuilder Category(string category)
         {
-            _command.MinArgs = minArgCount;
-            _command.MaxArgs = null;
+            _command.Category = category;
             return this;
-        }
-        public CommandBuilder ArgsAtMost(int maxArgCount)
-        {
-            _command.MinArgs = null;
-            _command.MaxArgs = maxArgCount;
-            return this;
-        }
-        public CommandBuilder ArgsBetween(int minArgCount, int maxArgCount)
-        {
-            _command.MinArgs = minArgCount;
-            _command.MaxArgs = maxArgCount;
-            return this;
-        }
-        public CommandBuilder NoArgs()
-        {
-            _command.MinArgs = 0;
-            _command.MaxArgs = 0;
-            return this;
-        }
-        public CommandBuilder AnyArgs()
-        {
-            _command.MinArgs = null;
-            _command.MaxArgs = null;
-            return this;
-        }
-
-        public CommandBuilder MinPermissions(int level)
-        {
-            _command.MinPerms = level;
-            return this;
-        }
+        }*/
 
         public CommandBuilder FlagNsfw(bool isNsfw)
         {
@@ -68,49 +59,109 @@ namespace Nekobot.Commands
             return this;
         }
 
-        public CommandBuilder Description(string desc)
+        public CommandBuilder Description(string description)
         {
-            _command.Description = desc;
+            _command.Description = description;
             return this;
         }
 
-        public CommandBuilder Syntax(string syntax)
+        public CommandBuilder Parameter(string name, ParameterType type = ParameterType.Required)
         {
-            _command.Syntax = syntax;
+            if (_areParamsClosed)
+                throw new Exception($"No parameters may be added after a {nameof(ParameterType.Multiple)} or {nameof(ParameterType.Unparsed)} parameter.");
+            if (!_allowRequiredParams && type == ParameterType.Required)
+                throw new Exception($"{nameof(ParameterType.Required)} parameters may not be added after an optional one");
+
+            _params.Add(new CommandParameter(name, type));
+
+            if (type == ParameterType.Optional)
+                _allowRequiredParams = false;
+            if (type == ParameterType.Multiple || type == ParameterType.Unparsed)
+                _areParamsClosed = true;
+            return this;
+        }
+        public CommandBuilder Hide()
+        {
+            _command.IsHidden = true;
+            return this;
+        }
+        public CommandBuilder AddCheck(IPermissionChecker check)
+        {
+            _checks.Add(check);
+            return this;
+        }
+        public CommandBuilder AddCheck(Func<Command, User, Channel, bool> checkFunc)
+        {
+            _checks.Add(new GenericPermissionChecker(checkFunc));
             return this;
         }
 
-        public CommandBuilder Do(Func<CommandEventArgs, Task> func)
+        public void Do(Func<CommandEventArgs, Task> func)
         {
-            _command.Handler = func;
-            return this;
+            _command.SetRunFunc(func);
+            Build();
         }
-        public CommandBuilder Do(Action<CommandEventArgs> func)
+        public void Do(Action<CommandEventArgs> func)
         {
-            _command.Handler = e => { func(e); return TaskHelper.CompletedTask; };
-            return this;
+            _command.SetRunFunc(func);
+            Build();
+        }
+        private void Build()
+        {
+            _command.SetParameters(_params.ToArray());
+            _command.SetChecks(_checks.ToArray());
+            _command.SetAliases(_aliases.Select(x => AppendPrefix(_prefix, x)).ToArray());
+            _service.AddCommand(_command);
+        }
+
+        internal static string AppendPrefix(string prefix, string cmd)
+        {
+            if (cmd != "")
+            {
+                if (prefix != "")
+                    return prefix + ' ' + cmd;
+                else
+                    return cmd;
+            }
+            else
+                return prefix;
         }
     }
     public sealed class CommandGroupBuilder
     {
-        private readonly CommandsPlugin _plugin;
+        private readonly CommandService _service;
         private readonly string _prefix;
-        private int _defaultMinPermissions;
+        private readonly List<IPermissionChecker> _checks;
         private bool _defaultNsfwFlag;
         private bool _defaultMusicFlag;
+        private string _category;
 
-        internal CommandGroupBuilder(CommandsPlugin plugin, string prefix, int defaultMinPermissions, bool defaultNsfwFlag, bool defaultMusicFlag)
+        public CommandService Service => _service;
+
+        internal CommandGroupBuilder(CommandService service, string prefix, IEnumerable<IPermissionChecker> initialChecks = null, bool defaultNsfwFlag = false, bool defaultMusicFlag = false)
         {
-            _plugin = plugin;
+            _service = service;
             _prefix = prefix;
-            _defaultMinPermissions = defaultMinPermissions;
+            if (initialChecks != null)
+                _checks = new List<IPermissionChecker>(initialChecks);
+            else
+                _checks = new List<IPermissionChecker>();
             _defaultNsfwFlag = defaultNsfwFlag;
             _defaultMusicFlag = defaultMusicFlag;
         }
 
-        public void DefaultMinPermissions(int level)
+        public CommandGroupBuilder Category(string category)
         {
-            _defaultMinPermissions = level;
+            _category = category;
+            return this;
+        }
+        public void AddCheck(IPermissionChecker checker)
+        {
+            _checks.Add(checker);
+        }
+        public void AddCheck(Func<Command, User, Channel, bool> checkFunc)
+        {
+            _checks.Add(new GenericPermissionChecker(checkFunc));
         }
 
         public void DefaultNsfwFlag(bool isNsfw)
@@ -123,36 +174,19 @@ namespace Nekobot.Commands
             _defaultMusicFlag = isMusicRelated;
         }
 
-        public CommandGroupBuilder CreateCommandGroup(string cmd, Action<CommandGroupBuilder> config = null)
+        public CommandGroupBuilder CreateGroup(string cmd, Action<CommandGroupBuilder> config = null)
         {
-            config(new CommandGroupBuilder(_plugin, _prefix + ' ' + cmd, _defaultMinPermissions, _defaultNsfwFlag, _defaultMusicFlag));
+            config(new CommandGroupBuilder(_service, CommandBuilder.AppendPrefix(_prefix, cmd), _checks, _defaultNsfwFlag, _defaultMusicFlag));
             return this;
         }
         public CommandBuilder CreateCommand()
             => CreateCommand("");
         public CommandBuilder CreateCommand(string cmd)
         {
-            string text;
-            if (cmd != "")
-            {
-                if (_prefix != "")
-                    text = _prefix + ' ' + cmd;
-                else
-                    text = cmd;
-            }
-            else
-            {
-                if (_prefix != "")
-                    text = _prefix;
-                else
-                    throw new ArgumentOutOfRangeException(nameof(cmd));
-            }
-            var command = new Command(text);
-            command.MinPerms = _defaultMinPermissions;
+            var command = new Command(CommandBuilder.AppendPrefix(_prefix, cmd));
             command.NsfwFlag = _defaultNsfwFlag;
             command.MusicFlag = _defaultMusicFlag;
-            _plugin.AddCommand(command);
-            return new CommandBuilder(command);
+            return new CommandBuilder(_service, command, _prefix, _category, _checks);
         }
     }
 }

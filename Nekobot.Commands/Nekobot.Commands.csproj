@@ -42,13 +42,32 @@
   <ItemGroup>
     <Compile Include="Command.cs" />
     <Compile Include="CommandBuilder.cs" />
+    <Compile Include="CommandExtensions.cs" />
+    <Compile Include="CommandMap.cs" />
     <Compile Include="CommandParser.cs" />
-    <Compile Include="CommandsPlugin.cs" />
-    <Compile Include="CommandsPlugin.Events.cs" />
+    <Compile Include="CommandService.cs" />
+    <Compile Include="CommandService.Events.cs" />
+    <Compile Include="CommandServiceConfig.cs" />
+    <Compile Include="Permissions\GenericPermissionChecker.cs" />
+    <Compile Include="Permissions\IPermissionChecker.cs" />
+    <Compile Include="Permissions\Levels\PermissionLevelChecker.cs" />
+    <Compile Include="Permissions\Levels\PermissionLevelExtensions.cs" />
+    <Compile Include="Permissions\Levels\PermissionLevelService.cs" />
+    <Compile Include="Permissions\Userlist\BlacklistChecker.cs" />
+    <Compile Include="Permissions\Userlist\BlacklistExtensions.cs" />
+    <Compile Include="Permissions\Userlist\BlacklistService.cs" />
+    <Compile Include="Permissions\Userlist\UserlistService.cs" />
+    <Compile Include="Permissions\Userlist\WhitelistChecker.cs" />
+    <Compile Include="Permissions\Userlist\WhitelistExtensions.cs" />
+    <Compile Include="Permissions\Userlist\WhitelistService.cs" />
+    <Compile Include="Permissions\Visibility\PrivateChecker.cs" />
+    <Compile Include="Permissions\Visibility\PrivateExtensions.cs" />
+    <Compile Include="Permissions\Visibility\PublicChecker.cs" />
+    <Compile Include="Permissions\Visibility\PublicExtensions.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\Discord.Net\src\Discord.Net.Net45\Discord.Net.csproj">
+    <ProjectReference Include="..\Discord.Net\src\Discord.Net.Net45\Discord.Net.csproj">
       <Project>{8d71a857-879a-4a10-859e-5ff824ed6688}</Project>
       <Name>Discord.Net</Name>
     </ProjectReference>
