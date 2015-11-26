@@ -681,14 +681,15 @@ Next songs:";
                         if (usermention)
                         {
                             foreach (User mention in e.Message.MentionedUsers)
-                                if (mentionmsg == mention.Name)
+                                if (client.CurrentUserId != mention.Id && mentionmsg == mention.Name)
                                     channel = await client.CreatePMChannel(mention);
                         }
                         else
                             foreach (Channel mention in e.Message.MentionedChannels)
                                 if (mentionmsg == mention.Name)
                                     channel = mention;
-                        message = message.Substring(index);
+                        if (channel != e.Channel)
+                            message = message.Substring(index);
                     }
 
                     foreach (Channel chan in e.Message.MentionedChannels)
