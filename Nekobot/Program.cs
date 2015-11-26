@@ -677,9 +677,7 @@ Next songs:";
                 .Description("I'll repeat what you said, in reverse!")
                 .Do(async e =>
                 {
-                    char[] chars = String.Join(" ", e.Args).ToArray();
-                    Array.Reverse(chars);
-                    await client.SendMessage(e.Channel, new string(chars));
+                    await client.SendMessage(e.Channel, String.Join("", GraphemeClusters(String.Join(" ", e.Args)).Reverse().ToArray()));
                 });
 
             group.CreateCommand("whereami")
@@ -1904,6 +1902,12 @@ on {booru}. Please try something else.";
                 PermissionLevel = 10;
             }
             return PermissionLevel;
+        }
+
+        private static IEnumerable<string> GraphemeClusters(string s)
+        {
+            var enumerator = System.Globalization.StringInfo.GetTextElementEnumerator(s);
+            while (enumerator.MoveNext()) yield return (string)enumerator.Current;
         }
     }
 }
