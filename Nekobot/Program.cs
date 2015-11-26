@@ -665,11 +665,37 @@ Next songs:";
 
             group.CreateCommand("say")
                 .Alias("forward")
+                .Parameter("#channel", Commands.ParameterType.Optional)
+                .Parameter("@User", Commands.ParameterType.Optional)
                 .Parameter("text...", Commands.ParameterType.Multiple)
-                .Description("I'll repeat what you said.")
+                .Description("I'll repeat what you said. (To a given user or channel)")
                 .Do(async e =>
                 {
-                    await client.SendMessage(e.Channel, String.Join(" ", e.Args));
+                    Channel channel = e.Channel;
+                    string message = string.Join(" ", e.Args);
+                    bool usermention = e.Message.MentionedUsers.Count() > (e.Message.IsMentioningMe ? 1 : 0) && message.StartsWith("@");
+                    if (usermention || (e.Message.MentionedChannels.Count() > 0 && message.StartsWith("#")))
+                    {
+                        int index = message.IndexOf(" ");
+                        string mentionmsg = message.Substring(1, index - 1);
+                        if (usermention)
+                        {
+                            foreach (User mention in e.Message.MentionedUsers)
+                                if (mentionmsg == mention.Name)
+                                    channel = await client.CreatePMChannel(mention);
+                        }
+                        else
+                            foreach (Channel mention in e.Message.MentionedChannels)
+                                if (mentionmsg == mention.Name)
+                                    channel = mention;
+                        message = message.Substring(index);
+                    }
+
+                    foreach (Channel chan in e.Message.MentionedChannels)
+                        message = message.Replace($"#{chan.Name}", $"<#{chan.Id}>");
+                    foreach (User user in e.Message.MentionedUsers)
+                        message = message.Replace($"@{user.Name}", $"<@{user.Id}>");
+                    await client.SendMessage(channel, message);
                 });
 
             group.CreateCommand("reverse")
