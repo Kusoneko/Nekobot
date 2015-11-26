@@ -24,8 +24,9 @@ namespace Nekobot.Commands
         }
 
         public string[] Args => _args;
+        /*We only add strings of use to us, no empty Optionals, so these can't be used
         public string GetArg(int index) => _args[index];
-        public string GetArg(string name) => _args[Command[name].Id];
+        public string GetArg(string name) => _args[Command[name].Id];*/
     }
 
     public enum CommandErrorType { Exception, UnknownCommand, BadPermissions, BadArgCount, InvalidInput }
