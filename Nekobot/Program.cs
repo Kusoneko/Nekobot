@@ -897,10 +897,11 @@ The current topic is: {e.Channel.Topic}";
                         await client.SendMessage(e.Channel, $"{message}{Mention.Everyone()}");
                     else
                     {
-                        foreach (User u in e.Message.MentionedUsers)
-                        {
-                            message += $"<@{u.Id}> ";
-                        }
+                        if (e.Message.MentionedUsers.Count() == 0)
+                            message += $"<@{client.CurrentUserId}>";
+                        else
+                            foreach (User u in e.Message.MentionedUsers)
+                                message += $"<@{u.Id}> ";
                         await client.SendMessage(e.Channel, message);
                     }
                     if (mentions_everyone || e.Message.IsMentioningMe || e.Message.MentionedUsers.Count() == 0)
