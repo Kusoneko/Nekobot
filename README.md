@@ -46,3 +46,4 @@ Requires the following NuGet Packages (Latest official version will do):
 - [NAudio](https://www.nuget.org/packages/NAudio)
 - [Newtonsoft.Json](https://www.nuget.org/packages/Newtonsoft.Json)
 - [TagLib#](https://www.nuget.org/packages/taglib)
+- [VideoLibrary](https://www.nuget.org/packages/VideoLibrary)
