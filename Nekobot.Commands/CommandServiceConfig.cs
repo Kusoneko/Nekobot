@@ -30,7 +30,8 @@ namespace Nekobot.Commands
         public char[] CommandChars { get { return _commandChars; } set { SetValue(ref _commandChars, value); } }
         private char[] _commandChars = new char[] { '!' };
 
-        public bool RequireCommandCharInPrivate, RequireCommandCharInPublic, MentionCommandChar;
+        public bool RequireCommandCharInPrivate, RequireCommandCharInPublic;
+        public short MentionCommandChar;
 
         public HelpMode HelpMode { get { return _helpMode; } set { SetValue(ref _helpMode, value); } }
         private HelpMode _helpMode = HelpMode.Disable;

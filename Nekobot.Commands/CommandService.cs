@@ -88,18 +88,20 @@ namespace Nekobot.Commands
                     bool hasCommandChar = chars.Contains(msg[0]);
                     if (!hasCommandChar && (e.Message.Channel.IsPrivate ? _config.RequireCommandCharInPrivate : _config.RequireCommandCharInPublic))
                     {
-                        if (_config.MentionCommandChar && e.Message.IsMentioningMe)
+                        if (_config.MentionCommandChar >= 1 && e.Message.IsMentioningMe)
                         {
-                            int index = 0;
                             // It's lame we have to do this, but our User isn't exposed by Discord.Net, so we don't know our name
                             User nekouser = client.GetUser(e.Server, client.CurrentUserId);
                             string neko = nekouser.Name;
                             if (neko.Length+2 > msg.Length) return;
-                            for (; index != -1 && neko != msg.Substring(index+1, neko.Length);
-                                index = msg.LastIndexOf("@", (index == 0 ? msg.Length-neko.Length : index)-1));
+                            int index = 0;
+                            if (!msg.StartsWith($"@{neko}") && _config.MentionCommandChar > 1)
+                                for (index = msg.Length - neko.Length-1; index != -1 && neko != msg.Substring(index+1, neko.Length);
+                                    index = msg.LastIndexOf("@", index-1));
 
                             if (index == -1) return;
                             msg = index == 0 ? msg.Substring(neko.Length + 1) : msg.Substring(0, index-1);
+                            // Ideally, don't let the command know that we were mentioned, if this is the only mention
                             /*if (msg.IndexOf($"@{neko}") != -1)
                             {
                                 e.Message.MentionedUsers = e.Message.MentionedUsers.Where(u => u == nekouser);
