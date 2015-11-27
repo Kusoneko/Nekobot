@@ -35,6 +35,13 @@ namespace Nekobot
                     await client.SendMessage(e.Channel, $"<@{e.User.Id}>, Pong!");
                 });
 
+            group.CreateCommand("status")
+                .Description("I'll give statistics about the servers, channels and users.")
+                .Do(async e =>
+                {
+                    await client.SendMessage(e.Channel, $"I'm connected to {client.AllServers.Count()} servers, which have a total of {client.AllServers.SelectMany(x => x.Channels).Count()} channels, and see a total of {client.AllServers.SelectMany(x => x.Members).Distinct().Count()} different users.");
+                });
+
             group.CreateCommand("whois")
                 .Alias("getinfo")
                 .Parameter("@User1", Commands.ParameterType.Required)
@@ -49,13 +56,13 @@ namespace Nekobot
                         if (u.Id == 63296013791666176 && e.User.Id == 63299786798796800)
                         {
                             reply += $@"
-<@{u.Id}> is your onii-chan <3 and his id is {u.Id} and his permission level is {GetPermissions(u, e.Channel).ToString()}.
+<@{u.Id}> is your onii-chan <3 and his id is {u.Id} and his permission level is {GetPermissions(u, e.Channel)}.
 ";
                         }
                         else
                         {
                             reply += $@"
-<@{u.Id}>'s id is {u.Id} and their permission level is {GetPermissions(u, e.Channel).ToString()}.
+<@{u.Id}>'s id is {u.Id} and their permission level is {GetPermissions(u, e.Channel)}.
 ";
                         }
                     }
@@ -117,18 +124,18 @@ Next songs:";
                                 title += songfile.Tag.Title;
                                 title = title.Substring(2);
                                 reply += $@"
-{i.ToString()} - **[{playlist[e.User.VoiceChannel.Id][i].Item2} by <@{playlist[e.User.VoiceChannel.Id][i].Item3}>]** {title}";
+{i} - **[{playlist[e.User.VoiceChannel.Id][i].Item2} by <@{playlist[e.User.VoiceChannel.Id][i].Item3}>]** {title}";
                             }
                             else
                             {
                                 reply += $@"
-{i.ToString()} - **[{playlist[e.User.VoiceChannel.Id][i].Item2} by <@{playlist[e.User.VoiceChannel.Id][i].Item3}>]** {System.IO.Path.GetFileNameWithoutExtension(playlist[e.User.VoiceChannel.Id][i].Item1)}";
+{i} - **[{playlist[e.User.VoiceChannel.Id][i].Item2} by <@{playlist[e.User.VoiceChannel.Id][i].Item3}>]** {System.IO.Path.GetFileNameWithoutExtension(playlist[e.User.VoiceChannel.Id][i].Item1)}";
                             }
                         }
                         else if (playlist[e.User.VoiceChannel.Id][i].Item2 == "Youtube")
                         {
                             reply += $@"
-{i.ToString()} - **[{playlist[e.User.VoiceChannel.Id][i].Item2} request by <@{playlist[e.User.VoiceChannel.Id][i].Item3}>]** {playlist[e.User.VoiceChannel.Id][i].Item4}";
+{i} - **[{playlist[e.User.VoiceChannel.Id][i].Item2} request by <@{playlist[e.User.VoiceChannel.Id][i].Item3}>]** {playlist[e.User.VoiceChannel.Id][i].Item4}";
                         }
                         else
                         {
@@ -148,12 +155,12 @@ Next songs:";
                                 title += songfile.Tag.Title;
                                 title = title.Substring(2);
                                 reply += $@"
-{i.ToString()} - **[{playlist[e.User.VoiceChannel.Id][i].Item2}]** {title}";
+{i} - **[{playlist[e.User.VoiceChannel.Id][i].Item2}]** {title}";
                             }
                             else
                             {
                                 reply += $@"
-{i.ToString()} - **[{playlist[e.User.VoiceChannel.Id][i].Item2}]** {System.IO.Path.GetFileNameWithoutExtension(playlist[e.User.VoiceChannel.Id][i].Item1)}";
+{i} - **[{playlist[e.User.VoiceChannel.Id][i].Item2}]** {System.IO.Path.GetFileNameWithoutExtension(playlist[e.User.VoiceChannel.Id][i].Item1)}";
                             }
                         }
                     }
@@ -230,7 +237,7 @@ Next songs:";
                             }
                             if (isAlreadyInPlaylist)
                             {
-                                await client.SendMessage(e.Channel, $"<@{e.User.Id}> Your request is already in the playlist at position {(songindex).ToString()}.");
+                                await client.SendMessage(e.Channel, $"<@{e.User.Id}> Your request is already in the playlist at position {songindex}.");
                                 return;
                             }
                             playlist[e.User.VoiceChannel.Id].Insert(index, Tuple.Create<string, string, long, string>(video.Uri, "Youtube", e.User.Id, e.Args[0]));
@@ -280,7 +287,7 @@ Next songs:";
                             }
                             if (isAlreadyInPlaylist)
                             {
-                                await client.SendMessage(e.Channel, $"<@{e.User.Id}> Your request is already in the playlist at position {(songindex).ToString()}.");
+                                await client.SendMessage(e.Channel, $"<@{e.User.Id}> Your request is already in the playlist at position {songindex}.");
                                 return;
                             }
                             playlist[e.User.VoiceChannel.Id].Insert(index, Tuple.Create<string, string, long, string>(files.ElementAt(j).File, "Request", e.User.Id, null));
@@ -396,31 +403,31 @@ Next songs:";
                     string[] remoteversions = remoteversion.Split('.');
                     if (int.Parse(versions[0]) < int.Parse(remoteversions[0]))
                     {
-                        await client.SendMessage(e.Channel, $"I'm currently {(int.Parse(remoteversions[0]) - int.Parse(versions[0])).ToString()} major version(s) behind. (Current version: {version}, latest version: {remoteversion})");
+                        await client.SendMessage(e.Channel, $"I'm currently {(int.Parse(remoteversions[0]) - int.Parse(versions[0]))} major version(s) behind. (Current version: {version}, latest version: {remoteversion})");
                     }
                     else if (int.Parse(versions[0]) > int.Parse(remoteversions[0]))
                     {
-                        await client.SendMessage(e.Channel, $"I'm currently {(int.Parse(versions[0]) - int.Parse(remoteversions[0])).ToString()} major version(s) ahead. (Current version: {version}, latest released version: {remoteversion})");
+                        await client.SendMessage(e.Channel, $"I'm currently {(int.Parse(versions[0]) - int.Parse(remoteversions[0]))} major version(s) ahead. (Current version: {version}, latest released version: {remoteversion})");
                     }
                     else
                     {
                         if (int.Parse(versions[1]) < int.Parse(remoteversions[1]))
                         {
-                            await client.SendMessage(e.Channel, $"I'm currently {(int.Parse(remoteversions[1]) - int.Parse(versions[1])).ToString()} minor version(s) behind. (Current version: {version}, latest version: {remoteversion})");
+                            await client.SendMessage(e.Channel, $"I'm currently {(int.Parse(remoteversions[1]) - int.Parse(versions[1]))} minor version(s) behind. (Current version: {version}, latest version: {remoteversion})");
                         }
                         else if (int.Parse(versions[1]) > int.Parse(remoteversions[1]))
                         {
-                            await client.SendMessage(e.Channel, $"I'm currently {(int.Parse(versions[1]) - int.Parse(remoteversions[1])).ToString()} minor version(s) ahead. (Current version: {version}, latest released version: {remoteversion})");
+                            await client.SendMessage(e.Channel, $"I'm currently {(int.Parse(versions[1]) - int.Parse(remoteversions[1]))} minor version(s) ahead. (Current version: {version}, latest released version: {remoteversion})");
                         }
                         else
                         {
                             if (int.Parse(versions[2]) < int.Parse(remoteversions[2]))
                             {
-                                await client.SendMessage(e.Channel, $"I'm currently {(int.Parse(remoteversions[2]) - int.Parse(versions[2])).ToString()} patch(es) behind. (Current version: {version}, latest version: {remoteversion})");
+                                await client.SendMessage(e.Channel, $"I'm currently {(int.Parse(remoteversions[2]) - int.Parse(versions[2]))} patch(es) behind. (Current version: {version}, latest version: {remoteversion})");
                             }
                             else if (int.Parse(versions[2]) > int.Parse(remoteversions[2]))
                             {
-                                await client.SendMessage(e.Channel, $"I'm currently {(int.Parse(versions[2]) - int.Parse(remoteversions[2])).ToString()} patch(es) ahead. (Current version: {version}, latest released version: {remoteversion})");
+                                await client.SendMessage(e.Channel, $"I'm currently {(int.Parse(versions[2]) - int.Parse(remoteversions[2]))} patch(es) ahead. (Current version: {version}, latest released version: {remoteversion})");
                             }
                             else
                             {
@@ -779,7 +786,7 @@ The current topic is: {e.Channel.Topic}";
                                 message = $"You're joking right? It's {min}.";
                             else
                             {
-                                message = $"Your number is **{rnd.Next(min, max + 1).ToString()}**.";
+                                message = $"Your number is **{rnd.Next(min, max + 1)}**.";
                             }
                         }
                     }
@@ -805,7 +812,7 @@ The current topic is: {e.Channel.Topic}";
                                 message = $"You're joking right? It's {min}.";
                             else
                             {
-                                message = $"Your number is **{rnd.Next(min, max + 1).ToString()}**.";
+                                message = $"Your number is **{rnd.Next(min, max + 1)}**.";
                             }
                         }
                     }
@@ -852,7 +859,7 @@ The current topic is: {e.Channel.Topic}";
                                     roll += rnd.Next(1, sides + 1);
                                 }
                             }
-                            await client.SendMessage(e.Channel, $"You rolled {dice.ToString()} different {sides.ToString()}-sided dice {times.ToString()} times... Result: **{roll}**");
+                            await client.SendMessage(e.Channel, $"You rolled {dice} different {sides}-sided dice {times} times... Result: **{roll}**");
                         }
                         else
                             await client.SendMessage(e.Channel, $"Arguments are not all numbers!");
@@ -880,7 +887,7 @@ The current topic is: {e.Channel.Topic}";
                         }
                         lotto.Add(number);
                     }
-                    await client.SendMessage(e.Channel, $"Your lucky numbers are **{lotto[0].ToString()}, {lotto[1].ToString()}, {lotto[2].ToString()}, {lotto[3].ToString()}, {lotto[4].ToString()}, {lotto[5].ToString()}**.");
+                    await client.SendMessage(e.Channel, $"Your lucky numbers are **{lotto[0]}, {lotto[1]}, {lotto[2]}, {lotto[3]}, {lotto[4]}, {lotto[5]}**.");
                 });
 
             group.CreateCommand("pet")
@@ -956,7 +963,7 @@ The current topic is: {e.Channel.Topic}";
                 {
                     Random rnd = new Random();
                     rclient.BaseUrl = new Uri("https://ajax.googleapis.com/ajax/services/search");
-                    var request = new RestRequest($"images?v=1.0&q={String.Join(" ", e.Args)}&rsz=8&start={rnd.Next(1, 12).ToString()}&safe=active", Method.GET);
+                    var request = new RestRequest($"images?v=1.0&q={String.Join(" ", e.Args)}&rsz=8&start={rnd.Next(1, 12)}&safe=active", Method.GET);
                     JObject result = JObject.Parse(rclient.Execute(request).Content);
                     List<string> images = new List<string>();
                     foreach (var element in result["responseData"]["results"])
