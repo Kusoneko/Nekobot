@@ -90,9 +90,21 @@ namespace Nekobot.Commands
                     {
                         if (_config.MentionCommandChar && e.Message.IsMentioningMe)
                         {
-                            int index = msg.IndexOf("@");
+                            int index = 0;
+                            // It's lame we have to do this, but our User isn't exposed by Discord.Net, so we don't know our name
+                            User nekouser = client.GetUser(e.Server, client.CurrentUserId);
+                            string neko = nekouser.Name;
+                            if (neko.Length+2 > msg.Length) return;
+                            for (; index != -1 && neko != msg.Substring(index+1, neko.Length);
+                                index = msg.LastIndexOf("@", (index == 0 ? msg.Length-neko.Length : index)-1));
+
                             if (index == -1) return;
-                            msg = index == 0 ? msg.Substring(msg.IndexOf(" ")) : msg.Substring(0, index-1);
+                            msg = index == 0 ? msg.Substring(neko.Length + 1) : msg.Substring(0, index-1);
+                            /*if (msg.IndexOf($"@{neko}") != -1)
+                            {
+                                e.Message.MentionedUsers = e.Message.MentionedUsers.Where(u => u == nekouser);
+                                e.Message.IsMentioningMe = false;
+                            }*/
                         }
                         else return;
                     }
