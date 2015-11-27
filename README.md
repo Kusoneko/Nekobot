@@ -1,5 +1,5 @@
 # Nekobot
-Version 2.2.14
+Version 2.2.16
 
 Bot for Discord using the [Discord.Net](https://github.com/RogueException/Discord.Net) Library.
 
