@@ -1727,15 +1727,15 @@ on {booru}. Please try something else.";
             }
             email = config["email"].ToString();
             password = config["password"].ToString();
-            masterId = Convert.ToInt64(config["master"].ToString());
+            masterId = config["master"].ToObject<long>();
             musicFolder = config["musicFolder"].ToString();
             pitur = config["pitur"].ToString();
             gold = config["gold"].ToString();
             cosplay = config["cosplay"].ToString();
             CommandServiceConfig command_config = new CommandServiceConfig();
             command_config.CommandChars = config["prefix"].ToString().ToCharArray();
-            command_config.RequireCommandCharInPrivate = config["prefixprivate"].ToString().Equals("true");
-            command_config.RequireCommandCharInPublic = config["prefixpublic"].ToString().Equals("true");
+            command_config.RequireCommandCharInPrivate = config["prefixprivate"].ToObject<bool>();
+            command_config.RequireCommandCharInPublic = config["prefixpublic"].ToObject<bool>();
             command_config.MentionCommandChar = config["mentioncommand"].ToObject<short>();
             string helpmode = config["helpmode"].ToString();
             command_config.HelpMode = helpmode.Equals("public") ? HelpMode.Public : helpmode.Equals("private") ? HelpMode.Private : HelpMode.Disable;
