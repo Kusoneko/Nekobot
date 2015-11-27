@@ -891,22 +891,20 @@ The current topic is: {e.Channel.Topic}";
                 .Description("Everyone loves being pet, right!?! Pets each *@user*. Leave empty (or mention me too) to pet me!")
                 .Do(async e =>
                 {
-                    string message = $"<@{e.User.Id}> pets ";
-                    bool mentions_everyone = e.Message.MentionedRoles.Contains(e.Server.EveryoneRole);
-                    if (mentions_everyone)
-                        await client.SendMessage(e.Channel, $"{message}{Mention.Everyone()}");
-                    else
-                    {
-                        if (e.Message.MentionedUsers.Count() == 0)
-                            message += $"<@{client.CurrentUserId}>";
-                        else
-                            foreach (User u in e.Message.MentionedUsers)
-                                message += $"<@{u.Id}> ";
-                        await client.SendMessage(e.Channel, message);
-                    }
-                    if (mentions_everyone || e.Message.IsMentioningMe || e.Message.MentionedUsers.Count() == 0)
-                        await client.SendMessage(e.Channel, "*purrs*");
+                    await PerformAction(e, "pet", "*purrs*", false);
                 });
+
+            group.CreateCommand("hug")
+                .Alias("hugs")
+                .Parameter("@User1", Commands.ParameterType.Optional)
+                .Parameter("@User2", Commands.ParameterType.Optional)
+                .Parameter("@UserN", Commands.ParameterType.Multiple)
+                .Description("Hug someone! Hugs each *@user*. Leave empty to get a hug!")
+                .Do(async e =>
+                {
+                    await PerformAction(e, "hug", "<3", true);
+                });
+
 
             group.CreateCommand("trash")
                 .Alias("worstgirl")
@@ -1935,6 +1933,28 @@ on {booru}. Please try something else.";
         {
             var enumerator = System.Globalization.StringInfo.GetTextElementEnumerator(s);
             while (enumerator.MoveNext()) yield return (string)enumerator.Current;
+        }
+
+        private static async Task PerformAction(CommandEventArgs e, string action, string reaction, bool perform_when_empty)
+        {
+            User neko = client.GetUser(e.Server, client.CurrentUserId);
+            bool mentions_neko = e.Message.IsMentioningMe && string.Join(" ", e.Args).IndexOf($"@{neko.Name}") != -1;
+            string message = $"<@{e.User.Id}> {action}s ";
+            bool mentions_everyone = e.Message.MentionedRoles.Contains(e.Server.EveryoneRole);
+            if (mentions_everyone)
+                await client.SendMessage(e.Channel, $"{message}{Mention.Everyone()}");
+            else
+            {
+                if (e.Message.MentionedUsers.Count() == (!mentions_neko && e.Message.IsMentioningMe ? 1 : 0))
+                    message = perform_when_empty ? $"*{action}s <@{e.User.Id}>.*" : message + $"<@{client.CurrentUserId}>";
+                else
+                    foreach (User u in e.Message.MentionedUsers)
+                        if (u != neko || mentions_neko)
+                            message += $"<@{u.Id}> ";
+                await client.SendMessage(e.Channel, message);
+            }
+            if (mentions_everyone || mentions_neko || (!perform_when_empty && e.Message.MentionedUsers.Count() == (e.Message.IsMentioningMe ? 1 : 0)))
+                await client.SendMessage(e.Channel, $"{reaction}");
         }
     }
 }
