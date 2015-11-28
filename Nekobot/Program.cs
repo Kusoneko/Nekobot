@@ -672,7 +672,7 @@ Next songs:";
 
             group.CreateCommand("say")
                 .Alias("forward")
-                .Parameter("#channel or @User", Commands.ParameterType.Optional)
+                .Parameter("#channel or @User (or user/channel id in PMs)", Commands.ParameterType.Optional)
                 .Parameter("text...", Commands.ParameterType.Multiple)
                 .Description("I'll repeat what you said. (To a given user or channel)")
                 .Do(async e =>
@@ -695,6 +695,15 @@ Next songs:";
                                 : e.Message.MentionedChannels.Where(c => c.Id == mentionid).Single();
                             message = message.Substring(index+2);
                         }
+                    }
+                    else if (channel.IsPrivate)
+                    {
+                        try
+                        {
+                            long id = Convert.ToInt64(e.Args[0]);
+                            channel = client.GetChannel(id) ?? await client.CreatePMChannel(client.AllServers.Select(x => client.GetUser(x, id)).FirstOrDefault());
+                            message = message.Substring(message.IndexOf(" ")+1);
+                        } catch (Exception) { }
                     }
                     await client.SendMessage(channel, message);
                 });
