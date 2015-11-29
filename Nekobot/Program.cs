@@ -1373,7 +1373,7 @@ The current topic is: {e.Channel.Topic}";
                                 await client.SendMessage(e.Channel, "The bot is now " + (!botstatus ? "on" : "off") + $" for {e.Channel}");
                                 ExecuteNonQuery(ExecuteScalarPos($"select count(channel) from flags where channel = '{e.Channel.Id}'")
                                     ? $"update flags set chatbot={bottype} where channel='{e.Channel.Id}'"
-                                    : $"insert into flags values ('{e.User.VoiceChannel.Id}', 0, 0, 0, {bottype})");
+                                    : $"insert into flags values ('{e.Channel.Id}', 0, 0, 0, {bottype})");
                             }
                         }
                         else await client.SendMessage(e.Channel, "First argument must be on or off.");
