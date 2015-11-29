@@ -1873,13 +1873,7 @@ on {booru}. Please try something else.";
         private static int CountVoiceChannelMembers(Channel chan)
         {
             if (chan.Type != "voice") { return -1; }
-            int result = 0;
-            foreach (User u in chan.Members)
-            {
-                if (u.VoiceChannel == chan)
-                    result++;
-            }
-            return result;
+            return chan.Members.Where(u => u.VoiceChannel == chan).Count();
         }
 
         private static bool GetIgnoredFlag(Channel chan, User user)
