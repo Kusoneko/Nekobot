@@ -470,6 +470,7 @@ Next songs:";
                     await client.SendMessage(e.Channel, LewdSX("lewd"));
                 });
 
+            string pitur = config["pitur"].ToString();
             if (pitur != "")
             {
                 group.CreateCommand("pitur")
@@ -481,6 +482,7 @@ Next songs:";
                     });
             }
 
+            string gold = config["gold"].ToString();
             if (gold != "")
             {
                 group.CreateCommand("gold")
@@ -492,6 +494,7 @@ Next songs:";
                     });
             }
 
+            string cosplay = config["cosplay"].ToString();
             if (cosplay != "")
             {
                 group.CreateCommand("cosplay")
@@ -981,8 +984,7 @@ The current topic is: {e.Channel.Topic}";
                     List<string> images = new List<string>();
                     foreach (var element in result["responseData"]["results"])
                     {
-                        var image = element["unescapedUrl"];
-                        images.Add(image.ToString());
+                        images.Add(element["unescapedUrl"].ToString());
                     }
                     var imageURL = images[rnd.Next(images.Count())].ToString();
                     await client.SendMessage(e.Channel, imageURL);
@@ -1389,14 +1391,8 @@ The current topic is: {e.Channel.Topic}";
         static RestClient rclient = new RestClient();
         static SQLiteConnection connection;
         static JObject config;
-        static JObject versionfile;
         static long masterId;
-        static string email;
-        static string password;
         static string musicFolder;
-        static string pitur;
-        static string gold;
-        static string cosplay;
         static string version;
         public static Dictionary<long, ChatterBotSession> chatbots = new Dictionary<long, ChatterBotSession>();
         // Music-related variables
@@ -1532,7 +1528,7 @@ The current topic is: {e.Channel.Topic}";
             {
                 client.Run(async() =>
                 {
-                    await client.Connect(email, password);
+                    await client.Connect(config["email"].ToString(), config["password"].ToString());
                     if (config["server"].ToString() != "")
                     {
                         await client.AcceptInvite(client.GetInvite(config["server"].ToString()).Result);
@@ -1763,13 +1759,8 @@ on {booru}. Please try something else.";
                 Console.ReadKey();
                 Environment.Exit(0);
             }
-            email = config["email"].ToString();
-            password = config["password"].ToString();
             masterId = config["master"].ToObject<long>();
             musicFolder = config["musicFolder"].ToString();
-            pitur = config["pitur"].ToString();
-            gold = config["gold"].ToString();
-            cosplay = config["cosplay"].ToString();
             CommandServiceConfig command_config = new CommandServiceConfig();
             command_config.CommandChars = config["prefix"].ToString().ToCharArray();
             command_config.RequireCommandCharInPrivate = config["prefixprivate"].ToObject<bool>();
@@ -1780,8 +1771,10 @@ on {booru}. Please try something else.";
             commands = new CommandService(command_config, GetNsfwFlag, GetMusicFlag, GetIgnoredFlag);
 
             if (System.IO.File.Exists(@"version.json"))
-                versionfile = JObject.Parse(System.IO.File.ReadAllText(@"version.json"));
-            version = versionfile["version"].ToString();
+            {
+                JObject versionfile = JObject.Parse(System.IO.File.ReadAllText(@"version.json"));
+                version = versionfile["version"].ToString();
+            }
         }
 
         private static void LoadDB()
