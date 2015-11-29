@@ -6,6 +6,7 @@ MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nekobot", "Nekobot\Nekobot.csproj", "{E2CB1AB4-C221-4948-B1B8-2BF684502B5F}"
 	ProjectSection(ProjectDependencies) = postProject
 		{8D71A857-879A-4A10-859E-5FF824ED6688} = {8D71A857-879A-4A10-859E-5FF824ED6688}
+		{2E624962-F155-432C-A90A-E1CE75DEE9EA} = {2E624962-F155-432C-A90A-E1CE75DEE9EA}
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nekobot.Commands", "Nekobot.Commands\Nekobot.Commands.csproj", "{4C109E0E-5837-4A2E-8AB4-AB1F5CEAAC2D}"
@@ -14,6 +15,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nekobot.Commands", "Nekobot
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Discord.Net", "Discord.Net\src\Discord.Net.Net45\Discord.Net.csproj", "{8D71A857-879A-4A10-859E-5FF824ED6688}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChatterBotAPI", "chatter-bot-api\dotnet\ChatterBotAPI\ChatterBotAPI.csproj", "{2E624962-F155-432C-A90A-E1CE75DEE9EA}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -40,6 +43,12 @@ Global
 		{8D71A857-879A-4A10-859E-5FF824ED6688}.FullDebug|Any CPU.Build.0 = FullDebug|Any CPU
 		{8D71A857-879A-4A10-859E-5FF824ED6688}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8D71A857-879A-4A10-859E-5FF824ED6688}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2E624962-F155-432C-A90A-E1CE75DEE9EA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2E624962-F155-432C-A90A-E1CE75DEE9EA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2E624962-F155-432C-A90A-E1CE75DEE9EA}.FullDebug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2E624962-F155-432C-A90A-E1CE75DEE9EA}.FullDebug|Any CPU.Build.0 = Debug|Any CPU
+		{2E624962-F155-432C-A90A-E1CE75DEE9EA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2E624962-F155-432C-A90A-E1CE75DEE9EA}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

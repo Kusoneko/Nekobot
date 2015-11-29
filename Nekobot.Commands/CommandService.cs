@@ -33,6 +33,9 @@ namespace Nekobot.Commands
         internal IEnumerable<CommandMap> Categories => _categories.Values;
         private readonly Dictionary<string, CommandMap> _categories;
 
+        //Allow stuff to happen when we don't handle a command.
+        public Action<MessageEventArgs> NonCommands;
+
         public CommandService(CommandServiceConfig config, Func<Channel, bool> getNsfwFlag = null, Func<User, bool> getMusicFlag = null, Func<Channel, User, bool> getIgnoredChannelFlag = null)
         {
             _config = config;
@@ -93,13 +96,21 @@ namespace Nekobot.Commands
                             // It's lame we have to do this, but our User isn't exposed by Discord.Net, so we don't know our name
                             User nekouser = client.GetUser(e.Server, client.CurrentUserId);
                             string neko = nekouser.Name;
-                            if (neko.Length+2 > msg.Length) return;
+                            if (neko.Length+2 > msg.Length)
+                            {
+                                NonCommands(e);
+                                return;
+                            }
                             int index = 0;
                             if (!msg.StartsWith($"@{neko}") && _config.MentionCommandChar > 1)
                                 for (index = msg.Length - neko.Length-1; index != -1 && neko != msg.Substring(index+1, neko.Length);
                                     index = msg.LastIndexOf("@", index-1));
 
-                            if (index == -1) return;
+                            if (index == -1)
+                            {
+                                NonCommands(e);
+                                return;
+                            }
                             msg = index == 0 ? msg.Substring(neko.Length + 1) : msg.Substring(0, index-1);
                             // Ideally, don't let the command know that we were mentioned, if this is the only mention
                             /*if (msg.IndexOf($"@{neko}") != -1)
@@ -108,7 +119,11 @@ namespace Nekobot.Commands
                                 e.Message.IsMentioningMe = false;
                             }*/
                         }
-                        else return;
+                        else
+                        {
+                            NonCommands(e);
+                            return;
+                        }
                     }
                     else if (hasCommandChar)
                         msg = msg.Substring(1);
@@ -124,6 +139,7 @@ namespace Nekobot.Commands
                     CommandEventArgs errorArgs = new CommandEventArgs(e.Message, null, null);
                     RaiseCommandError(CommandErrorType.UnknownCommand, errorArgs, new Exception("Error parsing command"));
                     */
+                    NonCommands(e);
                     return;
                 }
                 else
