@@ -1728,7 +1728,7 @@ on {booru}. Please try something else.";
             if (chatbots.Count() == 0) return; // No bot sessions
             string msg = e.Message.Text;
             // It's lame we have to do this, but our User isn't exposed by Discord.Net, so we don't know our name
-            string neko = client.GetUser(e.Server, client.CurrentUserId).Name;
+            string neko = e.Channel.IsPrivate ? "" : client.GetUser(e.Server, client.CurrentUserId).Name;
             if (chatbots.ContainsKey(e.Channel.Id) && (e.Channel.IsPrivate || msg.ToLower().IndexOf(neko.ToLower()) != -1))
             {
                 if (!e.Channel.IsPrivate)
