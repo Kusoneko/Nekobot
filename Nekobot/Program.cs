@@ -1138,18 +1138,11 @@ The current topic is: {e.Channel.Topic}";
                         {
                             sql = $"select count(channel) from flags where channel='{e.Channel.Id}'";
                             query = new SQLiteCommand(sql, connection);
-                            if (Convert.ToInt32(query.ExecuteScalar()) > 0)
-                            {
-                                sql = $"update flags set nsfw=1 where channel='{e.Channel.Id}'";
-                                query = new SQLiteCommand(sql, connection);
-                                await query.ExecuteNonQueryAsync();
-                            }
-                            else
-                            {
-                                sql = $"insert into flags values ('{e.Channel.Id}', 1, 0, 0)";
-                                query = new SQLiteCommand(sql, connection);
-                                await query.ExecuteNonQueryAsync();
-                            }
+                            sql = Convert.ToInt32(query.ExecuteScalar()) > 0
+                                ? $"update flags set nsfw=1 where channel='{e.Channel.Id}'"
+                                : $"insert into flags values ('{e.Channel.Id}', 1, 0, 0)";
+                            query = new SQLiteCommand(sql, connection);
+                            await query.ExecuteNonQueryAsync();
                             await client.SendMessage(e.Channel, "I've set this channel to allow nsfw commands.");
                         }
                         else
@@ -1207,18 +1200,11 @@ The current topic is: {e.Channel.Topic}";
                                 streams.Add(e.User.VoiceChannel.Id);
                                 sql = $"select count(channel) from flags where channel = '{e.User.VoiceChannel.Id}'";
                                 query = new SQLiteCommand(sql, connection);
-                                if (Convert.ToInt32(query.ExecuteScalar()) > 0)
-                                {
-                                    sql = $"update flags set music=1 where channel='{e.User.VoiceChannel.Id}'";
-                                    query = new SQLiteCommand(sql, connection);
-                                    query.ExecuteNonQuery();
-                                }
-                                else
-                                {
-                                    sql = $"insert into flags values ('{e.User.VoiceChannel.Id}', 0, 1, 0)";
-                                    query = new SQLiteCommand(sql, connection);
-                                    query.ExecuteNonQuery();
-                                }
+                                sql = Convert.ToInt32(query.ExecuteScalar()) > 0
+                                    ? $"update flags set music=1 where channel='{e.User.VoiceChannel.Id}'"
+                                    : $"insert into flags values ('{e.User.VoiceChannel.Id}', 0, 1, 0)";
+                                query = new SQLiteCommand(sql, connection);
+                                query.ExecuteNonQuery();
                                 await client.SendMessage(e.Channel, $"<@{e.User.Id}>, I'm starting the stream!");
                                 await StreamMusic(e.User.VoiceChannel.Id);
                             }
@@ -1275,9 +1261,9 @@ The current topic is: {e.Channel.Topic}";
                             {
                                 sql = $"select count(user) from users where user='{u.Id}'";
                                 query = new SQLiteCommand(sql, connection);
-                                sql = (Convert.ToInt32(query.ExecuteScalar()) > 0) ?
-                                    $"update users set perms={newPermLevel} where user='{u.Id}'" :
-                                    $"insert into users values ('{u.Id}', {newPermLevel}, 0)";
+                                sql = (Convert.ToInt32(query.ExecuteScalar()) > 0)
+                                    ? $"update users set perms={newPermLevel} where user='{u.Id}'"
+                                    : $"insert into users values ('{u.Id}', {newPermLevel}, 0)";
                                 query = new SQLiteCommand(sql, connection);
                                 await query.ExecuteNonQueryAsync();
                             }
@@ -1909,25 +1895,17 @@ on {booru}. Please try something else.";
         {
             sql = $"select count({row}) from {table} where {row}='{id}'";
             query = new SQLiteCommand(sql, connection);
+
+            bool in_table = Convert.ToInt32(query.ExecuteScalar()) > 0;
+            bool isIgnored = in_table && GetIgnoredFlag(row, table, id);
+            sql = in_table
+                ? $"update {table} set ignored={Convert.ToInt32(!isIgnored)} where {row}='{id}'"
+                : $"insert into {table} values ('{id}'{insertdata})";
+            query = new SQLiteCommand(sql, connection);
+            await query.ExecuteNonQueryAsync();
             if (reply != "")
                 reply += '\n';
-            if (Convert.ToInt32(query.ExecuteScalar()) > 0)
-            {
-                bool isIgnored = GetIgnoredFlag(row, table, id);
-                sql = $"update {table} set ignored={Convert.ToInt32(!isIgnored)} where {row}='{id}'";
-                query = new SQLiteCommand(sql, connection);
-                await query.ExecuteNonQueryAsync();
-
-                string ignoredstatus = !isIgnored ? "now" : "no longer";
-                reply += $"<{symbol}{id}> is {ignoredstatus} ignored.";
-            }
-            else
-            {
-                sql = $"insert into {table} values ('{id}'{insertdata})";
-                query = new SQLiteCommand(sql, connection);
-                await query.ExecuteNonQueryAsync();
-                reply += $"<{symbol}{id}> is now ignored.";
-            }
+            reply += $"<{symbol}{id}> is " + (isIgnored ? "now" : "no longer") + " ignored.";
             setreply(reply);
         }
 
