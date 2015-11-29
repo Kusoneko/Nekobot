@@ -1378,11 +1378,22 @@ The current topic is: {e.Channel.Topic}";
                                 await client.SendMessage(e.Channel, "The bot is already " + (botstatus ? "on" : "off") + $" for {e.Channel}");
                             else
                             {
+                                int bottype = -1;
                                 if (botstatus)
                                     chatbots.Remove(e.Channel.Id);
                                 else
-                                    chatbots[e.Channel.Id] = CreateBotSession(GetBotType(e.Args.Count() == 1 ? "" : e.Args[0]));
+                                {
+                                    bottype = GetBotType(e.Args.Count() == 1 ? "" : e.Args[0]);
+                                    chatbots[e.Channel.Id] = CreateBotSession((ChatterBotType)bottype);
+                                }
                                 await client.SendMessage(e.Channel, "The bot is now " + (!botstatus ? "on" : "off") + $" for {e.Channel}");
+                                sql = $"select count(channel) from flags where channel = '{e.Channel.Id}'";
+                                query = new SQLiteCommand(sql, connection);
+                                sql = Convert.ToInt32(query.ExecuteScalar()) > 0
+                                    ? $"update flags set chatbot={bottype} where channel='{e.Channel.Id}'"
+                                    : $"insert into flags values ('{e.User.VoiceChannel.Id}', 0, 0, 0, {bottype})";
+                                query = new SQLiteCommand(sql, connection);
+                                query.ExecuteNonQuery();
                             }
                         }
                         else await client.SendMessage(e.Channel, "First argument must be on or off.");
@@ -1533,6 +1544,8 @@ The current topic is: {e.Channel.Topic}";
             client.AddService(new PermissionLevelService(GetPermissions));
             commands.CreateGroup("", group => GenerateCommands(group));
             commands.NonCommands += DoChatBot;
+            // Load the chatbots
+            LoadChatBots();
             // Keep the window open in case of crashes elsewhere... (hopefully)
             Thread input = new Thread(InputThread);
             input.Start();
@@ -1804,9 +1817,16 @@ on {booru}. Please try something else.";
             sql = "create table if not exists users (user varchar(17), perms int, ignored int)";
             query = new SQLiteCommand(sql, connection);
             query.ExecuteNonQuery();
-            sql = "create table if not exists flags (channel varchar(17), nsfw int, music int, ignored int)";
+            sql = "create table if not exists flags (channel varchar(17), nsfw int, music int, ignored int, chatbot int default -1)";
             query = new SQLiteCommand(sql, connection);
             query.ExecuteNonQuery();
+            try
+            {
+                sql = "alter table flags add chatbot int default -1";
+                query = new SQLiteCommand(sql, connection);
+                query.ExecuteNonQuery();
+            }
+            catch (System.Data.SQLite.SQLiteException) { }
         }
 
         private static void UserJoined(object sender, UserEventArgs e)
@@ -1860,6 +1880,16 @@ on {booru}. Please try something else.";
         {
             if (chan.Type != "voice") { return -1; }
             return chan.Members.Where(u => u.VoiceChannel == chan).Count();
+        }
+
+        private static void LoadChatBots()
+        {
+            sql = "select channel,chatbot from flags where chatbot <> -1";
+            query = new SQLiteCommand(sql, connection);
+            SQLiteDataReader reader = query.ExecuteReader();
+            while (reader.Read())
+                chatbots[Convert.ToInt64(reader["channel"].ToString())] =
+                    CreateBotSession((ChatterBotType)Convert.ToInt32(reader["chatbot"]));
         }
 
         private static bool GetIgnoredFlag(Channel chan, User user)
@@ -1997,9 +2027,9 @@ on {booru}. Please try something else.";
                 await client.SendMessage(e.Channel, $"{reaction}");
         }
 
-        static ChatterBotType GetBotType(string bottype)
+        static int GetBotType(string bottype)
         {
-            return /*bottype == "pandora" ? ChatterBotType.PANDORABOTS :*/ bottype == "jabberwacky" ? ChatterBotType.JABBERWACKY : ChatterBotType.CLEVERBOT;
+            return (int)(/*bottype == "pandora" ? ChatterBotType.PANDORABOTS :*/ bottype == "jabberwacky" ? ChatterBotType.JABBERWACKY : ChatterBotType.CLEVERBOT);
         }
 
         static ChatterBotSession CreateBotSession(ChatterBotType type)
