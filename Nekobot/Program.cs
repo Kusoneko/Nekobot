@@ -689,24 +689,32 @@ Next songs:";
                     if (usermention || (e.Message.MentionedChannels.Count() > 0 && message.StartsWith("<#")))
                     {
                         int index = message.IndexOf(">");
-                        long mentionid = Convert.ToInt64(message.Substring(2, index-2));
-                        if (mentionid != client.CurrentUserId)
+                        if (index+2 < message.Length)
                         {
-                            channel = usermention ? await client.CreatePMChannel(e.Message.MentionedUsers.Where(u => u.Id == mentionid).Single())
-                                : e.Message.MentionedChannels.Where(c => c.Id == mentionid).Single();
-                            message = message.Substring(index+2);
+                            long mentionid = Convert.ToInt64(message.Substring(2, index-2));
+                            if (mentionid != client.CurrentUserId)
+                            {
+                                channel = usermention ? await client.CreatePMChannel(e.Message.MentionedUsers.Where(u => u.Id == mentionid).Single())
+                                    : e.Message.MentionedChannels.Where(c => c.Id == mentionid).Single();
+                                message = message.Substring(index+2);
+                            }
                         }
                     }
                     else if (channel.IsPrivate)
                     {
                         try
                         {
-                            long id = Convert.ToInt64(e.Args[0]);
-                            channel = client.GetChannel(id) ?? await client.CreatePMChannel(client.AllServers.Select(x => client.GetUser(x, id)).FirstOrDefault());
-                            message = message.Substring(message.IndexOf(" ")+1);
+                            string chanstr = e.Args[0];
+                            if (chanstr.Length+1 < message.Length)
+                            {
+                                long id = Convert.ToInt64(chanstr);
+                                channel = client.GetChannel(id) ?? await client.CreatePMChannel(client.AllServers.Select(x => client.GetUser(x, id)).FirstOrDefault());
+                                message = message.Substring(message.IndexOf(" ")+1);
+                            }
                         } catch (Exception) { }
                     }
-                    await client.SendMessage(channel, message);
+                    if (message.TrimEnd() != "")
+                        await client.SendMessage(channel, message);
                 });
 
             group.CreateCommand("reverse")
