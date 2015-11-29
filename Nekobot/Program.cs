@@ -651,7 +651,7 @@ Next songs:";
                 .Description("A great advice in any situation.")
                 .Do(async e =>
                 {
-                    await client.SendMessage(e.Channel, "https://www.youtube.com/watch?v=iNCXiMt1bR4");
+                    await client.SendMessage(e.Channel, "https://www.youtube.com/watch?v=5sQzi0dn_dA");
                 });
 
             group.CreateCommand("killyourself")
