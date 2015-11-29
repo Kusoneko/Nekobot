@@ -1056,10 +1056,10 @@ The current topic is: {e.Channel.Topic}";
 **{waifu_prefix}**: {waifu}
 **Bio**: {bio}
 **Time wasted on Anime**: {lifeAnime}";
-                            if (String.IsNullOrWhiteSpace(location))
+                            if (!String.IsNullOrWhiteSpace(location))
                                 message += $@"
 **Location**: {location}";
-                            if (String.IsNullOrWhiteSpace(website))
+                            if (!String.IsNullOrWhiteSpace(website))
                                 message += $@"
 **Website**: {website}";
                             message += $@"
