@@ -1136,13 +1136,9 @@ The current topic is: {e.Channel.Topic}";
                     {
                         if (!GetNsfwFlag(e.Channel))
                         {
-                            sql = $"select count(channel) from flags where channel='{e.Channel.Id}'";
-                            query = new SQLiteCommand(sql, connection);
-                            sql = Convert.ToInt32(query.ExecuteScalar()) > 0
+                            await ExecuteNonQueryAsync(ExecuteScalarPos($"select count(channel) from flags where channel='{e.Channel.Id}'")
                                 ? $"update flags set nsfw=1 where channel='{e.Channel.Id}'"
-                                : $"insert into flags values ('{e.Channel.Id}', 1, 0, 0)";
-                            query = new SQLiteCommand(sql, connection);
-                            await query.ExecuteNonQueryAsync();
+                                : $"insert into flags values ('{e.Channel.Id}', 1, 0, 0)");
                             await client.SendMessage(e.Channel, "I've set this channel to allow nsfw commands.");
                         }
                         else
@@ -1154,9 +1150,7 @@ The current topic is: {e.Channel.Topic}";
                     {
                         if (GetNsfwFlag(e.Channel))
                         {
-                            sql = $"update flags set nsfw=0 where channel='{e.Channel.Id}'";
-                            query = new SQLiteCommand(sql, connection);
-                            await query.ExecuteNonQueryAsync();
+                            await ExecuteNonQueryAsync($"update flags set nsfw=0 where channel='{e.Channel.Id}'");
                             await client.SendMessage(e.Channel, "I've set this channel to disallow nsfw commands.");
                         }
                         else
@@ -1198,13 +1192,9 @@ The current topic is: {e.Channel.Topic}";
                             if (!streams.Contains(e.User.VoiceChannel.Id))
                             {
                                 streams.Add(e.User.VoiceChannel.Id);
-                                sql = $"select count(channel) from flags where channel = '{e.User.VoiceChannel.Id}'";
-                                query = new SQLiteCommand(sql, connection);
-                                sql = Convert.ToInt32(query.ExecuteScalar()) > 0
+                                ExecuteNonQuery(ExecuteScalarPos($"select count(channel) from flags where channel = '{e.User.VoiceChannel.Id}'")
                                     ? $"update flags set music=1 where channel='{e.User.VoiceChannel.Id}'"
-                                    : $"insert into flags values ('{e.User.VoiceChannel.Id}', 0, 1, 0)";
-                                query = new SQLiteCommand(sql, connection);
-                                query.ExecuteNonQuery();
+                                    : $"insert into flags values ('{e.User.VoiceChannel.Id}', 0, 1, 0)");
                                 await client.SendMessage(e.Channel, $"<@{e.User.Id}>, I'm starting the stream!");
                                 await StreamMusic(e.User.VoiceChannel.Id);
                             }
@@ -1218,9 +1208,7 @@ The current topic is: {e.Channel.Topic}";
                             if (streams.Contains(e.User.VoiceChannel.Id))
                             {
                                 streams.Remove(e.User.VoiceChannel.Id);
-                                sql = $"update flags set music=0 where channel='{e.User.VoiceChannel.Id}'";
-                                query = new SQLiteCommand(sql, connection);
-                                query.ExecuteNonQuery();
+                                ExecuteNonQuery($"update flags set music=0 where channel='{e.User.VoiceChannel.Id}'");
                                 await client.SendMessage(e.Channel, $"<@{e.User.Id}>, I'm stopping the stream!");
                             }
                             else
@@ -1259,13 +1247,9 @@ The current topic is: {e.Channel.Topic}";
                             bool change_needed = GetPermissions(u, e.Channel) != newPermLevel;
                             if (change_needed)
                             {
-                                sql = $"select count(user) from users where user='{u.Id}'";
-                                query = new SQLiteCommand(sql, connection);
-                                sql = (Convert.ToInt32(query.ExecuteScalar()) > 0)
+                                await ExecuteNonQueryAsync(ExecuteScalarPos($"select count(user) from users where user='{u.Id}'")
                                     ? $"update users set perms={newPermLevel} where user='{u.Id}'"
-                                    : $"insert into users values ('{u.Id}', {newPermLevel}, 0)";
-                                query = new SQLiteCommand(sql, connection);
-                                await query.ExecuteNonQueryAsync();
+                                    : $"insert into users values ('{u.Id}', {newPermLevel}, 0)");
                             }
                             if (reply != "")
                                 reply += '\n';
@@ -1387,13 +1371,9 @@ The current topic is: {e.Channel.Topic}";
                                     chatbots[e.Channel.Id] = CreateBotSession((ChatterBotType)bottype);
                                 }
                                 await client.SendMessage(e.Channel, "The bot is now " + (!botstatus ? "on" : "off") + $" for {e.Channel}");
-                                sql = $"select count(channel) from flags where channel = '{e.Channel.Id}'";
-                                query = new SQLiteCommand(sql, connection);
-                                sql = Convert.ToInt32(query.ExecuteScalar()) > 0
+                                ExecuteNonQuery(ExecuteScalarPos($"select count(channel) from flags where channel = '{e.Channel.Id}'")
                                     ? $"update flags set chatbot={bottype} where channel='{e.Channel.Id}'"
-                                    : $"insert into flags values ('{e.User.VoiceChannel.Id}', 0, 0, 0, {bottype})";
-                                query = new SQLiteCommand(sql, connection);
-                                query.ExecuteNonQuery();
+                                    : $"insert into flags values ('{e.User.VoiceChannel.Id}', 0, 0, 0, {bottype})");
                             }
                         }
                         else await client.SendMessage(e.Channel, "First argument must be on or off.");
@@ -1408,10 +1388,8 @@ The current topic is: {e.Channel.Topic}";
         static CommandService commands;
         static RestClient rclient = new RestClient();
         static SQLiteConnection connection;
-        static SQLiteCommand query;
         static JObject config;
         static JObject versionfile;
-        static string sql;
         static long masterId;
         static string email;
         static string password;
@@ -1814,18 +1792,9 @@ on {booru}. Please try something else.";
             }
             connection = new SQLiteConnection("Data Source=nekobot.db;Version=3;");
             connection.Open();
-            sql = "create table if not exists users (user varchar(17), perms int, ignored int)";
-            query = new SQLiteCommand(sql, connection);
-            query.ExecuteNonQuery();
-            sql = "create table if not exists flags (channel varchar(17), nsfw int, music int, ignored int, chatbot int default -1)";
-            query = new SQLiteCommand(sql, connection);
-            query.ExecuteNonQuery();
-            try
-            {
-                sql = "alter table flags add chatbot int default -1";
-                query = new SQLiteCommand(sql, connection);
-                query.ExecuteNonQuery();
-            }
+            ExecuteNonQuery("create table if not exists users (user varchar(17), perms int, ignored int)");
+            ExecuteNonQuery("create table if not exists flags (channel varchar(17), nsfw int, music int, ignored int, chatbot int default -1)");
+            try { ExecuteNonQuery("alter table flags add chatbot int default -1"); }
             catch (System.Data.SQLite.SQLiteException) { }
         }
 
@@ -1867,13 +1836,9 @@ on {booru}. Please try something else.";
 
         private static void LoadStreams()
         {
-            sql = "select channel from flags where music = 1";
-            query = new SQLiteCommand(sql, connection);
-            SQLiteDataReader reader = query.ExecuteReader();
+            SQLiteDataReader reader = ExecuteReader("select channel from flags where music = 1");
             while (reader.Read())
-            {
                 streams.Add(Convert.ToInt64(reader["channel"].ToString()));
-            }
         }
 
         private static int CountVoiceChannelMembers(Channel chan)
@@ -1884,9 +1849,7 @@ on {booru}. Please try something else.";
 
         private static void LoadChatBots()
         {
-            sql = "select channel,chatbot from flags where chatbot <> -1";
-            query = new SQLiteCommand(sql, connection);
-            SQLiteDataReader reader = query.ExecuteReader();
+            SQLiteDataReader reader = ExecuteReader("select channel,chatbot from flags where chatbot <> -1");
             while (reader.Read())
                 chatbots[Convert.ToInt64(reader["channel"].ToString())] =
                     CreateBotSession((ChatterBotType)Convert.ToInt32(reader["chatbot"]));
@@ -1909,30 +1872,20 @@ on {booru}. Please try something else.";
 
         private static bool GetIgnoredFlag(string row, string table, long id)
         {
-            sql = $"select ignored from {table} where {row} = '{id}'";
-            query = new SQLiteCommand(sql, connection);
-            SQLiteDataReader reader = query.ExecuteReader();
-            bool isIgnored = false;
+            SQLiteDataReader reader = ExecuteReader($"select ignored from {table} where {row} = '{id}'");
             while (reader.Read())
-            {
                 if (int.Parse(reader["ignored"].ToString()) == 1)
-                    isIgnored = true;
-            }
-            return isIgnored;
+                    return true;
+            return false;
         }
 
         protected static async Task SetIgnoredFlag(string row, string table, long id, string insertdata, char symbol, string reply, Action<string> setreply)
         {
-            sql = $"select count({row}) from {table} where {row}='{id}'";
-            query = new SQLiteCommand(sql, connection);
-
-            bool in_table = Convert.ToInt32(query.ExecuteScalar()) > 0;
+            bool in_table = ExecuteScalarPos($"select count({row}) from {table} where {row}='{id}'");
             bool isIgnored = in_table && GetIgnoredFlag(row, table, id);
-            sql = in_table
+            await ExecuteNonQueryAsync(in_table
                 ? $"update {table} set ignored={Convert.ToInt32(!isIgnored)} where {row}='{id}'"
-                : $"insert into {table} values ('{id}'{insertdata})";
-            query = new SQLiteCommand(sql, connection);
-            await query.ExecuteNonQueryAsync();
+                : $"insert into {table} values ('{id}'{insertdata})");
             if (reply != "")
                 reply += '\n';
             reply += $"<{symbol}{id}> is " + (isIgnored ? "now" : "no longer") + " ignored.";
@@ -1941,37 +1894,20 @@ on {booru}. Please try something else.";
 
         private static bool GetMusicFlag(User user)
         {
-            sql = "select channel from flags where music = 1";
-            query = new SQLiteCommand(sql, connection);
-            SQLiteDataReader reader = query.ExecuteReader();
-            bool isInMusicChannel = false;
+            SQLiteDataReader reader = ExecuteReader("select channel from flags where music = 1");
             List<long> streams = new List<long>();
             while (reader.Read())
-            {
                 streams.Add(Convert.ToInt64(reader["channel"].ToString()));
-            }
-            if (user.VoiceChannel != null)
-            {
-                if (streams.Contains(user.VoiceChannel.Id))
-                {
-                    isInMusicChannel = true;
-                }
-            }
-            return isInMusicChannel;
+            return user.VoiceChannel != null && streams.Contains(user.VoiceChannel.Id);
         }
 
         private static bool GetNsfwFlag(Channel chan)
         {
-            sql = "select nsfw from flags where channel = '" + chan.Id + "'";
-            query = new SQLiteCommand(sql, connection);
-            SQLiteDataReader reader = query.ExecuteReader();
-            bool isNsfw = false;
+            SQLiteDataReader reader = ExecuteReader("select nsfw from flags where channel = '" + chan.Id + "'");
             while (reader.Read())
-            {
                 if (int.Parse(reader["nsfw"].ToString()) == 1)
-                    isNsfw = true;
-            }
-            return isNsfw;
+                    return true;
+            return false;
         }
 
         private static int GetPermissions(User user, Channel channel)
@@ -1979,17 +1915,11 @@ on {booru}. Please try something else.";
             int PermissionLevel = 0;
             if (user.Id != masterId)
             {
-                sql = $"select count(perms) from users where user = '{user.Id}'";
-                query = new SQLiteCommand(sql, connection);
-                if (Convert.ToInt32(query.ExecuteScalar()) > 0)
+                if (ExecuteScalarPos($"select count(perms) from users where user = '{user.Id}'"))
                 {
-                    sql = $"select perms from users where user = '{user.Id}'";
-                    query = new SQLiteCommand(sql, connection);
-                    SQLiteDataReader reader = query.ExecuteReader();
+                    SQLiteDataReader reader = ExecuteReader($"select perms from users where user = '{user.Id}'");
                     while (reader.Read())
-                    {
                         PermissionLevel = int.Parse(reader["perms"].ToString());
-                    }
                 }
             }
             else
@@ -2035,6 +1965,31 @@ on {booru}. Please try something else.";
         static ChatterBotSession CreateBotSession(ChatterBotType type)
         {
             return new ChatterBotFactory().Create(type).CreateSession();
+        }
+
+        static SQLiteCommand SQLCommand(string sql)
+        {
+            return new SQLiteCommand(sql, connection);
+        }
+
+        static void ExecuteNonQuery(string sql)
+        {
+            SQLCommand(sql).ExecuteNonQuery();
+        }
+
+        static async Task ExecuteNonQueryAsync(string sql)
+        {
+            await SQLCommand(sql).ExecuteNonQueryAsync();
+        }
+
+        static bool ExecuteScalarPos(string sql)
+        {
+            return Convert.ToInt32(SQLCommand(sql).ExecuteScalar()) > 0;
+        }
+
+        static SQLiteDataReader ExecuteReader(string sql)
+        {
+            return SQLCommand(sql).ExecuteReader();
         }
     }
 }
