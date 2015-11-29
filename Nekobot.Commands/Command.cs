@@ -36,7 +36,6 @@ namespace Nekobot.Commands
         public string Category { get; internal set; }
         public bool IsHidden { get; internal set; }
         public string Description { get; internal set; }
-        public string Syntax { get; internal set; }
         public bool NsfwFlag { get; internal set; }
         public bool MusicFlag { get; internal set; }
 
