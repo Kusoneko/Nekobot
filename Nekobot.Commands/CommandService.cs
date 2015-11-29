@@ -364,7 +364,7 @@ namespace Nekobot.Commands
                         output.Append(" [...]");
                         break;
                     case ParameterType.Unparsed:
-                        output.Append(" [--]");
+                        output.Append($" [{param.Name}]"); // " [--]"
                         break;
                 }
             }
