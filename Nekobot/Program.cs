@@ -673,13 +673,14 @@ Next songs:";
 
             group.CreateCommand("say")
                 .Alias("forward")
-                .Parameter("#channel or @User (or user/channel id in PMs)", Commands.ParameterType.Optional)
-                .Parameter("text...", Commands.ParameterType.Multiple)
+                .Parameter("#channel or @User (or user/channel id in PMs)] [...", Commands.ParameterType.Unparsed)
                 .Description("I'll repeat what you said. (To a given user or channel)")
                 .Do(async e =>
                 {
                     Channel channel = e.Channel;
-                    string message = string.Join(" ", e.Args);
+                    string message = e.Args[0];
+                    if (message == "") return; // Unparsed can be empty
+
                     foreach (User user in e.Message.MentionedUsers)
                         message = message.Replace($"@{user.Name}", $"<@{user.Id}>");
                     foreach (Channel chan in e.Message.MentionedChannels)
