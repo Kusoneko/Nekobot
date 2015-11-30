@@ -1134,36 +1134,24 @@ The current topic is: {e.Channel.Topic}";
                 .Description("I'll set a channel's nsfw flag to on or off.")
                 .Do(async e =>
                 {
-                    if (e.Args[0] == "on")
+                    bool on = e.Args[0] == "on";
+                    bool off = !on && e.Args[0] == "off";
+                    if (on || off)
                     {
-                        if (!GetNsfwFlag(e.Channel))
+                        bool nsfw = GetNsfwFlag(e.Channel);
+                        string status = on ? "allow" : "disallow";
+                        if (nsfw == on || nsfw != off)
+                            await client.SendMessage(e.Channel, $"<@{e.User.Id}>, this channel is already {status}ing nsfw commands.");
+                        else
                         {
-                            await ExecuteNonQueryAsync(ExecuteScalarPos($"select count(channel) from flags where channel='{e.Channel.Id}'")
+                            await ExecuteNonQueryAsync(off ? $"update flags set nsfw=0 where channel='{e.Channel.Id}'"
+                                : ExecuteScalarPos($"select count(channel) from flags where channel='{e.Channel.Id}'")
                                 ? $"update flags set nsfw=1 where channel='{e.Channel.Id}'"
                                 : $"insert into flags values ('{e.Channel.Id}', 1, 0, 0)");
-                            await client.SendMessage(e.Channel, "I've set this channel to allow nsfw commands.");
-                        }
-                        else
-                        {
-                            await client.SendMessage(e.Channel, $"<@{e.User.Id}>, this channel is already allowing nsfw commands.");
+                            await client.SendMessage(e.Channel, $"I've set this channel to {status} nsfw commands.");
                         }
                     }
-                    else if (e.Args[0] == "off")
-                    {
-                        if (GetNsfwFlag(e.Channel))
-                        {
-                            await ExecuteNonQueryAsync($"update flags set nsfw=0 where channel='{e.Channel.Id}'");
-                            await client.SendMessage(e.Channel, "I've set this channel to disallow nsfw commands.");
-                        }
-                        else
-                        {
-                            await client.SendMessage(e.Channel, $"<@{e.User.Id}>, this channel is already disallowing nsfw commands.");
-                        }
-                    }
-                    else
-                    {
-                        await client.SendMessage(e.Channel, $"<@{e.User.Id}>, '{String.Join(" ", e.Args)}' isn't a valid argument. Please use on or off instead.");
-                    }
+                    else await client.SendMessage(e.Channel, $"<@{e.User.Id}>, '{String.Join(" ", e.Args)}' isn't a valid argument. Please use on or off instead.");
                 });
 
             group.CreateCommand("invite")
@@ -1184,44 +1172,32 @@ The current topic is: {e.Channel.Topic}";
                 .Do(async e =>
                 {
                     if (e.User.VoiceChannel?.Id <= 0)
-                    {
                         await client.SendMessage(e.Channel, $"<@{e.User.Id}>, you need to be in a voice channel to use this.");
-                    }
                     else
                     {
-                        if (e.Args[0] == "on")
+                        bool on = e.Args[0] == "on";
+                        bool off = !on && e.Args[0] == "off";
+                        if (on || off)
                         {
-                            if (!streams.Contains(e.User.VoiceChannel.Id))
+                            bool has_stream = streams.Contains(e.User.VoiceChannel.Id);
+                            string status = on ? "start" : "halt";
+                            if (has_stream == on || has_stream != off)
+                            {
+                                string blah = on ? "streaming in! Did you mean to !reset or !forcereset the stream?" : "not streaming in!";
+                                await client.SendMessage(e.Channel, $"<@{e.User.Id}>, I can't {status} streaming in a channel that I'm already {blah}");
+                            }
+                            else
                             {
                                 streams.Add(e.User.VoiceChannel.Id);
-                                ExecuteNonQuery(ExecuteScalarPos($"select count(channel) from flags where channel = '{e.User.VoiceChannel.Id}'")
+                                ExecuteNonQuery(off ? $"update flags set music=0 where channel='{e.User.VoiceChannel.Id}'"
+                                    : ExecuteScalarPos($"select count(channel) from flags where channel = '{e.User.VoiceChannel.Id}'")
                                     ? $"update flags set music=1 where channel='{e.User.VoiceChannel.Id}'"
                                     : $"insert into flags values ('{e.User.VoiceChannel.Id}', 0, 1, 0)");
-                                await client.SendMessage(e.Channel, $"<@{e.User.Id}>, I'm starting the stream!");
+                                await client.SendMessage(e.Channel, $"<@{e.User.Id}>, I'm {status}ing the stream!");
                                 await StreamMusic(e.User.VoiceChannel.Id);
                             }
-                            else
-                            {
-                                await client.SendMessage(e.Channel, $"<@{e.User.Id}>, I can't start streaming in a channel that I'm already streaming in! Did you mean to !reset or !forcereset the stream?");
-                            }
                         }
-                        else if (e.Args[0] == "off")
-                        {
-                            if (streams.Contains(e.User.VoiceChannel.Id))
-                            {
-                                streams.Remove(e.User.VoiceChannel.Id);
-                                ExecuteNonQuery($"update flags set music=0 where channel='{e.User.VoiceChannel.Id}'");
-                                await client.SendMessage(e.Channel, $"<@{e.User.Id}>, I'm stopping the stream!");
-                            }
-                            else
-                            {
-                                await client.SendMessage(e.Channel, $"<@{e.User.Id}>, I can't stop streaming in a channel that I'm already not streaming in!");
-                            }
-                        }
-                        else
-                        {
-                            await client.SendMessage(e.Channel, $"<@{e.User.Id}>, the argument needs to be either on or off.");
-                        }
+                        else await client.SendMessage(e.Channel, $"<@{e.User.Id}>, the argument needs to be either on or off.");
                     }
                 });
 
