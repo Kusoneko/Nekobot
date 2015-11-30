@@ -5,22 +5,18 @@ using System.Threading.Tasks;
 using Discord;
 using Nekobot.Commands;
 using Nekobot.Commands.Permissions.Levels;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using RestSharp;
 using TagLib;
 using System.Data.SQLite;
-using NAudio.Wave;
-using Discord.Audio;
 using VideoLibrary;
 using System.Text.RegularExpressions;
 using System.Threading;
-using System.Xml;
 using ChatterBotAPI;
 
 namespace Nekobot
 {
-    class Program
+    partial class Program
     {
         // Commands first to help with adding new commands
         static void GenerateCommands(CommandGroupBuilder group)
@@ -372,7 +368,7 @@ Next songs:";
                 .Description("I'll tell you if this channel allows nsfw commands.")
                 .Do(async e =>
                 {
-                    bool nsfw = GetNsfwFlag(e.Channel);
+                    bool nsfw = Flags.GetNsfwFlag(e.Channel);
                     if (nsfw)
                         await client.SendMessage(e.Channel, "This channel allows nsfw commands.");
                     else
@@ -1138,7 +1134,7 @@ The current topic is: {e.Channel.Topic}";
                     bool off = !on && e.Args[0] == "off";
                     if (on || off)
                     {
-                        bool nsfw = GetNsfwFlag(e.Channel);
+                        bool nsfw = Flags.GetNsfwFlag(e.Channel);
                         string status = on ? "allow" : "disallow";
                         if (nsfw == on || nsfw != off)
                             await client.SendMessage(e.Channel, $"<@{e.User.Id}>, this channel is already {status}ing nsfw commands.");
@@ -1306,9 +1302,9 @@ The current topic is: {e.Channel.Topic}";
                         string reply = "";
                         Action<string> setreply = x => reply = x;
                         foreach (Channel c in e.Message.MentionedChannels)
-                            await SetIgnoredFlag("channel", "flags", c.Id, "0, 0, 1", '#', reply, setreply);
+                            await Flags.SetIgnoredFlag("channel", "flags", c.Id, "0, 0, 1", '#', reply, setreply);
                         foreach (User u in e.Message.MentionedUsers)
-                            await SetIgnoredFlag("user", "users", u.Id, ", 0, 1", '@', reply, setreply);
+                            await Flags.SetIgnoredFlag("user", "users", u.Id, ", 0, 1", '@', reply, setreply);
                         await client.SendMessage(e.Channel, reply);
                     }
                     else
@@ -1361,96 +1357,9 @@ The current topic is: {e.Channel.Topic}";
         static DiscordClient client = new DiscordClient(new DiscordClientConfig { AckMessages = true, EnableVoiceMultiserver = true, VoiceMode = DiscordVoiceMode.Outgoing/*, LogLevel = LogMessageSeverity.Debug*/ });
         static CommandService commands;
         static RestClient rclient = new RestClient();
-        static SQLiteConnection connection;
         static JObject config;
         static long masterId;
-        static string musicFolder;
         static string version;
-        public static Dictionary<long, ChatterBotSession> chatbots = new Dictionary<long, ChatterBotSession>();
-        // Music-related variables
-        static List<long> streams = new List<long>();
-        public static Dictionary<long, List<Tuple<string, string, long, string>>> playlist = new Dictionary<long, List<Tuple<string, string, long, string>>>();
-        public static Dictionary<long, bool> skip = new Dictionary<long, bool>();
-        public static Dictionary<long, bool> reset = new Dictionary<long, bool>();
-        public static Dictionary<long, List<long>> voteskip = new Dictionary<long, List<long>>();
-        public static Dictionary<long, List<long>> votereset = new Dictionary<long, List<long>>();
-        public static Dictionary<long, List<long>> voteencore = new Dictionary<long, List<long>>();
-        public static string[] musicexts = { ".wma", ".aac", ".mp3", ".m4a", ".wav", ".flac" };
-
-        private static async Task StreamMusic(long cid)
-        {
-            Channel c = client.GetChannel(cid);
-            IDiscordVoiceClient _client = null;
-            try
-            {
-                _client = await client.JoinVoiceServer(c);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("Join Voice Server Error: " + e.Message);
-                return;
-            }
-            Random rnd = new Random();
-            if (!playlist.ContainsKey(cid))
-                playlist.Add(cid, new List<Tuple<string, string, long, string>>());
-            if (!skip.ContainsKey(cid))
-                skip.Add(cid, false);
-            if (!reset.ContainsKey(cid))
-                reset.Add(cid, false);
-            while (streams.Contains(cid))
-            {
-                voteskip[cid] = new List<long>();
-                votereset[cid] = new List<long>();
-                voteencore[cid] = new List<long>();
-                var files = from file in System.IO.Directory.EnumerateFiles(musicFolder, "*.*").Where(s => musicexts.Contains(System.IO.Path.GetExtension(s))) select new { File = file };
-                int mp3 = 0;
-                while (playlist[cid].Count() < 11)
-                {
-                    mp3 = rnd.Next(0, files.Count());
-                    bool isAlreadyInPlaylist = false;
-                    for (int i = 0; !isAlreadyInPlaylist && i < playlist[cid].Count; i++)
-                        if (playlist[cid][i].Item1 == files.ElementAt(mp3).File)
-                            isAlreadyInPlaylist = true;
-                    if (isAlreadyInPlaylist)
-                        break;
-                    playlist[cid].Add(Tuple.Create<string, string, long, string>(files.ElementAt(mp3).File, "Playlist", 0, null));
-                }
-                await Task.Run(async () =>
-                {
-                    try
-                    {
-                        var outFormat = new WaveFormat(48000, 16, 1);
-                        int blockSize = outFormat.AverageBytesPerSecond; // 1 second
-                        byte[] buffer = new byte[blockSize];
-                        using (var musicReader = new MediaFoundationReader(playlist[cid][0].Item1))
-                        using (var resampler = new MediaFoundationResampler(musicReader, outFormat) { ResamplerQuality = 60 })
-                        {
-                            int byteCount;
-                            while ((byteCount = resampler.Read(buffer, 0, blockSize)) > 0)
-                            {
-                                if (!streams.Contains(cid) || skip[cid] || reset[cid])
-                                {
-                                    _client.ClearVoicePCM();
-                                    await Task.Delay(1000);
-                                    break;
-                                }
-                                _client.SendVoicePCM(buffer, blockSize);
-                            }
-                        }
-                    }
-                    catch (OperationCanceledException err) { Console.WriteLine(err.Message); }
-                });
-                await _client.WaitVoice(); // Prevent endless queueing which would eventually eat up all the ram
-                skip[cid] = false;
-                if (reset[cid])
-                {
-                    reset[cid] = false;
-                    break;
-                }
-                playlist[cid].RemoveAt(0);
-            }
-            await client.LeaveVoiceServer(c.Server);
-        }
 
         static void InputThread()
         {
@@ -1505,7 +1414,6 @@ The current topic is: {e.Channel.Topic}";
                 Console.WriteLine($"Error: {e.GetBaseException().Message}");
             }
         }
-
 
         protected static string CalculateTime(int minutes)
         {
@@ -1581,94 +1489,6 @@ The current topic is: {e.Channel.Topic}";
             return animeWatched;
         }
 
-        private class ImageBoard : Tuple<string, string, string>
-        {
-            public ImageBoard(string link, string resource, string post) : base(link, resource, post) { }
-            public string link { get { return Item1; } }
-            public string resource { get { return Item2; } }
-            public string post { get { return Item3; } }
-        };
-        private static string ImageBooru(string booru, string tags)
-        {
-            string res1 = $"index.php?page=dapi&s=post&q=index&limit=1&tags={tags}&pid=", post1 = $"/index.php?page=post&s=view&id=";
-            string res2 = $"/index.xml?limit=1&tags={tags}&page=", post2 = $"/show/";
-            ImageBoard board = null;
-            if (booru == "safebooru")
-                board = new ImageBoard("http://safebooru.org", res1, post1);
-            else if (booru == "gelbooru")
-                board = new ImageBoard("http://gelbooru.com", res1, post1);
-            else if (booru == "rule34")
-                board = new ImageBoard("http://rule34.xxx", res1, post1);
-            else if (booru == "konachan")
-                board = new ImageBoard("http://konachan.com/post", res2, post2);
-            else if (booru == "yandere")
-                board = new ImageBoard("https://yande.re/post", res2, post2);
-            else if (booru == "lolibooru")
-                board = new ImageBoard("http://lolibooru.moe/post", res2, post2);
-            else if (booru == "e621")
-                board = new ImageBoard("https://e621.net/post", res2, post2);
-            for (int i = 10; i != 0; --i)
-            {
-                try
-                {
-                    int posts = GetBooruPostCount(board);
-                    if (posts == 0)
-                        return $@"There is nothing under the tag(s):
-{tags.Replace("%20", " ")}
-on {booru}. Please try something else.";
-                    return GetBooruImageLink(board, posts == 1 ? 0 : (new Random()).Next(1, posts - 1));
-                }
-                catch (Exception) {}
-            }
-            return $"Failed ten times, something must be broken with {booru}'s API.";
-        }
-
-        private static JObject GetBooruCommon(ImageBoard board, int rnd)
-        {
-            rclient.BaseUrl = new System.Uri(board.link);
-            var request = new RestRequest(board.resource + rnd.ToString(), Method.GET);
-            var result = rclient.Execute(request);
-            XmlDocument xml = new XmlDocument();
-            xml.LoadXml(result.Content);
-            string json = JsonConvert.SerializeXmlNode(xml);
-            return JObject.Parse(json);
-        }
-
-        private static string GetBooruImageLink(ImageBoard board, int rnd)
-        {
-            JObject res = GetBooruCommon(board, rnd);
-            return "**"+board.link+board.post+res["posts"]["post"]["@id"].ToString()+ "** " + res["posts"]["post"]["@file_url"].ToString().Replace(" ", "%20");
-        }
-
-        private static int GetBooruPostCount(ImageBoard board)
-        {
-            JObject res = GetBooruCommon(board, 0);
-            return int.Parse(res["posts"]["@count"].ToString());
-        }
-
-        private static string ImageFolders(string folder)
-        {
-            string[] imgexts = new string[] { ".jpg", ".jpeg", ".png", ".gif", ".bmp" };
-            var files = from file in System.IO.Directory.EnumerateFiles($@"{folder}", "*.*").Where(s => imgexts.Contains(System.IO.Path.GetExtension(s.ToLower()))) select new { File = file };
-            Random rnd = new Random();
-            int img = rnd.Next(0, files.Count());
-            return files.ElementAt(img).File;
-        }
-
-        private static string LewdSX(string chan)
-        {
-            rclient.BaseUrl = new Uri("https://lewdchan.com");
-            var request = new RestRequest($"{chan}/src/list.php", Method.GET);
-            string result = rclient.Execute(request).Content;
-            List<string> list = result.Split(new string[] { Environment.NewLine }, StringSplitOptions.None).ToList();
-            Regex re = new Regex(@"([^\s]+(\.(jpg|jpeg|png|gif|bmp)))");
-            foreach (Match m in re.Matches(result))
-            {
-                list.Add(m.Value);
-            }
-            return $"https://lewdchan.com/{chan}/src/{list[new Random().Next(0, list.Count())]}";
-        }
-
         private static void RCInit()
         {
             rclient.UserAgent = $"Nekobot {version}";
@@ -1679,34 +1499,6 @@ on {booru}. Please try something else.";
             System.Diagnostics.Debug.WriteLine($"[{e.Severity}] {e.Source} : {e.Message}");
         }
 
-        private static async void DoChatBot(MessageEventArgs e)
-        {
-            if (chatbots.Count() == 0) return; // No bot sessions
-            string msg = e.Message.Text;
-            // It's lame we have to do this, but our User isn't exposed by Discord.Net, so we don't know our name
-            string neko = e.Channel.IsPrivate ? "" : client.GetUser(e.Server, client.CurrentUserId).Name;
-            if (chatbots.ContainsKey(e.Channel.Id) && (e.Channel.IsPrivate || msg.ToLower().IndexOf(neko.ToLower()) != -1))
-            {
-                if (!e.Channel.IsPrivate)
-                    msg = msg.Replace(neko, "");
-                await client.SendMessage(e.Channel, chatbots[e.Channel.Id].Think(msg));
-            }
-        }
-
-        private static Task StartMusicStreams()
-        {
-            return Task.WhenAll(
-              streams.Select(s =>
-              {
-                  if (client.GetChannel(s).Type == "voice")
-                      return Task.Run(() => StreamMusic(s));
-                  else
-                      return null;
-              })
-              .Where(t => t != null)
-              .ToArray());
-        }
-
         private static void LoadConfig()
         {
             if (System.IO.File.Exists("config.json"))
@@ -1714,8 +1506,7 @@ on {booru}. Please try something else.";
             else
             {
                 Console.WriteLine("config.json file not found! Unable to initialize Nekobot!");
-                connection.Close();
-                connection.Dispose();
+                CloseAndDisposeConnection();
                 Console.ReadKey();
                 Environment.Exit(0);
             }
@@ -1728,27 +1519,13 @@ on {booru}. Please try something else.";
             command_config.MentionCommandChar = config["mentioncommand"].ToObject<short>();
             string helpmode = config["helpmode"].ToString();
             command_config.HelpMode = helpmode.Equals("public") ? HelpMode.Public : helpmode.Equals("private") ? HelpMode.Private : HelpMode.Disable;
-            commands = new CommandService(command_config, GetNsfwFlag, GetMusicFlag, GetIgnoredFlag);
+            commands = new CommandService(command_config, Flags.GetNsfwFlag, Flags.GetMusicFlag, Flags.GetIgnoredFlag);
 
             if (System.IO.File.Exists(@"version.json"))
             {
                 JObject versionfile = JObject.Parse(System.IO.File.ReadAllText(@"version.json"));
                 version = versionfile["version"].ToString();
             }
-        }
-
-        private static void LoadDB()
-        {
-            if (!System.IO.File.Exists("nekobot.db"))
-            {
-                SQLiteConnection.CreateFile("nekobot.db");
-            }
-            connection = new SQLiteConnection("Data Source=nekobot.db;Version=3;");
-            connection.Open();
-            ExecuteNonQuery("create table if not exists users (user varchar(17), perms int, ignored int)");
-            ExecuteNonQuery("create table if not exists flags (channel varchar(17), nsfw int, music int, ignored int, chatbot int default -1)");
-            try { ExecuteNonQuery("alter table flags add chatbot int default -1"); }
-            catch (System.Data.SQLite.SQLiteException) { }
         }
 
         private static void UserJoined(object sender, UserEventArgs e)
@@ -1778,82 +1555,6 @@ on {booru}. Please try something else.";
             else error += e.Exception.GetBaseException().Message;
             client.SendMessage(e.Channel, error);
             //Console.WriteLine(error);
-        }
-
-        private static void LoadStreams()
-        {
-            SQLiteDataReader reader = ExecuteReader("select channel from flags where music = 1");
-            while (reader.Read())
-                streams.Add(Convert.ToInt64(reader["channel"].ToString()));
-        }
-
-        private static int CountVoiceChannelMembers(Channel chan)
-        {
-            if (chan.Type != "voice") return -1;
-            return chan.Members.Where(u => u.VoiceChannel == chan).Count();
-        }
-
-        private static void LoadChatBots()
-        {
-            SQLiteDataReader reader = ExecuteReader("select channel,chatbot from flags where chatbot <> -1");
-            while (reader.Read())
-                chatbots[Convert.ToInt64(reader["channel"].ToString())] =
-                    CreateBotSession((ChatterBotType)Convert.ToInt32(reader["chatbot"]));
-        }
-
-        private static bool GetIgnoredFlag(Channel chan, User user)
-        {
-            return GetIgnoredFlag(chan) || GetIgnoredFlag(user);
-        }
-
-        private static bool GetIgnoredFlag(User user)
-        {
-            return GetIgnoredFlag("user", "users", user.Id);
-        }
-
-        private static bool GetIgnoredFlag(Channel chan)
-        {
-            return GetIgnoredFlag("channel", "flags", chan.Id);
-        }
-
-        private static bool GetIgnoredFlag(string row, string table, long id)
-        {
-            SQLiteDataReader reader = ExecuteReader($"select ignored from {table} where {row} = '{id}'");
-            while (reader.Read())
-                if (int.Parse(reader["ignored"].ToString()) == 1)
-                    return true;
-            return false;
-        }
-
-        protected static async Task SetIgnoredFlag(string row, string table, long id, string insertdata, char symbol, string reply, Action<string> setreply)
-        {
-            bool in_table = ExecuteScalarPos($"select count({row}) from {table} where {row}='{id}'");
-            bool isIgnored = in_table && GetIgnoredFlag(row, table, id);
-            await ExecuteNonQueryAsync(in_table
-                ? $"update {table} set ignored={Convert.ToInt32(!isIgnored)} where {row}='{id}'"
-                : $"insert into {table} values ('{id}'{insertdata})");
-            if (reply != "")
-                reply += '\n';
-            reply += $"<{symbol}{id}> is " + (isIgnored ? "now" : "no longer") + " ignored.";
-            setreply(reply);
-        }
-
-        private static bool GetMusicFlag(User user)
-        {
-            SQLiteDataReader reader = ExecuteReader("select channel from flags where music = 1");
-            List<long> streams = new List<long>();
-            while (reader.Read())
-                streams.Add(Convert.ToInt64(reader["channel"].ToString()));
-            return user.VoiceChannel != null && streams.Contains(user.VoiceChannel.Id);
-        }
-
-        private static bool GetNsfwFlag(Channel chan)
-        {
-            SQLiteDataReader reader = ExecuteReader("select nsfw from flags where channel = '" + chan.Id + "'");
-            while (reader.Read())
-                if (int.Parse(reader["nsfw"].ToString()) == 1)
-                    return true;
-            return false;
         }
 
         private static int GetPermissions(User user, Channel channel)
@@ -1896,41 +1597,6 @@ on {booru}. Please try something else.";
             }
             if (mentions_everyone || mentions_neko || (!perform_when_empty && e.Message.MentionedUsers.Count() == (e.Message.IsMentioningMe ? 1 : 0)))
                 await client.SendMessage(e.Channel, $"{reaction}");
-        }
-
-        static int GetBotType(string bottype)
-        {
-            return (int)(/*bottype == "pandora" ? ChatterBotType.PANDORABOTS :*/ bottype == "jabberwacky" ? ChatterBotType.JABBERWACKY : ChatterBotType.CLEVERBOT);
-        }
-
-        static ChatterBotSession CreateBotSession(ChatterBotType type)
-        {
-            return new ChatterBotFactory().Create(type).CreateSession();
-        }
-
-        static SQLiteCommand SQLCommand(string sql)
-        {
-            return new SQLiteCommand(sql, connection);
-        }
-
-        static void ExecuteNonQuery(string sql)
-        {
-            SQLCommand(sql).ExecuteNonQuery();
-        }
-
-        static async Task ExecuteNonQueryAsync(string sql)
-        {
-            await SQLCommand(sql).ExecuteNonQueryAsync();
-        }
-
-        static bool ExecuteScalarPos(string sql)
-        {
-            return Convert.ToInt32(SQLCommand(sql).ExecuteScalar()) > 0;
-        }
-
-        static SQLiteDataReader ExecuteReader(string sql)
-        {
-            return SQLCommand(sql).ExecuteReader();
         }
     }
 }
