@@ -1306,13 +1306,9 @@ The current topic is: {e.Channel.Topic}";
                         string reply = "";
                         Action<string> setreply = x => reply = x;
                         foreach (Channel c in e.Message.MentionedChannels)
-                        {
                             await SetIgnoredFlag("channel", "flags", c.Id, "0, 0, 1", '#', reply, setreply);
-                        }
                         foreach (User u in e.Message.MentionedUsers)
-                        {
                             await SetIgnoredFlag("user", "users", u.Id, ", 0, 1", '@', reply, setreply);
-                        }
                         await client.SendMessage(e.Channel, reply);
                     }
                     else
@@ -1396,17 +1392,11 @@ The current topic is: {e.Channel.Topic}";
             }
             Random rnd = new Random();
             if (!playlist.ContainsKey(cid))
-            {
                 playlist.Add(cid, new List<Tuple<string, string, long, string>>());
-            }
             if (!skip.ContainsKey(cid))
-            {
                 skip.Add(cid, false);
-            }
             if (!reset.ContainsKey(cid))
-            {
                 reset.Add(cid, false);
-            }
             while (streams.Contains(cid))
             {
                 voteskip[cid] = new List<long>();
@@ -1418,11 +1408,9 @@ The current topic is: {e.Channel.Topic}";
                 {
                     mp3 = rnd.Next(0, files.Count());
                     bool isAlreadyInPlaylist = false;
-                    for (int i = 0; i < playlist[cid].Count; i++)
-                    {
+                    for (int i = 0; !isAlreadyInPlaylist && i < playlist[cid].Count; i++)
                         if (playlist[cid][i].Item1 == files.ElementAt(mp3).File)
                             isAlreadyInPlaylist = true;
-                    }
                     if (isAlreadyInPlaylist)
                         break;
                     playlist[cid].Add(Tuple.Create<string, string, long, string>(files.ElementAt(mp3).File, "Playlist", 0, null));
@@ -1591,8 +1579,6 @@ The current topic is: {e.Channel.Topic}";
             }
 
             return animeWatched;
-
-
         }
 
         private class ImageBoard : Tuple<string, string, string>
@@ -1680,9 +1666,7 @@ on {booru}. Please try something else.";
             {
                 list.Add(m.Value);
             }
-            Random rnd = new Random();
-            string image = $"https://lewdchan.com/{chan}/src/{list[rnd.Next(0, list.Count())]}";
-            return image;
+            return $"https://lewdchan.com/{chan}/src/{list[new Random().Next(0, list.Count())]}";
         }
 
         private static void RCInit()
@@ -1787,18 +1771,11 @@ on {booru}. Please try something else.";
             string error = "Command Error : ";
             if (e.Exception == null)
                 error += "No Exception, this should be fixed!";
-            else
-            {
-                if (e.Exception.GetType() == typeof(NsfwFlagException))
-                {
-                    error = "This channel doesn't allow nsfw commands.";
-                }
-                else if (e.Exception.GetType() == typeof(MusicFlagException))
-                {
-                    error = "You need to be in a music streaming channel to use this command.";
-                }
-                else error += e.Exception.GetBaseException().Message;
-            }
+            else if (e.Exception.GetType() == typeof(NsfwFlagException))
+                error = "This channel doesn't allow nsfw commands.";
+            else if (e.Exception.GetType() == typeof(MusicFlagException))
+                error = "You need to be in a music streaming channel to use this command.";
+            else error += e.Exception.GetBaseException().Message;
             client.SendMessage(e.Channel, error);
             //Console.WriteLine(error);
         }
@@ -1812,7 +1789,7 @@ on {booru}. Please try something else.";
 
         private static int CountVoiceChannelMembers(Channel chan)
         {
-            if (chan.Type != "voice") { return -1; }
+            if (chan.Type != "voice") return -1;
             return chan.Members.Where(u => u.VoiceChannel == chan).Count();
         }
 
@@ -1882,18 +1859,13 @@ on {booru}. Please try something else.";
         private static int GetPermissions(User user, Channel channel)
         {
             int PermissionLevel = 0;
-            if (user.Id != masterId)
-            {
-                if (ExecuteScalarPos($"select count(perms) from users where user = '{user.Id}'"))
-                {
-                    SQLiteDataReader reader = ExecuteReader($"select perms from users where user = '{user.Id}'");
-                    while (reader.Read())
-                        PermissionLevel = int.Parse(reader["perms"].ToString());
-                }
-            }
-            else
-            {
+            if (user.Id == masterId)
                 PermissionLevel = 10;
+            else if (ExecuteScalarPos($"select count(perms) from users where user = '{user.Id}'"))
+            {
+                SQLiteDataReader reader = ExecuteReader($"select perms from users where user = '{user.Id}'");
+                while (reader.Read())
+                    PermissionLevel = int.Parse(reader["perms"].ToString());
             }
             return PermissionLevel;
         }
