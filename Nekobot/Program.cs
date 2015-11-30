@@ -41,12 +41,11 @@ namespace Nekobot
 
             group.CreateCommand("whois")
                 .Alias("getinfo")
-                .Parameter("@User1", Commands.ParameterType.Required)
-                .Parameter("@User2", Commands.ParameterType.Optional)
-                .Parameter("@UserN", Commands.ParameterType.Multiple)
+                .Parameter("@User1] [@User2] [...]", Commands.ParameterType.Unparsed)
                 .Description("I'll give you information about the mentioned user(s).")
                 .Do(async e =>
                 {
+                    if (e.Args[0] == "") return;
                     string reply = "";
                     foreach (User u in e.Message.MentionedUsers)
                     {
@@ -746,12 +745,11 @@ The current topic is: {e.Channel.Topic}";
                 });
 
             group.CreateCommand("avatar")
-                .Parameter("@User1", Commands.ParameterType.Required)
-                .Parameter("@User2", Commands.ParameterType.Optional)
-                .Parameter("@UserN", Commands.ParameterType.Multiple)
+                .Parameter("@User1] [@User2] [...]", Commands.ParameterType.Unparsed)
                 .Description("I'll give you the avatars of every mentioned users.")
                 .Do(async e =>
                 {
+                    if (e.Args[0] == "") return;
                     foreach (User u in e.Message.MentionedUsers)
                     {
                         if (u.AvatarUrl == null)
@@ -904,9 +902,7 @@ The current topic is: {e.Channel.Topic}";
 
             group.CreateCommand("pet")
                 .Alias("pets")
-                .Parameter("@User1", Commands.ParameterType.Optional)
-                .Parameter("@User2", Commands.ParameterType.Optional)
-                .Parameter("@UserN", Commands.ParameterType.Multiple)
+                .Parameter("@User1] [@User2] [...]", Commands.ParameterType.Unparsed)
                 .Description("Everyone loves being pet, right!?! Pets each *@user*. Leave empty (or mention me too) to pet me!")
                 .Do(async e =>
                 {
@@ -915,9 +911,7 @@ The current topic is: {e.Channel.Topic}";
 
             group.CreateCommand("hug")
                 .Alias("hugs")
-                .Parameter("@User1", Commands.ParameterType.Optional)
-                .Parameter("@User2", Commands.ParameterType.Optional)
-                .Parameter("@UserN", Commands.ParameterType.Multiple)
+                .Parameter("@User1] [@User2] [...]", Commands.ParameterType.Unparsed)
                 .Description("Hug someone! Hugs each *@user*. Leave empty to get a hug!")
                 .Do(async e =>
                 {
@@ -1204,15 +1198,13 @@ The current topic is: {e.Channel.Topic}";
                 .Alias("setperms")
                 .Alias("setauth")
                 .Parameter("newPermissionLevel", Commands.ParameterType.Required)
-                .Parameter("@User1", Commands.ParameterType.Required)
-                .Parameter("@User2", Commands.ParameterType.Optional)
-                .Parameter("@UserN", Commands.ParameterType.Multiple)
+                .Parameter("@User1] [@User2] [...]", Commands.ParameterType.Unparsed)
                 .MinPermissions(2)
                 .Description("I'll set the permission level of the mentioned people to the level mentioned (cannot be higher than or equal to yours).")
                 .Do(async e =>
                 {
                     int newPermLevel = 0;
-                    if (e.Args.Count() < 2 || e.Message.MentionedUsers.Count() < 1)
+                    if (e.Args[1] == "" || e.Message.MentionedUsers.Count() < 1)
                         await client.SendMessage(e.Channel, "You need to at least specify a permission level and mention one user.");
                     else if (!int.TryParse(e.Args[0], out newPermLevel))
                         await client.SendMessage(e.Channel, "The first argument needs to be the new permission level.");
