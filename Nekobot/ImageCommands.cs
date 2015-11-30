@@ -98,5 +98,155 @@ on {booru}. Please try something else.";
             }
             return $"https://lewdchan.com/{chan}/src/{list[new Random().Next(0, list.Count())]}";
         }
+
+        public static void AddImageCommands(Commands.CommandGroupBuilder group)
+        {
+            group.CreateCommand("neko")
+                .FlagNsfw(true)
+                .Description("I'll give you a random image from https://lewdchan.com/neko/")
+                .Do(async e =>
+                {
+                    await client.SendMessage(e.Channel, LewdSX("neko"));
+                });
+
+            group.CreateCommand("qt")
+                .FlagNsfw(true)
+                .Description("I'll give you a random image from https://lewdchan.com/qt/")
+                .Do(async e =>
+                {
+                    await client.SendMessage(e.Channel, LewdSX("qt"));
+                });
+
+            group.CreateCommand("kitsune")
+                .FlagNsfw(true)
+                .Description("I'll give you a random image from https://lewdchan.com/kitsune/")
+                .Do(async e =>
+                {
+                    await client.SendMessage(e.Channel, LewdSX("kitsune"));
+                });
+
+            group.CreateCommand("lewd")
+                .FlagNsfw(true)
+                .Description("I'll give you a random image from https://lewdchan.com/lewd/")
+                .Do(async e =>
+                {
+                    await client.SendMessage(e.Channel, LewdSX("lewd"));
+                });
+
+            string pitur = Program.config["pitur"].ToString();
+            if (pitur != "")
+            {
+                group.CreateCommand("pitur")
+                    .FlagNsfw(true)
+                    .Description("I'll give you a random lewd image from pitur's hentai collection")
+                    .Do(async e =>
+                    {
+                        await client.SendFile(e.Channel, ImageFolders(pitur));
+                    });
+            }
+
+            string gold = Program.config["gold"].ToString();
+            if (gold != "")
+            {
+                group.CreateCommand("gold")
+                    .FlagNsfw(true)
+                    .Description("I'll give you a random kancolle image from gold's collection")
+                    .Do(async e =>
+                    {
+                        await client.SendFile(e.Channel, ImageFolders(gold));
+                    });
+            }
+
+            string cosplay = Program.config["cosplay"].ToString();
+            if (cosplay != "")
+            {
+                group.CreateCommand("cosplay")
+                    .FlagNsfw(true)
+                    .Description("I'll give you a random cosplay image from Salvy's collection")
+                    .Do(async e =>
+                    {
+                        await client.SendFile(e.Channel, ImageFolders(cosplay));
+                    });
+            }
+
+            group.CreateCommand("safebooru")
+                .Parameter("[-]tag1", Commands.ParameterType.Optional)
+                .Parameter("[-]tag2", Commands.ParameterType.Optional)
+                .Parameter("[-]tagn", Commands.ParameterType.Multiple)
+                .FlagNsfw(true)
+                .Description("I'll give you a random image of the tags you entered from safebooru.")
+                .Do(async e =>
+                {
+                    await client.SendMessage(e.Channel, ImageBooru("safebooru", String.Join("%20", e.Args)));
+                });
+
+            group.CreateCommand("gelbooru")
+                .Parameter("[-]tag1", Commands.ParameterType.Optional)
+                .Parameter("[-]tag2", Commands.ParameterType.Optional)
+                .Parameter("[-]tagn", Commands.ParameterType.Multiple)
+                .FlagNsfw(true)
+                .Hide() // Disabled because of them disabling their API
+                .Description("I'll give you a random image of the tags you entered from gelbooru.")
+                .Do(async e =>
+                {
+                    await client.SendMessage(e.Channel, ImageBooru("gelbooru", String.Join("%20", e.Args)));
+                });
+
+            group.CreateCommand("rule34")
+                .Parameter("[-]tag1", Commands.ParameterType.Optional)
+                .Parameter("[-]tag2", Commands.ParameterType.Optional)
+                .Parameter("[-]tagn", Commands.ParameterType.Multiple)
+                .FlagNsfw(true)
+                .Description("I'll give you a random image of the tags you entered from rule34.")
+                .Do(async e =>
+                {
+                    await client.SendMessage(e.Channel, ImageBooru("rule34", String.Join("%20", e.Args)));
+                });
+
+            group.CreateCommand("konachan")
+                .Alias("kona")
+                .Parameter("[-]tag1", Commands.ParameterType.Optional)
+                .Parameter("[-]tag2", Commands.ParameterType.Optional)
+                .Parameter("[-]tagn", Commands.ParameterType.Multiple)
+                .FlagNsfw(true)
+                .Description("I'll give you a random image of the tags you entered from konachan.")
+                .Do(async e =>
+                {
+                    await client.SendMessage(e.Channel, ImageBooru("konachan", String.Join("%20", e.Args)));
+                });
+
+            group.CreateCommand("yandere")
+                .Parameter("[-]tag1", Commands.ParameterType.Optional)
+                .Parameter("[-]tag2", Commands.ParameterType.Optional)
+                .Parameter("[-]tagn", Commands.ParameterType.Multiple)
+                .FlagNsfw(true)
+                .Description("I'll give you a random image of the tags you entered from yandere.")
+                .Do(async e =>
+                {
+                    await client.SendMessage(e.Channel, ImageBooru("yandere", String.Join("%20", e.Args)));
+                });
+
+            group.CreateCommand("lolibooru")
+                .Parameter("[-]tag1", Commands.ParameterType.Optional)
+                .Parameter("[-]tag2", Commands.ParameterType.Optional)
+                .Parameter("[-]tagn", Commands.ParameterType.Multiple)
+                .FlagNsfw(true)
+                .Description("I'll give you a random image of the tags you entered from lolibooru.")
+                .Do(async e =>
+                {
+                    await client.SendMessage(e.Channel, ImageBooru("lolibooru", String.Join("%20", e.Args)));
+                });
+
+            group.CreateCommand("e621")
+                .Parameter("[-]tag1", Commands.ParameterType.Optional)
+                .Parameter("[-]tag2", Commands.ParameterType.Optional)
+                .Parameter("[-]tagn", Commands.ParameterType.Multiple)
+                .FlagNsfw(true)
+                .Description("I'll give you a random image from e621 (optionally with tags)")
+                .Do(async e =>
+                {
+                    await client.SendMessage(e.Channel, ImageBooru("e621", String.Join("%20", e.Args)));
+                });
+        }
     }
 }
