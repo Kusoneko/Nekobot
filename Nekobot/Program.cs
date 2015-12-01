@@ -61,7 +61,7 @@ namespace Nekobot
                     await client.SendMessage(e.Channel, reply);
                 });
 
-            AddMusicCommands(group);
+            Music.AddCommands(group);
 
             group.CreateCommand("quote")
                 .Description("I'll give you a random quote from https://inspiration.julxzs.website/quotes")
@@ -122,7 +122,7 @@ namespace Nekobot
                     }
                 });
 
-            AddImageCommands(group);
+            Image.AddCommands(group);
 
             group.CreateCommand("fortune")
                 .Description("I'll give you a fortune!")
@@ -674,7 +674,7 @@ The current topic is: {e.Channel.Topic}";
                             bool change_needed = GetPermissions(u, e.Channel) != newPermLevel;
                             if (change_needed)
                             {
-                                await ExecuteNonQueryAsync(ExecuteScalarPos($"select count(user) from users where user='{u.Id}'")
+                                await SQL.ExecuteNonQueryAsync(SQL.ExecuteScalarPos($"select count(user) from users where user='{u.Id}'")
                                     ? $"update users set perms={newPermLevel} where user='{u.Id}'"
                                     : $"insert into users values ('{u.Id}', {newPermLevel}, 0)");
                             }
@@ -744,14 +744,14 @@ The current topic is: {e.Channel.Topic}";
 
             Flags.AddCommands(group);
 
-            AddChatbotCommands(group);
+            Chatbot.AddCommands(group);
         }
 
         // Variables
         internal static DiscordClient client = new DiscordClient(new DiscordClientConfig { AckMessages = true, EnableVoiceMultiserver = true, VoiceMode = DiscordVoiceMode.Outgoing/*, LogLevel = LogMessageSeverity.Debug*/ });
         static CommandService commands;
-        static RestClient rclient = new RestClient();
-        static JObject config;
+        internal static RestClient rclient = new RestClient();
+        internal static JObject config;
         static long masterId;
         static string version;
 
@@ -767,12 +767,12 @@ The current topic is: {e.Channel.Topic}";
         static void Main(string[] args)
         {
             // Load up the DB, or create it if it doesn't exist
-            LoadDB();
+            SQL.LoadDB();
             // Load up the config file
             LoadConfig();
             Console.Title = $"Nekobot v{version}";
             // Load the stream channels
-            LoadStreams();
+            Music.LoadStreams();
             // Initialize rest client
             RCInit();
             // Set up the events and enforce use of the command prefix
@@ -784,9 +784,9 @@ The current topic is: {e.Channel.Topic}";
             client.AddService(commands);
             client.AddService(new PermissionLevelService(GetPermissions));
             commands.CreateGroup("", group => GenerateCommands(group));
-            commands.NonCommands += DoChatBot;
+            commands.NonCommands += Chatbot.Do;
             // Load the chatbots
-            LoadChatBots();
+            Chatbot.Load();
             // Keep the window open in case of crashes elsewhere... (hopefully)
             Thread input = new Thread(InputThread);
             input.Start();
@@ -800,7 +800,7 @@ The current topic is: {e.Channel.Topic}";
                     {
                         await client.AcceptInvite(client.GetInvite(config["server"].ToString()).Result);
                     }
-                    await StartMusicStreams();
+                    await Music.StartStreams();
                 });
             }
             catch (Exception e)
@@ -900,12 +900,12 @@ The current topic is: {e.Channel.Topic}";
             else
             {
                 Console.WriteLine("config.json file not found! Unable to initialize Nekobot!");
-                CloseAndDisposeConnection();
+                SQL.CloseAndDispose();
                 Console.ReadKey();
                 Environment.Exit(0);
             }
             masterId = config["master"].ToObject<long>();
-            musicFolder = config["musicFolder"].ToString();
+            Music.musicFolder = config["musicFolder"].ToString();
             CommandServiceConfig command_config = new CommandServiceConfig();
             command_config.CommandChars = config["prefix"].ToString().ToCharArray();
             command_config.RequireCommandCharInPrivate = config["prefixprivate"].ToObject<bool>();
@@ -913,7 +913,7 @@ The current topic is: {e.Channel.Topic}";
             command_config.MentionCommandChar = config["mentioncommand"].ToObject<short>();
             string helpmode = config["helpmode"].ToString();
             command_config.HelpMode = helpmode.Equals("public") ? HelpMode.Public : helpmode.Equals("private") ? HelpMode.Private : HelpMode.Disable;
-            commands = new CommandService(command_config, Flags.GetNsfwFlag, Flags.GetMusicFlag, Flags.GetIgnoredFlag);
+            commands = new CommandService(command_config, Flags.GetNsfw, Flags.GetMusic, Flags.GetIgnored);
 
             if (System.IO.File.Exists(@"version.json"))
             {
@@ -956,9 +956,9 @@ The current topic is: {e.Channel.Topic}";
             int PermissionLevel = 0;
             if (user.Id == masterId)
                 PermissionLevel = 10;
-            else if (ExecuteScalarPos($"select count(perms) from users where user = '{user.Id}'"))
+            else if (SQL.ExecuteScalarPos($"select count(perms) from users where user = '{user.Id}'"))
             {
-                SQLiteDataReader reader = ExecuteReader($"select perms from users where user = '{user.Id}'");
+                SQLiteDataReader reader = SQL.ExecuteReader($"select perms from users where user = '{user.Id}'");
                 while (reader.Read())
                     PermissionLevel = int.Parse(reader["perms"].ToString());
             }

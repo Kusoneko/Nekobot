@@ -13,26 +13,26 @@ using Nekobot.Commands.Permissions.Levels;
 
 namespace Nekobot
 {
-    partial class Program
+    class Music
     {
         // Music-related variables
-        static string musicFolder;
+        internal static string musicFolder;
         static List<long> streams = new List<long>();
-        public static Dictionary<long, List<Tuple<string, string, long, string>>> playlist = new Dictionary<long, List<Tuple<string, string, long, string>>>();
-        public static Dictionary<long, bool> skip = new Dictionary<long, bool>();
-        public static Dictionary<long, bool> reset = new Dictionary<long, bool>();
-        public static Dictionary<long, List<long>> voteskip = new Dictionary<long, List<long>>();
-        public static Dictionary<long, List<long>> votereset = new Dictionary<long, List<long>>();
-        public static Dictionary<long, List<long>> voteencore = new Dictionary<long, List<long>>();
-        public static string[] musicexts = { ".wma", ".aac", ".mp3", ".m4a", ".wav", ".flac" };
+        static Dictionary<long, List<Tuple<string, string, long, string>>> playlist = new Dictionary<long, List<Tuple<string, string, long, string>>>();
+        static Dictionary<long, bool> skip = new Dictionary<long, bool>();
+        static Dictionary<long, bool> reset = new Dictionary<long, bool>();
+        static Dictionary<long, List<long>> voteskip = new Dictionary<long, List<long>>();
+        static Dictionary<long, List<long>> votereset = new Dictionary<long, List<long>>();
+        static Dictionary<long, List<long>> voteencore = new Dictionary<long, List<long>>();
+        static string[] musicexts = { ".wma", ".aac", ".mp3", ".m4a", ".wav", ".flac" };
 
-        private static async Task StreamMusic(long cid)
+        static async Task Stream(long cid)
         {
-            Channel c = client.GetChannel(cid);
+            Channel c = Program.client.GetChannel(cid);
             IDiscordVoiceClient _client = null;
             try
             {
-                _client = await client.JoinVoiceServer(c);
+                _client = await Program.client.JoinVoiceServer(c);
             }
             catch (Exception e)
             {
@@ -98,16 +98,16 @@ namespace Nekobot
                 }
                 playlist[cid].RemoveAt(0);
             }
-            await client.LeaveVoiceServer(c.Server);
+            await Program.client.LeaveVoiceServer(c.Server);
         }
 
-        private static Task StartMusicStreams()
+        internal static Task StartStreams()
         {
             return Task.WhenAll(
               streams.Select(s =>
               {
-                  if (client.GetChannel(s).Type == "voice")
-                      return Task.Run(() => StreamMusic(s));
+                  if (Program.client.GetChannel(s).Type == "voice")
+                      return Task.Run(() => Stream(s));
                   else
                       return null;
               })
@@ -115,20 +115,20 @@ namespace Nekobot
               .ToArray());
         }
 
-        private static void LoadStreams()
+        internal static void LoadStreams()
         {
-            SQLiteDataReader reader = ExecuteReader("select channel from flags where music = 1");
+            SQLiteDataReader reader = SQL.ExecuteReader("select channel from flags where music = 1");
             while (reader.Read())
                 streams.Add(Convert.ToInt64(reader["channel"].ToString()));
         }
 
-        private static int CountVoiceChannelMembers(Channel chan)
+        static int CountVoiceChannelMembers(Channel chan)
         {
             if (chan.Type != "voice") return -1;
             return chan.Members.Where(u => u.VoiceChannel == chan).Count();
         }
 
-        private static void AddMusicCommands(Commands.CommandGroupBuilder group)
+        internal static void AddCommands(Commands.CommandGroupBuilder group)
         {
             group.CreateCommand("playlist")
                 .Description("I'll give you the list of songs in the playlist.")
@@ -225,7 +225,7 @@ Next songs:";
                             }
                         }
                     }
-                    await client.SendMessage(e.Channel, reply);
+                    await Program.client.SendMessage(e.Channel, reply);
                 });
 
             group.CreateCommand("song")
@@ -262,7 +262,7 @@ Next songs:";
                             reply = $@"Currently playing: {System.IO.Path.GetFileNameWithoutExtension(playlist[e.User.VoiceChannel.Id][0].Item1)}.";
                         }
                     }
-                    await client.SendMessage(e.Channel, reply);
+                    await Program.client.SendMessage(e.Channel, reply);
                 });
 
             group.CreateCommand("ytrequest")
@@ -298,20 +298,20 @@ Next songs:";
                             }
                             if (isAlreadyInPlaylist)
                             {
-                                await client.SendMessage(e.Channel, $"<@{e.User.Id}> Your request is already in the playlist at position {songindex}.");
+                                await Program.client.SendMessage(e.Channel, $"<@{e.User.Id}> Your request is already in the playlist at position {songindex}.");
                                 return;
                             }
                             playlist[e.User.VoiceChannel.Id].Insert(index, Tuple.Create<string, string, long, string>(video.Uri, "Youtube", e.User.Id, e.Args[0]));
-                            await client.SendMessage(e.Channel, $"{video.Title} added to the playlist.");
+                            await Program.client.SendMessage(e.Channel, $"{video.Title} added to the playlist.");
                         //}
                         //else
                         //{
-                        //    await client.SendMessage(e.Channel, $"{video.Title} couldn't be added to the playlist because of unsupported fileformat: {video.FileExtension}.");
+                        //    await Program.client.SendMessage(e.Channel, $"{video.Title} couldn't be added to the playlist because of unsupported fileformat: {video.FileExtension}.");
                         //}
                     }
                     else
                     {
-                        await client.SendMessage(e.Channel, $"{e.Args[0]} couldn't be added to playlist because it's not a valid youtube link.");
+                        await Program.client.SendMessage(e.Channel, $"{e.Args[0]} couldn't be added to playlist because it's not a valid youtube link.");
                     }
                 });
 
@@ -348,18 +348,18 @@ Next songs:";
                             }
                             if (isAlreadyInPlaylist)
                             {
-                                await client.SendMessage(e.Channel, $"<@{e.User.Id}> Your request is already in the playlist at position {songindex}.");
+                                await Program.client.SendMessage(e.Channel, $"<@{e.User.Id}> Your request is already in the playlist at position {songindex}.");
                                 return;
                             }
                             playlist[e.User.VoiceChannel.Id].Insert(index, Tuple.Create<string, string, long, string>(files.ElementAt(j).File, "Request", e.User.Id, null));
-                            await client.SendMessage(e.Channel, $"<@{e.User.Id}> Your request has been added to the list.");
+                            await Program.client.SendMessage(e.Channel, $"<@{e.User.Id}> Your request has been added to the list.");
                             requestfound = true;
                             break;
                         }
                     }
                     if (!requestfound)
                     {
-                        await client.SendMessage(e.Channel, $"<@{e.User.Id}> Your request was not found.");
+                        await Program.client.SendMessage(e.Channel, $"<@{e.User.Id}> Your request was not found.");
                     }
                 });
 
@@ -373,12 +373,12 @@ Next songs:";
                         voteskip[e.User.VoiceChannel.Id].Add(e.User.Id);
                         if (voteskip[e.User.VoiceChannel.Id].Count >= Math.Ceiling((decimal)CountVoiceChannelMembers(e.User.VoiceChannel) / 2))
                         {
-                            await client.SendMessage(e.Channel, $"{voteskip[e.User.VoiceChannel.Id].Count}/{CountVoiceChannelMembers(e.User.VoiceChannel)} votes to skip current song. 50%+ achieved, skipping song...");
+                            await Program.client.SendMessage(e.Channel, $"{voteskip[e.User.VoiceChannel.Id].Count}/{CountVoiceChannelMembers(e.User.VoiceChannel)} votes to skip current song. 50%+ achieved, skipping song...");
                             skip[e.User.VoiceChannel.Id] = true;
                         }
                         else
                         {
-                            await client.SendMessage(e.Channel, $"{voteskip[e.User.VoiceChannel.Id].Count}/{CountVoiceChannelMembers(e.User.VoiceChannel)} votes to skip current song. (Needs 50% or more to skip)");
+                            await Program.client.SendMessage(e.Channel, $"{voteskip[e.User.VoiceChannel.Id].Count}/{CountVoiceChannelMembers(e.User.VoiceChannel)} votes to skip current song. (Needs 50% or more to skip)");
                         }
                     }
                 });
@@ -393,14 +393,14 @@ Next songs:";
                         votereset[e.User.VoiceChannel.Id].Add(e.User.Id);
                         if (votereset[e.User.VoiceChannel.Id].Count >= Math.Ceiling((decimal)CountVoiceChannelMembers(e.User.VoiceChannel) / 2))
                         {
-                            await client.SendMessage(e.Channel, $"{votereset[e.User.VoiceChannel.Id].Count}/{CountVoiceChannelMembers(e.User.VoiceChannel)} votes to reset the stream. 50%+ achieved, resetting stream...");
+                            await Program.client.SendMessage(e.Channel, $"{votereset[e.User.VoiceChannel.Id].Count}/{CountVoiceChannelMembers(e.User.VoiceChannel)} votes to reset the stream. 50%+ achieved, resetting stream...");
                             reset[e.User.VoiceChannel.Id] = true;
                             await Task.Delay(5000);
-                            await StreamMusic(e.User.VoiceChannel.Id);
+                            await Stream(e.User.VoiceChannel.Id);
                         }
                         else
                         {
-                            await client.SendMessage(e.Channel, $"{votereset[e.User.VoiceChannel.Id].Count}/{CountVoiceChannelMembers(e.User.VoiceChannel)} votes to reset the stream. (Needs 50% or more to reset)");
+                            await Program.client.SendMessage(e.Channel, $"{votereset[e.User.VoiceChannel.Id].Count}/{CountVoiceChannelMembers(e.User.VoiceChannel)} votes to reset the stream. (Needs 50% or more to reset)");
                         }
                     }
                 });
@@ -417,12 +417,12 @@ Next songs:";
                         voteencore[e.User.VoiceChannel.Id].Add(e.User.Id);
                         if (voteencore[e.User.VoiceChannel.Id].Count >= Math.Ceiling((decimal)CountVoiceChannelMembers(e.User.VoiceChannel) / 2))
                         {
-                            await client.SendMessage(e.Channel, $"{voteencore[e.User.VoiceChannel.Id].Count}/{CountVoiceChannelMembers(e.User.VoiceChannel)} votes to replay current song. 50%+ achieved, song will be replayed...");
+                            await Program.client.SendMessage(e.Channel, $"{voteencore[e.User.VoiceChannel.Id].Count}/{CountVoiceChannelMembers(e.User.VoiceChannel)} votes to replay current song. 50%+ achieved, song will be replayed...");
                             playlist[e.User.VoiceChannel.Id].Insert(1, Tuple.Create(playlist[e.User.VoiceChannel.Id][0].Item1, "Encore", playlist[e.User.VoiceChannel.Id][0].Item3, playlist[e.User.VoiceChannel.Id][0].Item4));
                         }
                         else
                         {
-                            await client.SendMessage(e.Channel, $"{voteencore[e.User.VoiceChannel.Id].Count}/{CountVoiceChannelMembers(e.User.VoiceChannel)} votes to replay current song. (Needs 50% or more to replay)");
+                            await Program.client.SendMessage(e.Channel, $"{voteencore[e.User.VoiceChannel.Id].Count}/{CountVoiceChannelMembers(e.User.VoiceChannel)} votes to replay current song. (Needs 50% or more to replay)");
                         }
                     }
                 });
@@ -435,7 +435,7 @@ Next songs:";
                 .Do(async e =>
                 {
                     skip[e.User.VoiceChannel.Id] = true;
-                    await client.SendMessage(e.Channel, "Forcefully skipping song...");
+                    await Program.client.SendMessage(e.Channel, "Forcefully skipping song...");
                 });
 
             group.CreateCommand("forcereset")
@@ -445,9 +445,9 @@ Next songs:";
                 .Do(async e =>
                 {
                     reset[e.User.VoiceChannel.Id] = true;
-                    await client.SendMessage(e.Channel, "Reseting stream...");
+                    await Program.client.SendMessage(e.Channel, "Reseting stream...");
                     await Task.Delay(5000);
-                    await StreamMusic(e.User.VoiceChannel.Id);
+                    await Stream(e.User.VoiceChannel.Id);
                 });
 
             // Administrator commands
@@ -458,7 +458,7 @@ Next songs:";
                 .Do(async e =>
                 {
                     if (e.User.VoiceChannel?.Id <= 0)
-                        await client.SendMessage(e.Channel, $"<@{e.User.Id}>, you need to be in a voice channel to use this.");
+                        await Program.client.SendMessage(e.Channel, $"<@{e.User.Id}>, you need to be in a voice channel to use this.");
                     else
                     {
                         bool on = e.Args[0] == "on";
@@ -470,20 +470,20 @@ Next songs:";
                             if (has_stream == on || has_stream != off)
                             {
                                 string blah = on ? "streaming in! Did you mean to !reset or !forcereset the stream?" : "not streaming in!";
-                                await client.SendMessage(e.Channel, $"<@{e.User.Id}>, I can't {status} streaming in a channel that I'm already {blah}");
+                                await Program.client.SendMessage(e.Channel, $"<@{e.User.Id}>, I can't {status} streaming in a channel that I'm already {blah}");
                             }
                             else
                             {
                                 streams.Add(e.User.VoiceChannel.Id);
-                                ExecuteNonQuery(off ? $"update flags set music=0 where channel='{e.User.VoiceChannel.Id}'"
-                                    : ExecuteScalarPos($"select count(channel) from flags where channel = '{e.User.VoiceChannel.Id}'")
+                                SQL.ExecuteNonQuery(off ? $"update flags set music=0 where channel='{e.User.VoiceChannel.Id}'"
+                                    : SQL.ExecuteScalarPos($"select count(channel) from flags where channel = '{e.User.VoiceChannel.Id}'")
                                     ? $"update flags set music=1 where channel='{e.User.VoiceChannel.Id}'"
                                     : $"insert into flags values ('{e.User.VoiceChannel.Id}', 0, 1, 0)");
-                                await client.SendMessage(e.Channel, $"<@{e.User.Id}>, I'm {status}ing the stream!");
-                                await StreamMusic(e.User.VoiceChannel.Id);
+                                await Program.client.SendMessage(e.Channel, $"<@{e.User.Id}>, I'm {status}ing the stream!");
+                                await Music.Stream(e.User.VoiceChannel.Id);
                             }
                         }
-                        else await client.SendMessage(e.Channel, $"<@{e.User.Id}>, the argument needs to be either on or off.");
+                        else await Program.client.SendMessage(e.Channel, $"<@{e.User.Id}>, the argument needs to be either on or off.");
                     }
                 });
         }

@@ -3,11 +3,11 @@ using System.Threading.Tasks;
 
 namespace Nekobot
 {
-    partial class Program
+    class SQL
     {
         static SQLiteConnection connection;
 
-        static void LoadDB()
+        internal static void LoadDB()
         {
             if (!System.IO.File.Exists("nekobot.db"))
                 SQLiteConnection.CreateFile("nekobot.db");
@@ -16,7 +16,7 @@ namespace Nekobot
             ExecuteNonQuery("create table if not exists users (user varchar(17), perms int, ignored int)");
             ExecuteNonQuery("create table if not exists flags (channel varchar(17), nsfw int, music int, ignored int, chatbot int default -1)");
             try { ExecuteNonQuery("alter table flags add chatbot int default -1"); }
-            catch (System.Data.SQLite.SQLiteException) { }
+            catch (SQLiteException) { }
         }
 
         // SQL Helpers
@@ -25,28 +25,28 @@ namespace Nekobot
             return new SQLiteCommand(sql, connection);
         }
 
-        public static void ExecuteNonQuery(string sql)
+        internal static void ExecuteNonQuery(string sql)
         {
             SQLCommand(sql).ExecuteNonQuery();
         }
 
-        public static async Task ExecuteNonQueryAsync(string sql)
+        internal static async Task ExecuteNonQueryAsync(string sql)
         {
             await SQLCommand(sql).ExecuteNonQueryAsync();
         }
 
-        public static bool ExecuteScalarPos(string sql)
+        internal static bool ExecuteScalarPos(string sql)
         {
             return System.Convert.ToInt32(SQLCommand(sql).ExecuteScalar()) > 0;
         }
 
-        public static SQLiteDataReader ExecuteReader(string sql)
+        internal static SQLiteDataReader ExecuteReader(string sql)
         {
             return SQLCommand(sql).ExecuteReader();
         }
 
         // Other stuff
-        static void CloseAndDisposeConnection()
+        internal static void CloseAndDispose()
         {
             connection.Close();
             connection.Dispose();
