@@ -25,6 +25,8 @@ namespace Nekobot
 
         internal static async Task<string> SetIgnored(string row, string table, long id, string insertdata, char symbol)
         {
+            if (symbol == '@' && id == Program.masterId)
+                return $"<{symbol}{id}> is my senpai and shall not be ignored!";
             bool in_table = SQL.ExecuteScalarPos($"select count({row}) from {table} where {row}='{id}'");
             bool isIgnored = in_table && GetIgnored(row, table, id);
             await SQL.ExecuteNonQueryAsync(in_table
