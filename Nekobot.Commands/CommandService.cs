@@ -84,6 +84,10 @@ namespace Nekobot.Commands
                 string msg = e.Message.Text;
                 if (msg.Length == 0) return;
 
+                // Check ignored before doing work
+                if (_getIgnoredChannelFlag != null ? _getIgnoredChannelFlag(e.Message.Channel, e.User) : false)
+                    return;
+
                 //Check for command char if one is provided
                 var chars = _config.CommandChars;
                 if (chars.Length > 0)
@@ -146,12 +150,6 @@ namespace Nekobot.Commands
                 {
                     foreach (var command in commands)
                     {
-                        // Check ignored before doing work
-                        if (_getIgnoredChannelFlag != null ? _getIgnoredChannelFlag(e.Message.Channel, e.User) : false)
-                        {
-                            return;
-                        }
-
                         //Parse arguments
                         string[] args;
                         var error = CommandParser.ParseArgs(msg, argPos, command, out args);
