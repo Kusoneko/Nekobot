@@ -30,7 +30,7 @@ namespace Nekobot
             await SQL.ExecuteNonQueryAsync(in_table
                 ? $"update {table} set ignored={Convert.ToInt32(!isIgnored)} where {row}='{id}'"
                 : $"insert into {table} values ('{id}'{insertdata})");
-            return $"<{symbol}{id}> is " + (isIgnored ? "now" : "no longer") + " ignored.";
+            return $"<{symbol}{id}> is " + (!isIgnored ? "now" : "no longer") + " ignored.";
         }
 
         internal static bool GetMusic(User user)
