@@ -478,7 +478,7 @@ Next songs:";
                                 SQL.ExecuteNonQuery(off ? $"update flags set music=0 where channel='{e.User.VoiceChannel.Id}'"
                                     : SQL.ExecuteScalarPos($"select count(channel) from flags where channel = '{e.User.VoiceChannel.Id}'")
                                     ? $"update flags set music=1 where channel='{e.User.VoiceChannel.Id}'"
-                                    : $"insert into flags values ('{e.User.VoiceChannel.Id}', 0, 1, 0)");
+                                    : $"insert into flags values ('{e.User.VoiceChannel.Id}', 0, 1, 0, -1)");
                                 await Program.client.SendMessage(e.Channel, $"<@{e.User.Id}>, I'm {status}ing the stream!");
                                 await Music.Stream(e.User.VoiceChannel.Id);
                             }
