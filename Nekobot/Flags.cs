@@ -23,17 +23,14 @@ namespace Nekobot
             return false;
         }
 
-        internal static async Task SetIgnored(string row, string table, long id, string insertdata, char symbol, string reply, Action<string> setreply)
+        internal static async Task<string> SetIgnored(string row, string table, long id, string insertdata, char symbol)
         {
             bool in_table = SQL.ExecuteScalarPos($"select count({row}) from {table} where {row}='{id}'");
             bool isIgnored = in_table && GetIgnored(row, table, id);
             await SQL.ExecuteNonQueryAsync(in_table
                 ? $"update {table} set ignored={Convert.ToInt32(!isIgnored)} where {row}='{id}'"
                 : $"insert into {table} values ('{id}'{insertdata})");
-            if (reply != "")
-                reply += '\n';
-            reply += $"<{symbol}{id}> is " + (isIgnored ? "now" : "no longer") + " ignored.";
-            setreply(reply);
+            return $"<{symbol}{id}> is " + (isIgnored ? "now" : "no longer") + " ignored.";
         }
 
         internal static bool GetMusic(User user)
@@ -108,11 +105,10 @@ namespace Nekobot
                     if (e.Message.MentionedChannels.Count() > 0 || e.Message.MentionedUsers.Count() > 0)
                     {
                         string reply = "";
-                        Action<string> setreply = x => reply = x;
                         foreach (Channel c in e.Message.MentionedChannels)
-                            await SetIgnored("channel", "flags", c.Id, "0, 0, 1", '#', reply, setreply);
+                            reply += (reply != "" ? "\n" : "") + await SetIgnored("channel", "flags", c.Id, "0, 0, 1", '#');
                         foreach (User u in e.Message.MentionedUsers)
-                            await SetIgnored("user", "users", u.Id, ", 0, 1", '@', reply, setreply);
+                            reply += (reply != "" ? "\n" : "") + await SetIgnored("user", "users", u.Id, ", 0, 1", '@');
                         await Program.client.SendMessage(e.Channel, reply);
                     }
                     else
