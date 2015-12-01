@@ -239,7 +239,8 @@ namespace Nekobot
                             {
                                 channel = usermention ? await client.CreatePMChannel(e.Message.MentionedUsers.Where(u => u.Id == mentionid).Single())
                                     : e.Message.MentionedChannels.Where(c => c.Id == mentionid).Single();
-                                message = message.Substring(index+2);
+                                if (CanSay(ref channel, e.User, e.Channel))
+                                    message = message.Substring(index + 2);
                             }
                         }
                     }
@@ -252,7 +253,8 @@ namespace Nekobot
                             {
                                 long id = Convert.ToInt64(chanstr);
                                 channel = client.GetChannel(id) ?? await client.CreatePMChannel(client.AllServers.Select(x => client.GetUser(x, id)).FirstOrDefault());
-                                message = message.Substring(message.IndexOf(" ")+1);
+                                if (CanSay(ref channel, e.User, e.Channel))
+                                    message = message.Substring(message.IndexOf(" ")+1);
                             }
                         } catch (Exception) { }
                     }
@@ -958,6 +960,15 @@ The current topic is: {e.Channel.Topic}";
                     PermissionLevel = int.Parse(reader["perms"].ToString());
             }
             return PermissionLevel;
+        }
+
+        internal static bool CanSay(Channel c, User u) => c.IsPrivate || u.GetPermissions(c).SendMessages;
+        internal static bool CanSay(ref Channel c, User u, Channel old)
+        {
+            if (CanSay(c, u))
+                return true;
+            c = old;
+            return false;
         }
 
         private static IEnumerable<string> GraphemeClusters(string s)
