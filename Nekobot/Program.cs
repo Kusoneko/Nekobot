@@ -914,12 +914,7 @@ The current topic is: {e.Channel.Topic}";
             string helpmode = config["helpmode"].ToString();
             command_config.HelpMode = helpmode.Equals("public") ? HelpMode.Public : helpmode.Equals("private") ? HelpMode.Private : HelpMode.Disable;
             commands = new CommandService(command_config, Flags.GetNsfw, Flags.GetMusic, Flags.GetIgnored);
-
-            if (System.IO.File.Exists(@"version.json"))
-            {
-                JObject versionfile = JObject.Parse(System.IO.File.ReadAllText(@"version.json"));
-                version = versionfile["version"].ToString();
-            }
+            version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString();
         }
 
         private static void UserJoined(object sender, UserEventArgs e)
