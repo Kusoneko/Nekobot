@@ -248,7 +248,7 @@ namespace Nekobot
                     {
                         try
                         {
-                            string chanstr = e.Args[0];
+                            string chanstr = message.Split(' ').First();
                             if (chanstr.Length+1 < message.Length)
                             {
                                 long id = Convert.ToInt64(chanstr);
@@ -962,7 +962,7 @@ The current topic is: {e.Channel.Topic}";
             return PermissionLevel;
         }
 
-        internal static bool CanSay(Channel c, User u) => c.IsPrivate || u.GetPermissions(c).SendMessages;
+        internal static bool CanSay(Channel c, User u) => c.IsPrivate || c.Members.Where(m => m.Id == u.Id).SingleOrDefault().GetPermissions(c).SendMessages;
         internal static bool CanSay(ref Channel c, User u, Channel old)
         {
             if (CanSay(c, u))
