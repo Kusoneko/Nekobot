@@ -23,15 +23,22 @@ namespace Nekobot
             return false;
         }
 
-        internal static async Task<string> SetIgnored(string row, string table, long id, string insertdata, char symbol)
+        internal static async Task<string> SetIgnored(string row, string table, long id, string insertdata, char symbol, int perms, int their_perms = 0)
         {
-            if (symbol == '@' && id == Program.masterId)
-                return $"<{symbol}{id}> is my senpai and shall not be ignored!";
+            if (symbol == '#' && perms <3)
+                return $"You are not worthy of changing channel ignored status (permissions < 3).";
+            if (symbol == '@')
+            {
+                if (id == Program.masterId)
+                    return $"<@{id}> is my senpai and shall not be ignored!";
+                if (perms <= their_perms)
+                    return $"You are no more powerful than <@{id}>.";
+            }
             bool in_table = SQL.ExecuteScalarPos($"select count({row}) from {table} where {row}='{id}'");
             bool isIgnored = in_table && GetIgnored(row, table, id);
             await SQL.ExecuteNonQueryAsync(in_table
                 ? $"update {table} set ignored={Convert.ToInt32(!isIgnored)} where {row}='{id}'"
-                : $"insert into {table} values ('{id}'{insertdata})");
+                : $"insert into {table} values ('{id}', {insertdata})");
             return $"<{symbol}{id}> is " + (!isIgnored ? "now" : "no longer") + " ignored.";
         }
 
@@ -88,7 +95,7 @@ namespace Nekobot
                             await SQL.ExecuteNonQueryAsync(off ? $"update flags set nsfw=0 where channel='{e.Channel.Id}'"
                                 : SQL.ExecuteScalarPos($"select count(channel) from flags where channel='{e.Channel.Id}'")
                                 ? $"update flags set nsfw=1 where channel='{e.Channel.Id}'"
-                                : $"insert into flags values ('{e.Channel.Id}', 1, 0, 0)");
+                                : $"insert into flags values ('{e.Channel.Id}', 1, 0, 0, -1)");
                             await Program.client.SendMessage(e.Channel, $"I've set this channel to {status} nsfw commands.");
                         }
                     }
@@ -100,17 +107,18 @@ namespace Nekobot
                 .Parameter("channel", Commands.ParameterType.Optional)
                 .Parameter("user", Commands.ParameterType.Optional)
                 .Parameter("...", Commands.ParameterType.Multiple)
-                .MinPermissions(3)
+                .MinPermissions(1)
                 .Description("I'll ignore commands coming from a particular channel or user")
                 .Do(async e =>
                 {
                     if (e.Message.MentionedChannels.Count() > 0 || e.Message.MentionedUsers.Count() > 0)
                     {
+                        int perms = Program.GetPermissions(e.User, e.Channel);
                         string reply = "";
                         foreach (Channel c in e.Message.MentionedChannels)
-                            reply += (reply != "" ? "\n" : "") + await SetIgnored("channel", "flags", c.Id, "0, 0, 1", '#');
+                            reply += (reply != "" ? "\n" : "") + await SetIgnored("channel", "flags", c.Id, "0, 0, 1, -1", '#', perms);
                         foreach (User u in e.Message.MentionedUsers)
-                            reply += (reply != "" ? "\n" : "") + await SetIgnored("user", "users", u.Id, ", 0, 1", '@');
+                            reply += (reply != "" ? "\n" : "") + await SetIgnored("user", "users", u.Id, ", 0, 1", '@', perms, Program.GetPermissions(u, e.Channel));
                         await Program.client.SendMessage(e.Channel, reply);
                     }
                     else

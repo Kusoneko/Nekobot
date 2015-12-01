@@ -752,7 +752,7 @@ The current topic is: {e.Channel.Topic}";
         static CommandService commands;
         internal static RestClient rclient = new RestClient();
         internal static JObject config;
-        static long masterId;
+        internal static long masterId;
         static string version;
 
         static void InputThread()
@@ -946,7 +946,7 @@ The current topic is: {e.Channel.Topic}";
             //Console.WriteLine(error);
         }
 
-        private static int GetPermissions(User user, Channel channel)
+        internal static int GetPermissions(User user, Channel channel)
         {
             int PermissionLevel = 0;
             if (user.Id == masterId)
