@@ -34,14 +34,9 @@ namespace Nekobot
         }
 
         static int GetBotType(string bottype)
-        {
-            return (int)(/*bottype == "pandora" ? ChatterBotType.PANDORABOTS :*/ bottype == "jabberwacky" ? ChatterBotType.JABBERWACKY : ChatterBotType.CLEVERBOT);
-        }
+            => (int)(/*bottype == "pandora" ? ChatterBotType.PANDORABOTS :*/ bottype == "jabberwacky" ? ChatterBotType.JABBERWACKY : ChatterBotType.CLEVERBOT);
 
-        static ChatterBotSession CreateBotSession(ChatterBotType type)
-        {
-            return new ChatterBotFactory().Create(type).CreateSession();
-        }
+        static ChatterBotSession CreateBotSession(ChatterBotType type) => new ChatterBotFactory().Create(type).CreateSession();
 
         internal static void AddCommands(Commands.CommandGroupBuilder group)
         {

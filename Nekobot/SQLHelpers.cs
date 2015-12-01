@@ -20,30 +20,11 @@ namespace Nekobot
         }
 
         // SQL Helpers
-        static SQLiteCommand SQLCommand(string sql)
-        {
-            return new SQLiteCommand(sql, connection);
-        }
-
-        internal static void ExecuteNonQuery(string sql)
-        {
-            SQLCommand(sql).ExecuteNonQuery();
-        }
-
-        internal static async Task ExecuteNonQueryAsync(string sql)
-        {
-            await SQLCommand(sql).ExecuteNonQueryAsync();
-        }
-
-        internal static bool ExecuteScalarPos(string sql)
-        {
-            return System.Convert.ToInt32(SQLCommand(sql).ExecuteScalar()) > 0;
-        }
-
-        internal static SQLiteDataReader ExecuteReader(string sql)
-        {
-            return SQLCommand(sql).ExecuteReader();
-        }
+        static SQLiteCommand SQLCommand(string sql) => new SQLiteCommand(sql, connection);
+        internal static void ExecuteNonQuery(string sql) => SQLCommand(sql).ExecuteNonQuery();
+        internal static async Task ExecuteNonQueryAsync(string sql) => await SQLCommand(sql).ExecuteNonQueryAsync();
+        internal static bool ExecuteScalarPos(string sql) => System.Convert.ToInt32(SQLCommand(sql).ExecuteScalar()) > 0;
+        internal static SQLiteDataReader ExecuteReader(string sql) => SQLCommand(sql).ExecuteReader();
 
         // Other stuff
         internal static void CloseAndDispose()

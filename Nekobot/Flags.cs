@@ -10,20 +10,9 @@ namespace Nekobot
 {
     class Flags
     {
-        internal static bool GetIgnored(Channel chan, User user)
-        {
-            return GetIgnored(chan) || GetIgnored(user);
-        }
-
-        internal static bool GetIgnored(User user)
-        {
-            return GetIgnored("user", "users", user.Id);
-        }
-
-        internal static bool GetIgnored(Channel chan)
-        {
-            return GetIgnored("channel", "flags", chan.Id);
-        }
+        internal static bool GetIgnored(Channel chan, User user) => GetIgnored(chan) || GetIgnored(user);
+        internal static bool GetIgnored(User user) => GetIgnored("user", "users", user.Id);
+        internal static bool GetIgnored(Channel chan) => GetIgnored("channel", "flags", chan.Id);
 
         static bool GetIgnored(string row, string table, long id)
         {
