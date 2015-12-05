@@ -21,7 +21,7 @@ namespace Nekobot
             {
                 if (!e.Channel.IsPrivate)
                     msg = msg.Replace(neko, "");
-                await Program.client.SendMessage(e.Channel, chatbots[e.Channel.Id].Think(msg));
+                await Program.client.SendMessage(e.Channel, System.Net.WebUtility.HtmlDecode(chatbots[e.Channel.Id].Think(msg)));
             }
         }
 
