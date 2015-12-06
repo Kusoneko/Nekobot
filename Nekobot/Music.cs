@@ -5,7 +5,6 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Discord;
-using Discord.Audio;
 using NAudio.Wave;
 using TagLib;
 using VideoLibrary;
@@ -32,16 +31,7 @@ namespace Nekobot
         static async Task Stream(long cid)
         {
             Channel c = Program.client.GetChannel(cid);
-            IDiscordVoiceClient _client = null;
-            try
-            {
-                _client = await Program.client.JoinVoiceServer(c);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("Join Voice Server Error: " + e.Message);
-                return;
-            }
+            Discord.Audio.IDiscordVoiceClient _client = await Voice.JoinServer(c);
             Random rnd = new Random();
             if (!playlist.ContainsKey(cid))
                 playlist.Add(cid, new List<Tuple<string, string, long, string>>());
