@@ -204,6 +204,7 @@ on {booru}. Please try something else.";
                 .Parameter("search query", Commands.ParameterType.Required)
                 .Parameter("extended query", Commands.ParameterType.Multiple)
                 .Description("I'll get a random image from Google!")
+                .Hide() // Until we can  update this to work
                 .Do(async e =>
                 {
                     Random rnd = new Random();
