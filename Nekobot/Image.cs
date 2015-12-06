@@ -169,6 +169,56 @@ on {booru}. Please try something else.";
                     });
             }
 
+            if (System.IO.Directory.Exists("images"))
+            {
+                group.CreateCommand("trash")
+                    .Alias("worstgirl")
+                    .Alias("onodera")
+                    .Description("I'll upload an image of 'worst girl'. (WARNING: May cause nausea!)")
+                    .Do(async e =>
+                    {
+                        await Program.client.SendFile(e.Channel, "images/trash.png");
+                    });
+
+                group.CreateCommand("doit")
+                    .Alias("justdoit")
+                    .Alias("shia")
+                    .Description("DON'T LET YOUR DREAMS JUST BE DREAMS!")
+                    .Do(async e =>
+                    {
+                        await Program.client.SendFile(e.Channel, "images/shia.jpg");
+                    });
+
+                group.CreateCommand("bulli")
+                    .Alias("bully")
+                    .Alias("dunbulli")
+                    .Alias("dontbully")
+                    .Description("DON'T BULLY!")
+                    .Do(async e =>
+                    {
+                        await Program.client.SendFile(e.Channel, "images/bulli.jpg");
+                    });
+            }
+
+            group.CreateCommand("img")
+                .Parameter("search query", Commands.ParameterType.Required)
+                .Parameter("extended query", Commands.ParameterType.Multiple)
+                .Description("I'll get a random image from Google!")
+                .Do(async e =>
+                {
+                    Random rnd = new Random();
+                    Program.rclient.BaseUrl = new Uri("https://ajax.googleapis.com/ajax/services/search");
+                    var request = new RestRequest($"images?v=1.0&q={string.Join(" ", e.Args)}&rsz=8&start={rnd.Next(1, 12)}&safe=active", Method.GET);
+                    JObject result = JObject.Parse(Program.rclient.Execute(request).Content);
+                    List<string> images = new List<string>();
+                    foreach (var element in result["responseData"]["results"])
+                    {
+                        images.Add(element["unescapedUrl"].ToString());
+                    }
+                    var imageURL = images[rnd.Next(images.Count())].ToString();
+                    await Program.client.SendMessage(e.Channel, imageURL);
+                });
+
             group.CreateCommand("safebooru")
                 .Parameter("[-]tag1", Commands.ParameterType.Optional)
                 .Parameter("[-]tag2", Commands.ParameterType.Optional)

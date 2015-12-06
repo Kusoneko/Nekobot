@@ -490,25 +490,6 @@ The current topic is: {e.Channel.Topic}";
                         await client.SendMessage(e.Channel, $"*{eightball[rnd.Next(eightball.Length)]}*");
                 });
 
-            group.CreateCommand("img")
-                .Parameter("search query", Commands.ParameterType.Required)
-                .Parameter("extended query", Commands.ParameterType.Multiple)
-                .Description("I'll get a random image from Google!")
-                .Do(async e =>
-                {
-                    Random rnd = new Random();
-                    rclient.BaseUrl = new Uri("https://ajax.googleapis.com/ajax/services/search");
-                    var request = new RestRequest($"images?v=1.0&q={String.Join(" ", e.Args)}&rsz=8&start={rnd.Next(1, 12)}&safe=active", Method.GET);
-                    JObject result = JObject.Parse(rclient.Execute(request).Content);
-                    List<string> images = new List<string>();
-                    foreach (var element in result["responseData"]["results"])
-                    {
-                        images.Add(element["unescapedUrl"].ToString());
-                    }
-                    var imageURL = images[rnd.Next(images.Count())].ToString();
-                    await client.SendMessage(e.Channel, imageURL);
-                });
-
             group.CreateCommand("hbavatar")
                 .Parameter("username1", Commands.ParameterType.Required)
                 .Parameter("username2", Commands.ParameterType.Optional)
