@@ -158,9 +158,12 @@ namespace Nekobot
                     {
                         var t = playlist[e.User.VoiceChannel.Id][i];
                         string ext = "";
-                        if (t.Item2 == "Request" || t.Item2 == "Youtube")
-                            ext = $"{(t.Item2 == "Request" ? " request" : "")} by <@{t.Item3}>";
-                        reply += $"\n{i} - **[{t.Item2}{ext}]** {GetTitle(t)}";
+                        bool youtube = t.Item2 == "Youtube";
+                        if (t.Item2 == "Request" || youtube)
+                            ext = $"{(!youtube ? " request" : "")} by <@{t.Item3}>";
+                        string title = GetTitle(t);
+                        if (youtube) title = $"**{title}**";
+                        reply += $"\n{i} - **[{t.Item2}{ext}]** {title}";
                     }
                     await Program.client.SendMessage(e.Channel, reply);
                 });
@@ -388,7 +391,7 @@ namespace Nekobot
                                     ? $"update flags set music=1 where channel='{e.User.VoiceChannel.Id}'"
                                     : $"insert into flags values ('{e.User.VoiceChannel.Id}', 0, 1, 0, -1)");
                                 await Program.client.SendMessage(e.Channel, $"<@{e.User.Id}>, I'm {status}ing the stream!");
-                                await Music.Stream(e.User.VoiceChannel.Id);
+                                await Stream(e.User.VoiceChannel.Id);
                             }
                         }
                         else await Program.client.SendMessage(e.Channel, $"<@{e.User.Id}>, the argument needs to be either on or off.");
