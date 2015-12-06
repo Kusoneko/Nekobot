@@ -900,6 +900,7 @@ The current topic is: {e.Channel.Topic}";
             }
             masterId = config["master"].ToObject<long>();
             Music.musicFolder = config["musicFolder"].ToString();
+            Music.UseSubdirs = config["musicUseSubfolders"].ToObject<bool>();
 
             string helpmode = config["helpmode"].ToString();
             commands = new CommandService(new CommandServiceConfig

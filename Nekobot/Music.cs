@@ -17,6 +17,7 @@ namespace Nekobot
     {
         // Music-related variables
         internal static string musicFolder;
+        internal static bool UseSubdirs;
         static List<long> streams = new List<long>();
         static Dictionary<long, List<Tuple<string, string, long, string>>> playlist = new Dictionary<long, List<Tuple<string, string, long, string>>>();
         static Dictionary<long, bool> skip = new Dictionary<long, bool>();
@@ -25,6 +26,8 @@ namespace Nekobot
         static Dictionary<long, List<long>> votereset = new Dictionary<long, List<long>>();
         static Dictionary<long, List<long>> voteencore = new Dictionary<long, List<long>>();
         static string[] musicexts = { ".wma", ".aac", ".mp3", ".m4a", ".wav", ".flac" };
+
+        internal static IEnumerable<string> Files() => System.IO.Directory.EnumerateFiles(musicFolder, "*.*", UseSubdirs ? System.IO.SearchOption.AllDirectories : System.IO.SearchOption.TopDirectoryOnly).Where(s => musicexts.Contains(System.IO.Path.GetExtension(s)));
 
         static async Task Stream(long cid)
         {
@@ -51,18 +54,18 @@ namespace Nekobot
                 voteskip[cid] = new List<long>();
                 votereset[cid] = new List<long>();
                 voteencore[cid] = new List<long>();
-                var files = from file in System.IO.Directory.EnumerateFiles(musicFolder, "*.*").Where(s => musicexts.Contains(System.IO.Path.GetExtension(s))) select new { File = file };
+                var files = Files();
                 int mp3 = 0;
                 while (playlist[cid].Count() < 11)
                 {
                     mp3 = rnd.Next(0, files.Count());
                     bool isAlreadyInPlaylist = false;
                     for (int i = 0; !isAlreadyInPlaylist && i < playlist[cid].Count; i++)
-                        if (playlist[cid][i].Item1 == files.ElementAt(mp3).File)
+                        if (playlist[cid][i].Item1 == files.ElementAt(mp3))
                             isAlreadyInPlaylist = true;
                     if (isAlreadyInPlaylist)
                         break;
-                    playlist[cid].Add(Tuple.Create<string, string, long, string>(files.ElementAt(mp3).File, "Playlist", 0, null));
+                    playlist[cid].Add(Tuple.Create<string, string, long, string>(files.ElementAt(mp3), "Playlist", 0, null));
                 }
                 await Task.Run(async () =>
                 {
@@ -234,10 +237,10 @@ namespace Nekobot
                 .Do(async e =>
                 {
                     bool requestfound = false;
-                    var files = from file in System.IO.Directory.EnumerateFiles($"{musicFolder}", "*.*").Where(s => musicexts.Contains(System.IO.Path.GetExtension(s))) select new { File = file };
+                    var files = Files();
                     for (int j = 0; j < files.Count(); j++)
                     {
-                        if (System.IO.Path.GetFileNameWithoutExtension(files.ElementAt(j).File).ToLower().Contains(String.Join(" ", e.Args).ToLower()))
+                        if (System.IO.Path.GetFileNameWithoutExtension(files.ElementAt(j)).ToLower().Contains(String.Join(" ", e.Args).ToLower()))
                         {
                             int index = 1;
                             for (int i = 1; i < playlist[e.User.VoiceChannel.Id].Count; i++)
@@ -251,7 +254,7 @@ namespace Nekobot
                             int songindex = 1;
                             for (int z = 1; z < playlist[e.User.VoiceChannel.Id].Count; z++)
                             {
-                                if (playlist[e.User.VoiceChannel.Id][z].Item1 == files.ElementAt(j).File)
+                                if (playlist[e.User.VoiceChannel.Id][z].Item1 == files.ElementAt(j))
                                 {
                                     isAlreadyInPlaylist = true;
                                     songindex = z;
@@ -262,7 +265,7 @@ namespace Nekobot
                                 await Program.client.SendMessage(e.Channel, $"<@{e.User.Id}> Your request is already in the playlist at position {songindex}.");
                                 return;
                             }
-                            playlist[e.User.VoiceChannel.Id].Insert(index, Tuple.Create<string, string, long, string>(files.ElementAt(j).File, "Request", e.User.Id, null));
+                            playlist[e.User.VoiceChannel.Id].Insert(index, Tuple.Create<string, string, long, string>(files.ElementAt(j), "Request", e.User.Id, null));
                             await Program.client.SendMessage(e.Channel, $"<@{e.User.Id}> Your request has been added to the list.");
                             requestfound = true;
                             break;
