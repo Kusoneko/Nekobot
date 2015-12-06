@@ -202,7 +202,7 @@ namespace Nekobot
                                 await Program.client.SendMessage(e.Channel, $"<@{e.User.Id}> Your request is already in the playlist at position {songindex}.");
                                 return;
                             }
-                            playlist[e.User.VoiceChannel.Id].Insert(index, Tuple.Create<string, string, long, string>(video.Uri, "Youtube", e.User.Id, e.Args[0]));
+                            playlist[e.User.VoiceChannel.Id].Insert(index, Tuple.Create(video.Uri, "Youtube", e.User.Id, $"{video.Title} ({e.Args[0]})"));
                             await Program.client.SendMessage(e.Channel, $"{video.Title} added to the playlist.");
                         //}
                         //else
