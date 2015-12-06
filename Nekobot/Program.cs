@@ -87,39 +87,19 @@ namespace Nekobot
                     string remoteversion = result["version"].ToString();
                     string[] remoteversions = remoteversion.Split('.');
                     if (int.Parse(versions[0]) < int.Parse(remoteversions[0]))
-                    {
                         await client.SendMessage(e.Channel, $"I'm currently {(int.Parse(remoteversions[0]) - int.Parse(versions[0]))} major version(s) behind. (Current version: {version}, latest version: {remoteversion})");
-                    }
                     else if (int.Parse(versions[0]) > int.Parse(remoteversions[0]))
-                    {
                         await client.SendMessage(e.Channel, $"I'm currently {(int.Parse(versions[0]) - int.Parse(remoteversions[0]))} major version(s) ahead. (Current version: {version}, latest released version: {remoteversion})");
-                    }
+                    else if (int.Parse(versions[1]) < int.Parse(remoteversions[1]))
+                        await client.SendMessage(e.Channel, $"I'm currently {(int.Parse(remoteversions[1]) - int.Parse(versions[1]))} minor version(s) behind. (Current version: {version}, latest version: {remoteversion})");
+                    else if (int.Parse(versions[1]) > int.Parse(remoteversions[1]))
+                        await client.SendMessage(e.Channel, $"I'm currently {(int.Parse(versions[1]) - int.Parse(remoteversions[1]))} minor version(s) ahead. (Current version: {version}, latest released version: {remoteversion})");
+                    else if (int.Parse(versions[2]) < int.Parse(remoteversions[2]))
+                        await client.SendMessage(e.Channel, $"I'm currently {(int.Parse(remoteversions[2]) - int.Parse(versions[2]))} patch(es) behind. (Current version: {version}, latest version: {remoteversion})");
+                    else if (int.Parse(versions[2]) > int.Parse(remoteversions[2]))
+                        await client.SendMessage(e.Channel, $"I'm currently {(int.Parse(versions[2]) - int.Parse(remoteversions[2]))} patch(es) ahead. (Current version: {version}, latest released version: {remoteversion})");
                     else
-                    {
-                        if (int.Parse(versions[1]) < int.Parse(remoteversions[1]))
-                        {
-                            await client.SendMessage(e.Channel, $"I'm currently {(int.Parse(remoteversions[1]) - int.Parse(versions[1]))} minor version(s) behind. (Current version: {version}, latest version: {remoteversion})");
-                        }
-                        else if (int.Parse(versions[1]) > int.Parse(remoteversions[1]))
-                        {
-                            await client.SendMessage(e.Channel, $"I'm currently {(int.Parse(versions[1]) - int.Parse(remoteversions[1]))} minor version(s) ahead. (Current version: {version}, latest released version: {remoteversion})");
-                        }
-                        else
-                        {
-                            if (int.Parse(versions[2]) < int.Parse(remoteversions[2]))
-                            {
-                                await client.SendMessage(e.Channel, $"I'm currently {(int.Parse(remoteversions[2]) - int.Parse(versions[2]))} patch(es) behind. (Current version: {version}, latest version: {remoteversion})");
-                            }
-                            else if (int.Parse(versions[2]) > int.Parse(remoteversions[2]))
-                            {
-                                await client.SendMessage(e.Channel, $"I'm currently {(int.Parse(versions[2]) - int.Parse(remoteversions[2]))} patch(es) ahead. (Current version: {version}, latest released version: {remoteversion})");
-                            }
-                            else
-                            {
-                                await client.SendMessage(e.Channel, $"I'm up to date! (Current version: {version})");
-                            }
-                        }
-                    }
+                        await client.SendMessage(e.Channel, $"I'm up to date! (Current version: {version})");
                 });
 
             Image.AddCommands(group);
@@ -750,7 +730,7 @@ The current topic is: {e.Channel.Topic}";
         }
 
         // Variables
-        internal static DiscordClient client = new DiscordClient(new DiscordClientConfig { AckMessages = true, EnableVoiceMultiserver = true, VoiceMode = DiscordVoiceMode.Outgoing/*, LogLevel = LogMessageSeverity.Debug*/ });
+        internal static DiscordClient client;
         static CommandService commands;
         internal static RestClient rclient = new RestClient();
         internal static JObject config;
@@ -759,8 +739,7 @@ The current topic is: {e.Channel.Topic}";
 
         static void InputThread()
         {
-            bool accept = true;
-            while (accept)
+            for (;;)
             {
                 string input = Console.ReadLine();
             }
@@ -772,11 +751,24 @@ The current topic is: {e.Channel.Topic}";
             SQL.LoadDB();
             // Load up the config file
             LoadConfig();
+
             Console.Title = $"Nekobot v{version}";
             // Load the stream channels
             Music.LoadStreams();
             // Initialize rest client
             RCInit();
+
+            client = new DiscordClient(new DiscordClientConfig
+            {
+                AckMessages = true,
+                LogLevel = LogMessageSeverity.Verbose,
+                TrackActivity = true,
+                UseMessageQueue = false,
+                UseLargeThreshold = true,
+                EnableVoiceMultiserver = true,
+                VoiceMode = DiscordVoiceMode.Outgoing,
+            });
+
             // Set up the events and enforce use of the command prefix
             commands.CommandError += CommandError;
             client.Connected += Connected;
@@ -908,14 +900,17 @@ The current topic is: {e.Channel.Topic}";
             }
             masterId = config["master"].ToObject<long>();
             Music.musicFolder = config["musicFolder"].ToString();
-            CommandServiceConfig command_config = new CommandServiceConfig();
-            command_config.CommandChars = config["prefix"].ToString().ToCharArray();
-            command_config.RequireCommandCharInPrivate = config["prefixprivate"].ToObject<bool>();
-            command_config.RequireCommandCharInPublic = config["prefixpublic"].ToObject<bool>();
-            command_config.MentionCommandChar = config["mentioncommand"].ToObject<short>();
+
             string helpmode = config["helpmode"].ToString();
-            command_config.HelpMode = helpmode.Equals("public") ? HelpMode.Public : helpmode.Equals("private") ? HelpMode.Private : HelpMode.Disable;
-            commands = new CommandService(command_config, Flags.GetNsfw, Flags.GetMusic, Flags.GetIgnored);
+            commands = new CommandService(new CommandServiceConfig
+            {
+                CommandChars = config["prefix"].ToString().ToCharArray(),
+                RequireCommandCharInPrivate = config["prefixprivate"].ToObject<bool>(),
+                RequireCommandCharInPublic = config["prefixpublic"].ToObject<bool>(),
+                MentionCommandChar = config["mentioncommand"].ToObject<short>(),
+                HelpMode = helpmode.Equals("public") ? HelpMode.Public : helpmode.Equals("private") ? HelpMode.Private : HelpMode.Disable
+            }, Flags.GetNsfw, Flags.GetMusic, Flags.GetIgnored);
+
             version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString();
         }
 
@@ -936,30 +931,48 @@ The current topic is: {e.Channel.Topic}";
 
         private static void CommandError(object sender, CommandErrorEventArgs e)
         {
-            string error = "Command Error : ";
-            if (e.Exception == null)
-                error += "No Exception, this should be fixed!";
-            else if (e.Exception.GetType() == typeof(NsfwFlagException))
-                error = "This channel doesn't allow nsfw commands.";
-            else if (e.Exception.GetType() == typeof(MusicFlagException))
-                error = "You need to be in a music streaming channel to use this command.";
-            else error += e.Exception.GetBaseException().Message;
-            client.SendMessage(e.Channel, error);
-            //Console.WriteLine(error);
+            string msg = "Command Error: " + e.Exception?.GetBaseException().Message;
+            if (msg == null) //No mxception - show a generic message
+            {
+                switch (e.ErrorType)
+                {
+                    case CommandErrorType.Exception:
+                        msg = "Unknown Error";
+                        break;
+                    case CommandErrorType.BadPermissions:
+                        msg = "You do not have permission to run this command.";
+                        break;
+                    case CommandErrorType.BadArgCount:
+                        msg = "You provided the incorrect number of arguments for this command.";
+                        break;
+                    case CommandErrorType.InvalidInput:
+                        msg = "Unable to parse your command, please check your input.";
+                        break;
+                    case CommandErrorType.UnknownCommand:
+                        /* This command just wasn't for Neko, don't interrupt!
+                        msg = "Unknown command.";
+                        */
+                        break;
+                }
+            }
+            if (msg != null)
+            {
+                client.SendMessage(e.Channel, msg);
+                //Console.WriteLine(msg);
+            }
         }
 
         internal static int GetPermissions(User user, Channel channel)
         {
-            int PermissionLevel = 0;
             if (user.Id == masterId)
-                PermissionLevel = 10;
-            else if (SQL.ExecuteScalarPos($"select count(perms) from users where user = '{user.Id}'"))
+                return 10;
+            if (SQL.ExecuteScalarPos($"select count(perms) from users where user = '{user.Id}'"))
             {
                 SQLiteDataReader reader = SQL.ExecuteReader($"select perms from users where user = '{user.Id}'");
                 while (reader.Read())
-                    PermissionLevel = int.Parse(reader["perms"].ToString());
+                    return int.Parse(reader["perms"].ToString());
             }
-            return PermissionLevel;
+            return 0;
         }
 
         internal static bool CanSay(Channel c, User u) => c.IsPrivate || c.Members.Where(m => m.Id == u.Id).SingleOrDefault().GetPermissions(c).SendMessages;

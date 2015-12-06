@@ -3,8 +3,8 @@ using Discord;
 
 namespace Nekobot.Commands
 {
-    public class NsfwFlagException : Exception { public NsfwFlagException() : base("Channel doesn't allow this command.") { } }
-    public class MusicFlagException : Exception { public MusicFlagException() : base("User isn't in a music streaming channel.") { } }
+    public class NsfwFlagException : Exception { public NsfwFlagException() : base("This channel doesn't allow nsfw commands.") { } }
+    public class MusicFlagException : Exception { public MusicFlagException() : base("You need to be in a music streaming channel to use this command.") { } }
     public class CommandEventArgs
     {
         private readonly string[] _args;

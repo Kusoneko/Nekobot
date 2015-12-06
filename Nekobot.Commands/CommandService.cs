@@ -139,10 +139,8 @@ namespace Nekobot.Commands
                 CommandParser.ParseCommand(msg, _map, out commands, out argPos);                
                 if (commands == null)
                 {
-                    /* This command just wasn't for Neko, don't interrupt!
                     CommandEventArgs errorArgs = new CommandEventArgs(e.Message, null, null);
-                    RaiseCommandError(CommandErrorType.UnknownCommand, errorArgs, new Exception("Error parsing command"));
-                    */
+                    RaiseCommandError(CommandErrorType.UnknownCommand, errorArgs);
                     NonCommands(e);
                     return;
                 }
@@ -201,7 +199,7 @@ namespace Nekobot.Commands
                         return;
                     }
                     var errorArgs2 = new CommandEventArgs(e.Message, null, null);
-                    RaiseCommandError(CommandErrorType.BadArgCount, errorArgs2, new Exception("Bad number of args!"));
+                    RaiseCommandError(CommandErrorType.BadArgCount, errorArgs2);
                 }
             };
         }
