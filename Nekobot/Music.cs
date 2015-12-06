@@ -128,6 +128,24 @@ namespace Nekobot
             return chan.Members.Where(u => u.VoiceChannel == chan).Count();
         }
 
+        internal static string GetTitle(Tuple<string,string,long,string> t)
+        {
+            if (t.Item2 == "Youtube")
+                return t.Item4;
+            File song = File.Create(t.Item1);
+            if (song.Tag.Title != null && song.Tag.Title != "")
+            {
+                string title = "";
+                if (song.Tag.Performers != null)
+                    foreach (string p in song.Tag.Performers)
+                        title += $", {p}";
+                if (title != "")
+                    title = title.Substring(2) + " **-** ";
+                return title + song.Tag.Title;
+            }
+            return System.IO.Path.GetFileNameWithoutExtension(t.Item1);
+        }
+
         internal static void AddCommands(Commands.CommandGroupBuilder group)
         {
             group.CreateCommand("playlist")
@@ -135,95 +153,14 @@ namespace Nekobot
                 .FlagMusic(true)
                 .Do(async e =>
                 {
-                    string reply = "";
-                    if (playlist[e.User.VoiceChannel.Id][0].Item2 == "Youtube")
-                        reply = $@"Currently playing: {playlist[e.User.VoiceChannel.Id][0].Item4}.
-Next songs:";
-                    else
-                    {
-                        TagLib.File song = File.Create(playlist[e.User.VoiceChannel.Id][0].Item1);
-                        string title = "";
-                        if (song.Tag.Title != null && song.Tag.Title != "")
-                        {
-                            if (song.Tag.Performers != null)
-                            {
-                                foreach (string p in song.Tag.Performers)
-                                {
-                                    title += $", {p}";
-                                }
-                            }
-                            if (title != "")
-                                title += " **-** ";
-                            title += song.Tag.Title;
-                            title = title.Substring(2);
-                            reply = $@"Currently playing: {title}.
-Next songs:";
-                        }
-                        else
-                        {
-                            reply = $@"Currently playing: {System.IO.Path.GetFileNameWithoutExtension(playlist[e.User.VoiceChannel.Id][0].Item1)}.
-Next songs:";
-                        }
-                    }
+                    string reply = $"Currently playing: {GetTitle(playlist[e.User.VoiceChannel.Id][0])}.\nNext songs:";
                     for(int i = 1; i < 11; i++)
                     {
-                        if (playlist[e.User.VoiceChannel.Id][i].Item2 == "Request")
-                        {
-                            TagLib.File songfile = File.Create(playlist[e.User.VoiceChannel.Id][i].Item1);
-                            string title = "";
-                            if (songfile.Tag.Title != null && songfile.Tag.Title != "")
-                            {
-                                if (songfile.Tag.Performers != null)
-                                {
-                                    foreach (string p in songfile.Tag.Performers)
-                                    {
-                                        title += $", {p}";
-                                    }
-                                }
-                                if (title != "")
-                                    title += " **-** ";
-                                title += songfile.Tag.Title;
-                                title = title.Substring(2);
-                                reply += $@"
-{i} - **[{playlist[e.User.VoiceChannel.Id][i].Item2} by <@{playlist[e.User.VoiceChannel.Id][i].Item3}>]** {title}";
-                            }
-                            else
-                            {
-                                reply += $@"
-{i} - **[{playlist[e.User.VoiceChannel.Id][i].Item2} by <@{playlist[e.User.VoiceChannel.Id][i].Item3}>]** {System.IO.Path.GetFileNameWithoutExtension(playlist[e.User.VoiceChannel.Id][i].Item1)}";
-                            }
-                        }
-                        else if (playlist[e.User.VoiceChannel.Id][i].Item2 == "Youtube")
-                        {
-                            reply += $@"
-{i} - **[{playlist[e.User.VoiceChannel.Id][i].Item2} request by <@{playlist[e.User.VoiceChannel.Id][i].Item3}>]** {playlist[e.User.VoiceChannel.Id][i].Item4}";
-                        }
-                        else
-                        {
-                            TagLib.File songfile = File.Create(playlist[e.User.VoiceChannel.Id][i].Item1);
-                            string title = "";
-                            if (songfile.Tag.Title != null && songfile.Tag.Title != "")
-                            {
-                                if (songfile.Tag.Performers != null)
-                                {
-                                    foreach (string p in songfile.Tag.Performers)
-                                    {
-                                        title += $", {p}";
-                                    }
-                                }
-                                if (title != "")
-                                    title += " **-** ";
-                                title += songfile.Tag.Title;
-                                title = title.Substring(2);
-                                reply += $@"
-{i} - **[{playlist[e.User.VoiceChannel.Id][i].Item2}]** {title}";
-                            }
-                            else
-                            {
-                                reply += $@"
-{i} - **[{playlist[e.User.VoiceChannel.Id][i].Item2}]** {System.IO.Path.GetFileNameWithoutExtension(playlist[e.User.VoiceChannel.Id][i].Item1)}";
-                            }
-                        }
+                        var t = playlist[e.User.VoiceChannel.Id][i];
+                        string ext = "";
+                        if (t.Item2 == "Request" || t.Item2 == "Youtube")
+                            ext = $"{(t.Item2 == "Request" ? " request" : "")} by <@{t.Item3}>";
+                        reply += $"\n{i} - **[{t.Item2}{ext}]** {GetTitle(t)}";
                     }
                     await Program.client.SendMessage(e.Channel, reply);
                 });
@@ -233,36 +170,7 @@ Next songs:";
                 .FlagMusic(true)
                 .Do(async e =>
                 {
-                    string reply = "";
-                    if (playlist[e.User.VoiceChannel.Id][0].Item2 == "Youtube")
-                    {
-                        reply = $@"Currently playing: {playlist[e.User.VoiceChannel.Id][0].Item4}.";
-                    }
-                    else
-                    {
-                        TagLib.File song = File.Create(playlist[e.User.VoiceChannel.Id][0].Item1);
-                        string title = "";
-                        if (song.Tag.Title != null && song.Tag.Title != "")
-                        {
-                            if (song.Tag.Performers != null)
-                            {
-                                foreach (string p in song.Tag.Performers)
-                                {
-                                    title += $", {p}";
-                                }
-                            }
-                            if (title != "")
-                                title += " **-** ";
-                            title += song.Tag.Title;
-                            title = title.Substring(2);
-                            reply = $@"Currently playing: {title}.";
-                        }
-                        else
-                        {
-                            reply = $@"Currently playing: {System.IO.Path.GetFileNameWithoutExtension(playlist[e.User.VoiceChannel.Id][0].Item1)}.";
-                        }
-                    }
-                    await Program.client.SendMessage(e.Channel, reply);
+                    await Program.client.SendMessage(e.Channel, $"Currently playing: {GetTitle(playlist[e.User.VoiceChannel.Id][0])}.");
                 });
 
             group.CreateCommand("ytrequest")
