@@ -125,7 +125,7 @@ namespace Nekobot
         static int CountVoiceChannelMembers(Channel chan)
         {
             if (chan.Type != "voice") return -1;
-            return chan.Members.Where(u => u.VoiceChannel == chan).Count();
+            return chan.Members.Where(u => u.VoiceChannel == chan).Count()-1;
         }
 
         internal static string GetTitle(Tuple<string,string,long,string> t)
