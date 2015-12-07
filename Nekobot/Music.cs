@@ -27,6 +27,8 @@ namespace Nekobot
         static string[] musicexts = { ".wma", ".aac", ".mp3", ".m4a", ".wav", ".flac" };
 
         internal static IEnumerable<string> Files() => System.IO.Directory.EnumerateFiles(musicFolder, "*.*", UseSubdirs ? System.IO.SearchOption.AllDirectories : System.IO.SearchOption.TopDirectoryOnly).Where(s => musicexts.Contains(System.IO.Path.GetExtension(s)));
+        static bool InPlaylist(List<Tuple<string,string,long,string>> playlist, string file) => playlist.Where(song => song.Item1 == file).Count() != 0;
+        static int NonrequestedIndex(Commands.CommandEventArgs e) => 1 + playlist[e.User.VoiceChannel.Id].Where(song => song.Item2 == "Encore" || song.Item2 == "Request" || song.Item2 == "Youtube").Count();
 
         static async Task Stream(long cid)
         {
@@ -45,17 +47,12 @@ namespace Nekobot
                 votereset[cid] = new List<long>();
                 voteencore[cid] = new List<long>();
                 var files = Files();
-                int mp3 = 0;
                 while (playlist[cid].Count() < 11)
                 {
-                    mp3 = rnd.Next(0, files.Count());
-                    bool isAlreadyInPlaylist = false;
-                    for (int i = 0; !isAlreadyInPlaylist && i < playlist[cid].Count; i++)
-                        if (playlist[cid][i].Item1 == files.ElementAt(mp3))
-                            isAlreadyInPlaylist = true;
-                    if (isAlreadyInPlaylist)
+                    var mp3 = files.ElementAt(rnd.Next(0, files.Count()));
+                    if (InPlaylist(playlist[cid], mp3))
                         break;
-                    playlist[cid].Add(Tuple.Create<string, string, long, string>(files.ElementAt(mp3), "Playlist", 0, null));
+                    playlist[cid].Add(Tuple.Create<string, string, long, string>(mp3, "Playlist", 0, null));
                 }
                 await Task.Run(async () =>
                 {
@@ -178,13 +175,13 @@ namespace Nekobot
                         var video = await YouTube.Default.GetVideoAsync(e.Args[0]);
                         //if (video.FileExtension != ".webm")
                         //{
-                            int index = 1+playlist[e.User.VoiceChannel.Id].Where(song => song.Item2 == "Encore" || song.Item2 == "Request" || song.Item2 == "Youtube").Count();
-                            if (playlist[e.User.VoiceChannel.Id].Where(song => song.Item1 == video.Uri).Count() != 0)
+                            var pl = playlist[e.User.VoiceChannel.Id];
+                            if (InPlaylist(pl, video.Uri))
                             {
                                 await Program.client.SendMessage(e.Channel, $"<@{e.User.Id}> Your request is already in the playlist.");
                                 return;
                             }
-                            playlist[e.User.VoiceChannel.Id].Insert(index, Tuple.Create(video.Uri, "Youtube", e.User.Id, $"{video.Title} ({e.Args[0]})"));
+                            pl.Insert(NonrequestedIndex(e), Tuple.Create(video.Uri, "Youtube", e.User.Id, $"{video.Title} ({e.Args[0]})"));
                             await Program.client.SendMessage(e.Channel, $"{video.Title} added to the playlist.");
                         //}
                         //else
@@ -209,13 +206,13 @@ namespace Nekobot
                     {
                         if (System.IO.Path.GetFileNameWithoutExtension(file).ToLower().Contains(string.Join(" ", e.Args).ToLower()))
                         {
-                            int index = 1 + playlist[e.User.VoiceChannel.Id].Where(song => song.Item2 == "Encore" || song.Item2 == "Request" || song.Item2 == "Youtube").Count();
-                            if (playlist[e.User.VoiceChannel.Id].Where(song => song.Item1 == file).Count() != 0)
+                            var pl = playlist[e.User.VoiceChannel.Id];
+                            if (InPlaylist(pl, file))
                             {
                                 await Program.client.SendMessage(e.Channel, $"<@{e.User.Id}> Your request is already in the playlist.");
                                 return;
                             }
-                            playlist[e.User.VoiceChannel.Id].Insert(index, Tuple.Create<string, string, long, string>(file, "Request", e.User.Id, null));
+                            pl.Insert(NonrequestedIndex(e), Tuple.Create<string, string, long, string>(file, "Request", e.User.Id, null));
                             await Program.client.SendMessage(e.Channel, $"<@{e.User.Id}> Your request has been added to the list.");
                             return;
                         }
