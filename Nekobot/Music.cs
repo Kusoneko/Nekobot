@@ -175,31 +175,13 @@ namespace Nekobot
                     Regex re = new Regex(@"(?:https?:\/\/)?(?:youtu\.be\/|(?:www\.)?youtube\.com\/watch(?:\.php)?\?.*v=)([a-zA-Z0-9\-_]+)");
                     if (re.IsMatch(e.Args[0]))
                     {
-                        var youtube = YouTube.Default;
-                        var video = await youtube.GetVideoAsync(e.Args[0]);
+                        var video = await YouTube.Default.GetVideoAsync(e.Args[0]);
                         //if (video.FileExtension != ".webm")
                         //{
-                            int index = 1;
-                            for (int i = 1; i < playlist[e.User.VoiceChannel.Id].Count; i++)
+                            int index = 1+playlist[e.User.VoiceChannel.Id].Where(song => song.Item2 == "Encore" || song.Item2 == "Request" || song.Item2 == "Youtube").Count();
+                            if (playlist[e.User.VoiceChannel.Id].Where(song => song.Item1 == video.Uri).Count() != 0)
                             {
-                                if (playlist[e.User.VoiceChannel.Id][i].Item2 == "Encore" || playlist[e.User.VoiceChannel.Id][i].Item2 == "Request" || playlist[e.User.VoiceChannel.Id][i].Item2 == "Youtube")
-                                {
-                                    index++;
-                                }
-                            }
-                            bool isAlreadyInPlaylist = false;
-                            int songindex = 1;
-                            for (int z = 1; z < playlist[e.User.VoiceChannel.Id].Count; z++)
-                            {
-                                if (playlist[e.User.VoiceChannel.Id][z].Item1 == video.Uri)
-                                {
-                                    isAlreadyInPlaylist = true;
-                                    songindex = z;
-                                }
-                            }
-                            if (isAlreadyInPlaylist)
-                            {
-                                await Program.client.SendMessage(e.Channel, $"<@{e.User.Id}> Your request is already in the playlist at position {songindex}.");
+                                await Program.client.SendMessage(e.Channel, $"<@{e.User.Id}> Your request is already in the playlist.");
                                 return;
                             }
                             playlist[e.User.VoiceChannel.Id].Insert(index, Tuple.Create(video.Uri, "Youtube", e.User.Id, $"{video.Title} ({e.Args[0]})"));
@@ -223,45 +205,22 @@ namespace Nekobot
                 .FlagMusic(true)
                 .Do(async e =>
                 {
-                    bool requestfound = false;
-                    var files = Files();
-                    for (int j = 0; j < files.Count(); j++)
+                    foreach (var file in Files())
                     {
-                        if (System.IO.Path.GetFileNameWithoutExtension(files.ElementAt(j)).ToLower().Contains(String.Join(" ", e.Args).ToLower()))
+                        if (System.IO.Path.GetFileNameWithoutExtension(file).ToLower().Contains(string.Join(" ", e.Args).ToLower()))
                         {
-                            int index = 1;
-                            for (int i = 1; i < playlist[e.User.VoiceChannel.Id].Count; i++)
+                            int index = 1 + playlist[e.User.VoiceChannel.Id].Where(song => song.Item2 == "Encore" || song.Item2 == "Request" || song.Item2 == "Youtube").Count();
+                            if (playlist[e.User.VoiceChannel.Id].Where(song => song.Item1 == file).Count() != 0)
                             {
-                                if (playlist[e.User.VoiceChannel.Id][i].Item2 == "Encore" || playlist[e.User.VoiceChannel.Id][i].Item2 == "Request" || playlist[e.User.VoiceChannel.Id][i].Item2 == "Youtube")
-                                {
-                                    index++;
-                                }
-                            }
-                            bool isAlreadyInPlaylist = false;
-                            int songindex = 1;
-                            for (int z = 1; z < playlist[e.User.VoiceChannel.Id].Count; z++)
-                            {
-                                if (playlist[e.User.VoiceChannel.Id][z].Item1 == files.ElementAt(j))
-                                {
-                                    isAlreadyInPlaylist = true;
-                                    songindex = z;
-                                }
-                            }
-                            if (isAlreadyInPlaylist)
-                            {
-                                await Program.client.SendMessage(e.Channel, $"<@{e.User.Id}> Your request is already in the playlist at position {songindex}.");
+                                await Program.client.SendMessage(e.Channel, $"<@{e.User.Id}> Your request is already in the playlist.");
                                 return;
                             }
-                            playlist[e.User.VoiceChannel.Id].Insert(index, Tuple.Create<string, string, long, string>(files.ElementAt(j), "Request", e.User.Id, null));
+                            playlist[e.User.VoiceChannel.Id].Insert(index, Tuple.Create<string, string, long, string>(file, "Request", e.User.Id, null));
                             await Program.client.SendMessage(e.Channel, $"<@{e.User.Id}> Your request has been added to the list.");
-                            requestfound = true;
-                            break;
+                            return;
                         }
                     }
-                    if (!requestfound)
-                    {
-                        await Program.client.SendMessage(e.Channel, $"<@{e.User.Id}> Your request was not found.");
-                    }
+                    await Program.client.SendMessage(e.Channel, $"<@{e.User.Id}> Your request was not found.");
                 });
 
             group.CreateCommand("skip")
