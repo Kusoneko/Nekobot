@@ -24,7 +24,7 @@ namespace Nekobot
         static Dictionary<long, List<long>> voteskip = new Dictionary<long, List<long>>();
         static Dictionary<long, List<long>> votereset = new Dictionary<long, List<long>>();
         static Dictionary<long, List<long>> voteencore = new Dictionary<long, List<long>>();
-        static string[] exts = { ".wma", ".aac", ".mp3", ".m4a", ".wav", ".flac" };
+        static string[] exts = { ".wma", ".aac", ".mp3", ".m4a", ".wav", ".flac", ".ogg" };
 
         internal static IEnumerable<string> Files() => System.IO.Directory.EnumerateFiles(Folder, "*.*", UseSubdirs ? System.IO.SearchOption.AllDirectories : System.IO.SearchOption.TopDirectoryOnly).Where(s => exts.Contains(System.IO.Path.GetExtension(s)));
         static bool InPlaylist(List<Tuple<string,string,long,string>> playlist, string file) => playlist.Where(song => song.Item1 == file).Count() != 0;
@@ -62,7 +62,8 @@ namespace Nekobot
                         var outFormat = new WaveFormat(48000, 16, 1);
                         int blockSize = outFormat.AverageBytesPerSecond; // 1 second
                         byte[] buffer = new byte[blockSize];
-                        using (var musicReader = new MediaFoundationReader(playlist[cid][0].Item1))
+                        string file = playlist[cid][0].Item1;
+                        var musicReader = System.IO.Path.GetExtension(file) == ".ogg" ? (IWaveProvider)new NAudio.Vorbis.VorbisWaveReader(file) : new MediaFoundationReader(file);
                         using (var resampler = new MediaFoundationResampler(musicReader, outFormat) { ResamplerQuality = 60 })
                         {
                             int byteCount;

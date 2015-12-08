@@ -1,5 +1,5 @@
 # Nekobot
-Version 2.3.31
+Version 2.3.33
 
 Bot for Discord using the [Discord.Net](https://github.com/RogueException/Discord.Net) Library.
 
@@ -45,6 +45,8 @@ Requires the following NuGet Packages (Latest official version will do):
 - [RestSharp](https://www.nuget.org/packages/RestSharp)
 - [System.Data.SQLite](https://www.nuget.org/packages/System.Data.SQLite/)
 - [NAudio](https://www.nuget.org/packages/NAudio)
+- [NAudio.Vorbis](https://www.nuget.org/packages/NAudio.Vorbis)
+- [NVorbis](https://www.nuget.org/packages/NVorbis)
 - [Newtonsoft.Json](https://www.nuget.org/packages/Newtonsoft.Json)
 - [TagLib#](https://www.nuget.org/packages/taglib)
 - [VideoLibrary](https://www.nuget.org/packages/VideoLibrary)
