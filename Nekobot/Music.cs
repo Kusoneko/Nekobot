@@ -180,6 +180,8 @@ namespace Nekobot
                     if (re.IsMatch(e.Args[0]))
                     {
                         var video = await YouTube.Default.GetVideoAsync(e.Args[0]);
+                        try
+                        {
                             var pl = playlist[e.User.VoiceChannel.Id];
                             if (InPlaylist(pl, video.Uri))
                             {
@@ -188,6 +190,12 @@ namespace Nekobot
                             }
                             pl.Insert(NonrequestedIndex(e), Tuple.Create(video.Uri, "Youtube", e.User.Id, $"{video.Title} ({e.Args[0]})"));
                             await Program.client.SendMessage(e.Channel, $"{video.Title} added to the playlist.");
+                        }
+                        catch (Exception)
+                        {
+                            // Possibly region locking due to licencing/music identification?
+                            await Program.client.SendMessage(e.Channel, $"{video.Title} couldn't be added to the playlist because of an issue under investigation.");
+                        }
                     }
                     else
                     {
