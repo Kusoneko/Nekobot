@@ -48,3 +48,5 @@ Requires the following NuGet Packages (Latest official version will do):
 - [Newtonsoft.Json](https://www.nuget.org/packages/Newtonsoft.Json)
 - [TagLib#](https://www.nuget.org/packages/taglib)
 - [VideoLibrary](https://www.nuget.org/packages/VideoLibrary)
+
+For `ytrequest` to work with webm videos, please install the [Required codecs](https://tools.google.com/dlpage/webmmf/).
