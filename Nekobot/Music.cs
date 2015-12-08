@@ -15,7 +15,7 @@ namespace Nekobot
     class Music
     {
         // Music-related variables
-        internal static string musicFolder;
+        internal static string Folder;
         internal static bool UseSubdirs;
         static List<long> streams = new List<long>();
         static Dictionary<long, List<Tuple<string, string, long, string>>> playlist = new Dictionary<long, List<Tuple<string, string, long, string>>>();
@@ -24,9 +24,9 @@ namespace Nekobot
         static Dictionary<long, List<long>> voteskip = new Dictionary<long, List<long>>();
         static Dictionary<long, List<long>> votereset = new Dictionary<long, List<long>>();
         static Dictionary<long, List<long>> voteencore = new Dictionary<long, List<long>>();
-        static string[] musicexts = { ".wma", ".aac", ".mp3", ".m4a", ".wav", ".flac" };
+        static string[] exts = { ".wma", ".aac", ".mp3", ".m4a", ".wav", ".flac" };
 
-        internal static IEnumerable<string> Files() => System.IO.Directory.EnumerateFiles(musicFolder, "*.*", UseSubdirs ? System.IO.SearchOption.AllDirectories : System.IO.SearchOption.TopDirectoryOnly).Where(s => musicexts.Contains(System.IO.Path.GetExtension(s)));
+        internal static IEnumerable<string> Files() => System.IO.Directory.EnumerateFiles(Folder, "*.*", UseSubdirs ? System.IO.SearchOption.AllDirectories : System.IO.SearchOption.TopDirectoryOnly).Where(s => exts.Contains(System.IO.Path.GetExtension(s)));
         static bool InPlaylist(List<Tuple<string,string,long,string>> playlist, string file) => playlist.Where(song => song.Item1 == file).Count() != 0;
         static int NonrequestedIndex(Commands.CommandEventArgs e) => 1 + playlist[e.User.VoiceChannel.Id].Where(song => song.Item2 == "Encore" || song.Item2 == "Request" || song.Item2 == "Youtube").Count();
 

@@ -857,7 +857,7 @@ The current topic is: {e.Channel.Topic}";
                 Environment.Exit(0);
             }
             masterId = config["master"].ToObject<long>();
-            Music.musicFolder = config["musicFolder"].ToString();
+            Music.Folder = config["musicFolder"].ToString();
             Music.UseSubdirs = config["musicUseSubfolders"].ToObject<bool>();
 
             string helpmode = config["helpmode"].ToString();
