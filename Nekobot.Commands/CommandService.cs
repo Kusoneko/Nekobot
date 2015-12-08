@@ -99,25 +99,26 @@ namespace Nekobot.Commands
                         {
                             // It's lame we have to do this, but our User isn't exposed by Discord.Net, so we don't know our name
                             User nekouser = client.GetUser(e.Server, client.CurrentUserId);
-                            string neko = nekouser.Name;
-                            if (neko.Length+2 > msg.Length)
+                            string neko = '@'+nekouser.Name;
+                            if (neko.Length+2 > msg.Length || (e.Message.MentionedRoles.Contains(e.Server.EveryoneRole) && e.Message.MentionedUsers.Where(u => u == nekouser).Count() == 0))
                             {
                                 NonCommands(e);
                                 return;
                             }
-                            int index = 0;
-                            if (!msg.StartsWith($"@{neko}") && _config.MentionCommandChar > 1)
-                                for (index = msg.Length - neko.Length-1; index != -1 && neko != msg.Substring(index+1, neko.Length);
-                                    index = msg.LastIndexOf("@", index-1));
-
-                            if (index == -1)
+                            if (msg.StartsWith(neko))
+                                msg = msg.Substring(neko.Length+1);
+                            else
                             {
-                                NonCommands(e);
-                                return;
+                                int index = _config.MentionCommandChar > 1 ? msg.LastIndexOf(neko) : -1;
+                                if (index == -1)
+                                {
+                                    NonCommands(e);
+                                    return;
+                                }
+                                msg = msg.Substring(0, index-1);
                             }
-                            msg = index == 0 ? msg.Substring(neko.Length + 1) : msg.Substring(0, index-1);
                             // Ideally, don't let the command know that we were mentioned, if this is the only mention
-                            /*if (msg.IndexOf($"@{neko}") != -1)
+                            /*if (msg.IndexOf(neko) != -1)
                             {
                                 e.Message.MentionedUsers = e.Message.MentionedUsers.Where(u => u == nekouser);
                                 e.Message.IsMentioningMe = false;
