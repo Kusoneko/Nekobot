@@ -118,7 +118,7 @@ namespace Nekobot
                         foreach (Channel c in e.Message.MentionedChannels)
                             reply += (reply != "" ? "\n" : "") + await SetIgnored("channel", "flags", c.Id, "0, 0, 1, -1", '#', perms);
                         foreach (User u in e.Message.MentionedUsers)
-                            reply += (reply != "" ? "\n" : "") + await SetIgnored("user", "users", u.Id, ", 0, 1", '@', perms, Program.GetPermissions(u, e.Channel));
+                            reply += (reply != "" ? "\n" : "") + await SetIgnored("user", "users", u.Id, "0, 1", '@', perms, Program.GetPermissions(u, e.Channel));
                         await Program.client.SendMessage(e.Channel, reply);
                     }
                     else
