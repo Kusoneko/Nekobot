@@ -444,38 +444,6 @@ The current topic is: {e.Channel.Topic}";
                     await PerformAction(e, "hug", "<3", true);
                 });
 
-
-            if (System.IO.Directory.Exists("images"))
-            {
-                group.CreateCommand("trash")
-                    .Alias("worstgirl")
-                    .Alias("onodera")
-                    .Description("I'll upload an image of 'worst girl'. (WARNING: May cause nausea!)")
-                    .Do(async e =>
-                    {
-                        await client.SendFile(e.Channel, "images/trash.png");
-                    });
-
-                group.CreateCommand("doit")
-                    .Alias("justdoit")
-                    .Alias("shia")
-                    .Description("DON'T LET YOUR DREAMS JUST BE DREAMS!")
-                    .Do(async e =>
-                    {
-                        await client.SendFile(e.Channel, "images/shia.jpg");
-                    });
-
-                group.CreateCommand("bulli")
-                    .Alias("bully")
-                    .Alias("dunbulli")
-                    .Alias("dontbully")
-                    .Description("DON'T BULLY!")
-                    .Do(async e =>
-                    {
-                        await client.SendFile(e.Channel, "images/bulli.jpg");
-                    });
-            }
-
             group.CreateCommand("8ball")
                 .Parameter("question", Commands.ParameterType.Optional)
                 .Parameter("?", Commands.ParameterType.Multiple)
