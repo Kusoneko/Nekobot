@@ -47,11 +47,12 @@ namespace Nekobot
                 votereset[cid] = new List<long>();
                 voteencore[cid] = new List<long>();
                 var files = Files();
-                while (playlist[cid].Count() < 11)
+                var filecount = files.Count();
+                while (playlist[cid].Count() < (filecount < 11 ? filecount : 11))
                 {
-                    var mp3 = files.ElementAt(rnd.Next(0, files.Count()));
+                    var mp3 = files.ElementAt(rnd.Next(0, filecount));
                     if (InPlaylist(playlist[cid], mp3))
-                        break;
+                        continue;
                     playlist[cid].Add(Tuple.Create<string, string, long, string>(mp3, "Playlist", 0, null));
                 }
                 await Task.Run(async () =>
@@ -143,14 +144,20 @@ namespace Nekobot
                 .FlagMusic(true)
                 .Do(async e =>
                 {
-                    string reply = $"Currently playing: {GetTitle(playlist[e.User.VoiceChannel.Id][0])}.\nNext songs:";
-                    for(int i = 1; i < 11; i++)
+                    string reply = "";
+                    int i = -1;
+                    foreach(var t in playlist[e.User.VoiceChannel.Id])
                     {
-                        var t = playlist[e.User.VoiceChannel.Id][i];
+                        string title = GetTitle(t);
+                        if (++i == 0)
+                        {
+                            reply = $"Currently playing: {title}.\nNext songs:";
+                            continue;
+                        }
                         string ext = "";
                         if (t.Item2 == "Request" || t.Item2 == "Youtube")
                             ext = $"{(t.Item2 == "Request" ? " request" : "")} by <@{t.Item3}>";
-                        reply += $"\n{i} - **[{t.Item2}{ext}]** {GetTitle(t)}";
+                        reply += $"\n{i} - **[{t.Item2}{ext}]** {title}";
                     }
                     await Program.client.SendMessage(e.Channel, reply);
                 });
