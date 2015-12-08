@@ -881,7 +881,7 @@ The current topic is: {e.Channel.Topic}";
 
         private static void CommandError(object sender, CommandErrorEventArgs e)
         {
-            string msg = "Command Error: " + e.Exception?.GetBaseException().Message;
+            string msg = e.Exception?.GetBaseException().Message;
             if (msg == null) //No mxception - show a generic message
             {
                 switch (e.ErrorType)
@@ -907,7 +907,7 @@ The current topic is: {e.Channel.Topic}";
             }
             if (msg != null)
             {
-                client.SendMessage(e.Channel, msg);
+                client.SendMessage(e.Channel, "Command Error: " + msg);
                 //Console.WriteLine(msg);
             }
         }
