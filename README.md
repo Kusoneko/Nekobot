@@ -37,7 +37,7 @@ The musicFolder setting should be set to the full path to a folder containing a 
 The musicUseSubfolders setting is whether or not to include files buried in folders within your musicFolder.
 The pitur, gold and cosplay settings should be set to full paths to image folders containing whatever images you please. If they're not set, the commands will be disabled.
 
-To add new commands to the bot, look at the GenerateCommands method's content in the Program.cs file, all the commands are being created in there at startup, therefore you should easily be able to add your own commands to it, by copying the way the official commands are made.
+To add new commands to the bot, look at the GenerateCommands method's content in the Program.cs file, all the commands are being created from there at startup, therefore you should easily be able to add your own commands to it, by copying the way the official commands are made.
 
 Server where the bot is being tested: https://discord.gg/0Lv5NLFEoz3P07Aq
 
