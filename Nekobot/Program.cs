@@ -910,8 +910,9 @@ The current topic is: {e.Channel.Topic}";
                     case CommandErrorType.UnknownCommand:
                         /* This command just wasn't for Neko, don't interrupt!
                         msg = "Unknown command.";
-                        */
                         break;
+                        */
+                        return;
                 }
             }
             if (msg != null)
