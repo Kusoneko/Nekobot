@@ -593,16 +593,25 @@ The current topic is: {e.Channel.Topic}";
                 .Do(async e =>
                 {
                     int newPermLevel = 0;
+                    int eUserPerm = GetPermissions(e.User, e.Channel);
                     if (e.Args[1] == "" || e.Message.MentionedUsers.Count() < 1)
                         await client.SendMessage(e.Channel, "You need to at least specify a permission level and mention one user.");
                     else if (!int.TryParse(e.Args[0], out newPermLevel))
                         await client.SendMessage(e.Channel, "The first argument needs to be the new permission level.");
+                    else if (eUserPerm <= newPermLevel)
+                        await client.SendMessage(e.Channel, "You can only set permission level to lower than your own.");
                     else
                     {
                         string reply = "";
                         foreach (User u in e.Message.MentionedUsers)
                         {
-                            bool change_needed = GetPermissions(u, e.Channel) != newPermLevel;
+                            int oldPerm = GetPermissions(u, e.Channel);
+                            if (oldPerm >= eUserPerm)
+                            {
+                                reply += $"<@{u.Id}>'s permission level is no less than yours, you are not allowed to change it.";
+                                continue;
+                            }
+                            bool change_needed = oldPerm != newPermLevel;
                             if (change_needed)
                             {
                                 await SQL.ExecuteNonQueryAsync(SQL.ExecuteScalarPos($"select count(user) from users where user='{u.Id}'")
@@ -611,7 +620,7 @@ The current topic is: {e.Channel.Topic}";
                             }
                             if (reply != "")
                                 reply += '\n';
-                            reply += $@"<@{u.Id}>'s permission level is "+(change_needed ? "now" : "already at")+$" {newPermLevel}.";
+                            reply += $"<@{u.Id}>'s permission level is "+(change_needed ? "now" : "already at")+$" {newPermLevel}.";
                         }
                         await client.SendMessage(e.Channel, reply);
                     }
