@@ -17,7 +17,7 @@ namespace Nekobot
         class Song : Tuple<string, string, long, string>
         {
             internal Song(string uri, string type, long requester = 0, string ext = null) : base(uri, type, requester, ext) { }
-            internal Song Encore(long requester) => new Song(Item1, Item2 == "Youtube" ? Item2 : "Encore", requester, Item4);
+            internal Song Encore() => new Song(Item1, Item2 == "Youtube" ? Item2 : "Encore", 0, Item4);
         }
         // Music-related variables
         internal static string Folder;
@@ -185,7 +185,7 @@ namespace Nekobot
                             continue;
                         }
                         string ext = "";
-                        if (t.Item2 == "Request" || t.Item2 == "Youtube")
+                        if (t.Item3 != 0)
                             ext = $" by <@{t.Item3}>";
                         reply += $"\n{i} - **[{t.Item2}{ext}]** {title}";
                     }
@@ -286,7 +286,7 @@ namespace Nekobot
                     if (await AddVote(voteencore, e, "replay current song", "song will be replayed", "replay"))
                     {
                         var pl = playlist[e.User.VoiceChannel.Id];
-                        pl.Insert(1, pl[0].Encore(e.User.Id));
+                        pl.Insert(1, pl[0].Encore());
                     }
                 });
 
