@@ -37,7 +37,7 @@ namespace Nekobot
 
             group.CreateCommand("whois")
                 .Alias("getinfo")
-                .Parameter("@User1] [@User2] [...]", Commands.ParameterType.Unparsed)
+                .Parameter("@User1] [@User2] [...", Commands.ParameterType.Unparsed)
                 .Description("I'll give you information about the mentioned user(s).")
                 .Do(async e =>
                 {
@@ -271,7 +271,7 @@ The current topic is: {e.Channel.Topic}";
                 });
 
             group.CreateCommand("avatar")
-                .Parameter("@User1] [@User2] [...]", Commands.ParameterType.Unparsed)
+                .Parameter("@User1] [@User2] [...", Commands.ParameterType.Unparsed)
                 .Description("I'll give you the avatars of every mentioned users.")
                 .Do(async e =>
                 {
@@ -428,7 +428,7 @@ The current topic is: {e.Channel.Topic}";
 
             group.CreateCommand("pet")
                 .Alias("pets")
-                .Parameter("@User1] [@User2] [...]", Commands.ParameterType.Unparsed)
+                .Parameter("@User1] [@User2] [...", Commands.ParameterType.Unparsed)
                 .Description("Everyone loves being pet, right!?! Pets each *@user*. Leave empty (or mention me too) to pet me!")
                 .Do(async e =>
                 {
@@ -437,7 +437,7 @@ The current topic is: {e.Channel.Topic}";
 
             group.CreateCommand("hug")
                 .Alias("hugs")
-                .Parameter("@User1] [@User2] [...]", Commands.ParameterType.Unparsed)
+                .Parameter("@User1] [@User2] [...", Commands.ParameterType.Unparsed)
                 .Description("Hug someone! Hugs each *@user*. Leave empty to get a hug!")
                 .Do(async e =>
                 {
@@ -587,7 +587,7 @@ The current topic is: {e.Channel.Topic}";
                 .Alias("setperms")
                 .Alias("setauth")
                 .Parameter("newPermissionLevel", Commands.ParameterType.Required)
-                .Parameter("@User1] [@User2] [...]", Commands.ParameterType.Unparsed)
+                .Parameter("@User1] [@User2] [...", Commands.ParameterType.Unparsed)
                 .MinPermissions(2)
                 .Description("I'll set the permission level of the mentioned people to the level mentioned (cannot be higher than or equal to yours).")
                 .Do(async e =>
