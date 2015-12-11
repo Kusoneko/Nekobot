@@ -26,6 +26,7 @@ namespace Nekobot
         static Dictionary<long, List<Song>> playlist = new Dictionary<long, List<Song>>();
         static Dictionary<long, bool> skip = new Dictionary<long, bool>();
         static Dictionary<long, bool> reset = new Dictionary<long, bool>();
+        internal static Dictionary<long, bool> pause = new Dictionary<long, bool>();
         static Dictionary<long, List<long>> voteskip = new Dictionary<long, List<long>>();
         static Dictionary<long, List<long>> votereset = new Dictionary<long, List<long>>();
         static Dictionary<long, List<long>> voteencore = new Dictionary<long, List<long>>();
@@ -46,6 +47,8 @@ namespace Nekobot
                 skip.Add(cid, false);
             if (!reset.ContainsKey(cid))
                 reset.Add(cid, false);
+            if (!pause.ContainsKey(cid))
+                pause.Add(cid, false);
             while (streams.Contains(cid))
             {
                 voteskip[cid] = new List<long>();
@@ -80,6 +83,7 @@ namespace Nekobot
                                     await Task.Delay(1000);
                                     break;
                                 }
+                                while(pause[cid]);// Play Voice.cs commands in here?
                                 _client.SendVoicePCM(buffer, blockSize);
                             }
                         }
@@ -309,6 +313,17 @@ namespace Nekobot
                 {
                     await Program.client.SendMessage(e.Channel, "Reseting stream...");
                     await ResetStream(e.User.VoiceChannel.Id);
+                });
+
+            group.CreateCommand("pause")
+                .Alias("unpause")
+                .MinPermissions(1)
+                .FlagMusic(true)
+                .Description("I'll toggle pause on the stream")
+                .Do(async e =>
+                {
+                    await Program.client.SendMessage(e.Channel, $"{(pause[e.User.VoiceChannel.Id] ? "Resum" : "Paus")}ing stream...");
+                    pause[e.User.VoiceChannel.Id] = !pause[e.User.VoiceChannel.Id];
                 });
 
             // Administrator commands
