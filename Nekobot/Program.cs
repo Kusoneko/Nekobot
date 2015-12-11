@@ -243,11 +243,13 @@ namespace Nekobot
                 });
 
             group.CreateCommand("reverse")
-                .Parameter("text...", Commands.ParameterType.Multiple)
+                .Parameter("text...", Commands.ParameterType.Unparsed)
                 .Description("I'll repeat what you said, in reverse!")
                 .Do(async e =>
                 {
-                    await client.SendMessage(e.Channel, String.Join("", GraphemeClusters(String.Join(" ", e.Args)).Reverse().ToArray()));
+                    var text = e.Args[0];
+                    if (text.Length != 0)
+                        await client.SendMessage(e.Channel, String.Join("", GraphemeClusters(text).Reverse().ToArray()));
                 });
 
             group.CreateCommand("whereami")
