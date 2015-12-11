@@ -17,7 +17,7 @@ namespace Nekobot
         class Song : Tuple<string, string, long, string>
         {
             internal Song(string uri, string type, long requester = 0, string ext = null) : base(uri, type, requester, ext) { }
-            internal Song Encore(long requester) => new Song(Item1, "Encore", requester, Item4);
+            internal Song Encore(long requester) => new Song(Item1, Item2 == "Youtube" ? Item2 : "Encore", requester, Item4);
         }
         // Music-related variables
         internal static string Folder;
