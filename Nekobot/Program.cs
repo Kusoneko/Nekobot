@@ -137,6 +137,8 @@ namespace Nekobot
                 });
 
             group.CreateCommand("nya")
+                .Alias("nyaa")
+                .Alias("nyan")
                 .Description("I'll say 'Nyaa~'")
                 .Do(async e =>
                 {
@@ -187,6 +189,7 @@ namespace Nekobot
             group.CreateCommand("congratulations")
                 .Alias("congrats")
                 .Alias("grats")
+                .Alias("gg")
                 .Description("Congratulate someone for whatever reason.")
                 .Do(async e =>
                 {
@@ -195,6 +198,7 @@ namespace Nekobot
 
             group.CreateCommand("say")
                 .Alias("forward")
+                .Alias("echo")
                 .Parameter("#channel or @User (or user/channel id in PMs)] [...", Commands.ParameterType.Unparsed)
                 .Description("I'll repeat what you said. (To a given user or channel)")
                 .Do(async e =>
@@ -243,6 +247,8 @@ namespace Nekobot
                 });
 
             group.CreateCommand("reverse")
+                .Alias("backward")
+                .Alias("flip")
                 .Parameter("text...", Commands.ParameterType.Unparsed)
                 .Description("I'll repeat what you said, in reverse!")
                 .Do(async e =>
@@ -254,7 +260,9 @@ namespace Nekobot
 
             group.CreateCommand("whereami")
                 .Alias("channelinfo")
+                .Alias("channel")
                 .Alias("location")
+                .Alias("where")
                 .Description("I'll tell you information about the channel and server you're asking me this from.")
                 .Do(async e =>
                 {
