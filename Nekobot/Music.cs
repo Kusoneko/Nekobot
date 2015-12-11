@@ -120,6 +120,23 @@ namespace Nekobot
             return chan.Members.Where(u => u.VoiceChannel == chan).Count()-1;
         }
 
+        static async Task<bool> AddVote(Dictionary<long, List<long>> votes, Commands.CommandEventArgs e, string action, string success, string actionshort)
+        {
+            var vote = votes[e.User.VoiceChannel.Id];
+            if (!vote.Contains(e.User.Id))
+            {
+                vote.Add(e.User.Id);
+                var listeners = CountVoiceChannelMembers(e.User.VoiceChannel);
+                if (vote.Count >= Math.Ceiling((decimal)listeners / 2))
+                {
+                    await Program.client.SendMessage(e.Channel, $"{vote.Count}/{listeners} votes to {action}. 50%+ achieved, {success}...");
+                    return true;
+                }
+                await Program.client.SendMessage(e.Channel, $"{vote.Count}/{listeners} votes to {action}. (Needs 50% or more to {actionshort})");
+            }
+            return false;
+        }
+
         internal static string GetTitle(Tuple<string,string,long,string> t)
         {
             if (t.Item2 == "Youtube")
@@ -234,19 +251,8 @@ namespace Nekobot
                 .FlagMusic(true)
                 .Do(async e =>
                 {
-                    if (!voteskip[e.User.VoiceChannel.Id].Contains(e.User.Id))
-                    {
-                        voteskip[e.User.VoiceChannel.Id].Add(e.User.Id);
-                        if (voteskip[e.User.VoiceChannel.Id].Count >= Math.Ceiling((decimal)CountVoiceChannelMembers(e.User.VoiceChannel) / 2))
-                        {
-                            await Program.client.SendMessage(e.Channel, $"{voteskip[e.User.VoiceChannel.Id].Count}/{CountVoiceChannelMembers(e.User.VoiceChannel)} votes to skip current song. 50%+ achieved, skipping song...");
-                            skip[e.User.VoiceChannel.Id] = true;
-                        }
-                        else
-                        {
-                            await Program.client.SendMessage(e.Channel, $"{voteskip[e.User.VoiceChannel.Id].Count}/{CountVoiceChannelMembers(e.User.VoiceChannel)} votes to skip current song. (Needs 50% or more to skip)");
-                        }
-                    }
+                    if (await AddVote(voteskip, e, "skip current song", "skipping song", "skip"))
+                       skip[e.User.VoiceChannel.Id] = true;
                 });
 
             group.CreateCommand("reset")
@@ -254,20 +260,11 @@ namespace Nekobot
                 .FlagMusic(true)
                 .Do(async e =>
                 {
-                    if (!votereset[e.User.VoiceChannel.Id].Contains(e.User.Id))
+                    if (await AddVote(votereset, e, "reset the stream", "resetting stream", "reset"))
                     {
-                        votereset[e.User.VoiceChannel.Id].Add(e.User.Id);
-                        if (votereset[e.User.VoiceChannel.Id].Count >= Math.Ceiling((decimal)CountVoiceChannelMembers(e.User.VoiceChannel) / 2))
-                        {
-                            await Program.client.SendMessage(e.Channel, $"{votereset[e.User.VoiceChannel.Id].Count}/{CountVoiceChannelMembers(e.User.VoiceChannel)} votes to reset the stream. 50%+ achieved, resetting stream...");
-                            reset[e.User.VoiceChannel.Id] = true;
-                            await Task.Delay(5000);
-                            await Stream(e.User.VoiceChannel.Id);
-                        }
-                        else
-                        {
-                            await Program.client.SendMessage(e.Channel, $"{votereset[e.User.VoiceChannel.Id].Count}/{CountVoiceChannelMembers(e.User.VoiceChannel)} votes to reset the stream. (Needs 50% or more to reset)");
-                        }
+                        reset[e.User.VoiceChannel.Id] = true;
+                        await Task.Delay(5000);
+                        await Stream(e.User.VoiceChannel.Id);
                     }
                 });
 
@@ -278,18 +275,10 @@ namespace Nekobot
                 .FlagMusic(true)
                 .Do(async e =>
                 {
-                    if (!voteencore[e.User.VoiceChannel.Id].Contains(e.User.Id))
+                    if (await AddVote(voteencore, e, "replay current song", "song will be replayed", "replay"))
                     {
-                        voteencore[e.User.VoiceChannel.Id].Add(e.User.Id);
-                        if (voteencore[e.User.VoiceChannel.Id].Count >= Math.Ceiling((decimal)CountVoiceChannelMembers(e.User.VoiceChannel) / 2))
-                        {
-                            await Program.client.SendMessage(e.Channel, $"{voteencore[e.User.VoiceChannel.Id].Count}/{CountVoiceChannelMembers(e.User.VoiceChannel)} votes to replay current song. 50%+ achieved, song will be replayed...");
-                            playlist[e.User.VoiceChannel.Id].Insert(1, Tuple.Create(playlist[e.User.VoiceChannel.Id][0].Item1, "Encore", playlist[e.User.VoiceChannel.Id][0].Item3, playlist[e.User.VoiceChannel.Id][0].Item4));
-                        }
-                        else
-                        {
-                            await Program.client.SendMessage(e.Channel, $"{voteencore[e.User.VoiceChannel.Id].Count}/{CountVoiceChannelMembers(e.User.VoiceChannel)} votes to replay current song. (Needs 50% or more to replay)");
-                        }
+                        var pl = playlist[e.User.VoiceChannel.Id];
+                        pl.Insert(1, Tuple.Create(pl[0].Item1, "Encore", pl[0].Item3, pl[0].Item4));
                     }
                 });
 
