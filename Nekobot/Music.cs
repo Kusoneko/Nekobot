@@ -186,7 +186,7 @@ namespace Nekobot
                         }
                         string ext = "";
                         if (t.Item2 == "Request" || t.Item2 == "Youtube")
-                            ext = $"{(t.Item2 == "Request" ? " request" : "")} by <@{t.Item3}>";
+                            ext = $" by <@{t.Item3}>";
                         reply += $"\n{i} - **[{t.Item2}{ext}]** {title}";
                     }
                     await Program.client.SendMessage(e.Channel, reply);
