@@ -114,6 +114,13 @@ namespace Nekobot
                 streams.Add(Convert.ToInt64(reader["channel"].ToString()));
         }
 
+        static async Task ResetStream(long channel)
+        {
+            reset[channel] = true;
+            await Task.Delay(5000);
+            await Stream(channel);
+        }
+
         static int CountVoiceChannelMembers(Channel chan)
         {
             if (chan.Type != "voice") return -1;
@@ -261,11 +268,7 @@ namespace Nekobot
                 .Do(async e =>
                 {
                     if (await AddVote(votereset, e, "reset the stream", "resetting stream", "reset"))
-                    {
-                        reset[e.User.VoiceChannel.Id] = true;
-                        await Task.Delay(5000);
-                        await Stream(e.User.VoiceChannel.Id);
-                    }
+                        await ResetStream(e.User.VoiceChannel.Id);
                 });
 
             group.CreateCommand("encore")
@@ -299,10 +302,8 @@ namespace Nekobot
                 .Description("I'll reset the stream in case of bugs, while keeping the playlist intact.")
                 .Do(async e =>
                 {
-                    reset[e.User.VoiceChannel.Id] = true;
                     await Program.client.SendMessage(e.Channel, "Reseting stream...");
-                    await Task.Delay(5000);
-                    await Stream(e.User.VoiceChannel.Id);
+                    await ResetStream(e.User.VoiceChannel.Id);
                 });
 
             // Administrator commands
