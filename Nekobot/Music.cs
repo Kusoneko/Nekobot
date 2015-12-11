@@ -14,11 +14,16 @@ namespace Nekobot
 {
     class Music
     {
+        class Song : Tuple<string, string, long, string>
+        {
+            internal Song(string uri, string type, long requester = 0, string ext = null) : base(uri, type, requester, ext) { }
+            internal Song Encore() => new Song(Item1, "Encore", Item3, Item4);
+        }
         // Music-related variables
         internal static string Folder;
         internal static bool UseSubdirs;
         static List<long> streams = new List<long>();
-        static Dictionary<long, List<Tuple<string, string, long, string>>> playlist = new Dictionary<long, List<Tuple<string, string, long, string>>>();
+        static Dictionary<long, List<Song>> playlist = new Dictionary<long, List<Song>>();
         static Dictionary<long, bool> skip = new Dictionary<long, bool>();
         static Dictionary<long, bool> reset = new Dictionary<long, bool>();
         static Dictionary<long, List<long>> voteskip = new Dictionary<long, List<long>>();
@@ -27,7 +32,7 @@ namespace Nekobot
         static string[] exts = { ".wma", ".aac", ".mp3", ".m4a", ".wav", ".flac", ".ogg" };
 
         internal static IEnumerable<string> Files() => System.IO.Directory.EnumerateFiles(Folder, "*.*", UseSubdirs ? System.IO.SearchOption.AllDirectories : System.IO.SearchOption.TopDirectoryOnly).Where(s => exts.Contains(System.IO.Path.GetExtension(s)));
-        static bool InPlaylist(List<Tuple<string,string,long,string>> playlist, string file) => playlist.Where(song => song.Item1 == file).Count() != 0;
+        static bool InPlaylist(List<Song> playlist, string file) => playlist.Where(song => song.Item1 == file).Count() != 0;
         static int NonrequestedIndex(Commands.CommandEventArgs e) => 1 + playlist[e.User.VoiceChannel.Id].Where(song => song.Item2 == "Encore" || song.Item2 == "Request" || song.Item2 == "Youtube").Count();
 
         static async Task Stream(long cid)
@@ -36,7 +41,7 @@ namespace Nekobot
             Discord.Audio.IDiscordVoiceClient _client = await Voice.JoinServer(c);
             Random rnd = new Random();
             if (!playlist.ContainsKey(cid))
-                playlist.Add(cid, new List<Tuple<string, string, long, string>>());
+                playlist.Add(cid, new List<Song>());
             if (!skip.ContainsKey(cid))
                 skip.Add(cid, false);
             if (!reset.ContainsKey(cid))
@@ -53,7 +58,7 @@ namespace Nekobot
                     var mp3 = files.ElementAt(rnd.Next(0, filecount));
                     if (InPlaylist(playlist[cid], mp3))
                         continue;
-                    playlist[cid].Add(Tuple.Create<string, string, long, string>(mp3, "Playlist", 0, null));
+                    playlist[cid].Add(new Song(mp3, "Playlist"));
                 }
                 await Task.Run(async () =>
                 {
@@ -213,7 +218,7 @@ namespace Nekobot
                                 await Program.client.SendMessage(e.Channel, $"<@{e.User.Id}> Your request is already in the playlist.");
                                 return;
                             }
-                            pl.Insert(NonrequestedIndex(e), Tuple.Create(video.Uri, "Youtube", e.User.Id, $"{video.Title} ({e.Args[0]})"));
+                            pl.Insert(NonrequestedIndex(e), new Song(video.Uri, "Youtube", e.User.Id, $"{video.Title} ({e.Args[0]})"));
                             await Program.client.SendMessage(e.Channel, $"{video.Title} added to the playlist.");
                         }
                         catch (Exception)
@@ -245,7 +250,7 @@ namespace Nekobot
                                 await Program.client.SendMessage(e.Channel, $"<@{e.User.Id}> Your request is already in the playlist.");
                                 return;
                             }
-                            pl.Insert(NonrequestedIndex(e), Tuple.Create<string, string, long, string>(file, "Request", e.User.Id, null));
+                            pl.Insert(NonrequestedIndex(e), new Song(file, "Request", e.User.Id));
                             await Program.client.SendMessage(e.Channel, $"<@{e.User.Id}> Your request has been added to the list.");
                             return;
                         }
@@ -281,7 +286,7 @@ namespace Nekobot
                     if (await AddVote(voteencore, e, "replay current song", "song will be replayed", "replay"))
                     {
                         var pl = playlist[e.User.VoiceChannel.Id];
-                        pl.Insert(1, Tuple.Create(pl[0].Item1, "Encore", pl[0].Item3, pl[0].Item4));
+                        pl.Insert(1, pl[0].Encore());
                     }
                 });
 
