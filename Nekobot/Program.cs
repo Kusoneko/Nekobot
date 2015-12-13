@@ -301,72 +301,30 @@ The current topic is: {e.Channel.Topic}";
                 .Description("I'll give you a random number between *min* and *max*. Both are optional. If only one is given, it's *max*. (defaults: 1-100)")
                 .Do(async e =>
                 {
-                    int min = 1;
-                    int max = 101;
-                    Random rnd = new Random();
-                    string message = "";
-                    if (e.Args.Count() == 2)
+                    foreach (string s in e.Args)
                     {
-                        bool valid = true;
-                        foreach (string s in e.Args)
-                        {
-                            int dummy = 0;
-                            if (!int.TryParse(s, out dummy))
-                            {
-                                valid = false;
-                                message = $"{s} is not a number!";
-                                break;
-                            }
-                        }
-                        if (valid)
-                        {
-                            min = int.Parse(e.Args[0]);
-                            max = int.Parse(e.Args[1]);
-                            if (min > max)
-                            {
-                                int z = min;
-                                min = max;
-                                max = z;
-                            }
-                            if (min == max)
-                                message = $"You're joking right? It's {min}.";
-                            else
-                            {
-                                message = $"Your number is **{rnd.Next(min, max + 1)}**.";
-                            }
-                        }
-                    }
-                    else if (e.Args.Count() == 1)
-                    {
-                        bool valid = true;
                         int dummy = 0;
-                        if (!int.TryParse(e.Args[0], out dummy))
+                        if (!int.TryParse(s, out dummy))
                         {
-                            valid = false;
-                            message = $"{e.Args[0]} is not a number!";
-                        }
-                        if (valid)
-                        {
-                            max = int.Parse(e.Args[1]);
-                            if (min > max) // in case the nup set a lower number than the default min for max
-                            {
-                                int z = min;
-                                min = max;
-                                max = z;
-                            }
-                            if (min == max)
-                                message = $"You're joking right? It's {min}.";
-                            else
-                            {
-                                message = $"Your number is **{rnd.Next(min, max + 1)}**.";
-                            }
+                            await client.SendMessage(e.Channel, $"{s} is not a number!");
+                            return;
                         }
                     }
-                    else
+                    int min = e.Args.Length > 1 ? int.Parse(e.Args[0]) : 1;
+                    int max = e.Args.Length > 0 ? int.Parse(e.Args[e.Args.Length == 1 ? 0 : 1]) : 100;
+                    if (min == max)
                     {
-                        message = $"Your number is **{rnd.Next(min,max)}**.";
+                        await client.SendMessage(e.Channel, $"You're joking right? It's {min}.");
+                        return;
                     }
-                    await client.SendMessage(e.Channel, message);
+                    if (min > max)
+                    {
+                        int z = min;
+                        min = max;
+                        max = z;
+                    }
+                    ++max;
+                    await client.SendMessage(e.Channel, $"Your number is **{new Random().Next(min,max)}**.");
                 });
 
             group.CreateCommand("roll")
