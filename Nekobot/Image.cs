@@ -14,29 +14,25 @@ namespace Nekobot
         class Board : Tuple<string, string, string>
         {
             public Board(string link, string resource, string post) : base(link, resource, post) { }
+            public static Board A(string link, string tags) =>
+                new Board(link, $"index.php?page=dapi&s=post&q=index&limit=1&tags={tags}&pid=", "/index.php?page=post&s=view&id=");
+            public static Board B(string link, string tags) =>
+                new Board(link, $"/index.xml?limit=1&tags={tags}&page=", "/show/");
             public string link { get { return Item1; } }
             public string resource { get { return Item2; } }
             public string post { get { return Item3; } }
-        };
+        }
         static string ImageBooru(string booru, string tags)
         {
-            string res1 = $"index.php?page=dapi&s=post&q=index&limit=1&tags={tags}&pid=", post1 = $"/index.php?page=post&s=view&id=";
-            string res2 = $"/index.xml?limit=1&tags={tags}&page=", post2 = $"/show/";
-            Board board = null;
-            if (booru == "safebooru")
-                board = new Board("http://safebooru.org", res1, post1);
-            else if (booru == "gelbooru")
-                board = new Board("http://gelbooru.com", res1, post1);
-            else if (booru == "rule34")
-                board = new Board("http://rule34.xxx", res1, post1);
-            else if (booru == "konachan")
-                board = new Board("http://konachan.com/post", res2, post2);
-            else if (booru == "yandere")
-                board = new Board("https://yande.re/post", res2, post2);
-            else if (booru == "lolibooru")
-                board = new Board("http://lolibooru.moe/post", res2, post2);
-            else if (booru == "e621")
-                board = new Board("https://e621.net/post", res2, post2);
+            Board board =
+                booru == "safebooru" ? Board.A("http://safebooru.org", tags) :
+                booru == "gelbooru" ? Board.A("http://gelbooru.com", tags) :
+                booru == "rule34" ? Board.A("http://rule34.xxx", tags) :
+                booru == "konachan" ? Board.B("http://konachan.com/post", tags) :
+                booru == "yandere" ? Board.B("https://yande.re/post", tags) :
+                booru == "lolibooru" ? Board.B("http://lolibooru.moe/post", tags) :
+                booru == "e621" ? Board.B("https://e621.net/post", tags)
+                : null;
             for (int i = 10; i != 0; --i)
             {
                 try
@@ -55,13 +51,10 @@ on {booru}. Please try something else.";
 
         static JObject GetBooruCommon(Board board, int rnd)
         {
-            Program.rclient.BaseUrl = new System.Uri(board.link);
-            var request = new RestRequest(board.resource + rnd.ToString(), Method.GET);
-            var result = Program.rclient.Execute(request);
+            Program.rclient.BaseUrl = new Uri(board.link);
             XmlDocument xml = new XmlDocument();
-            xml.LoadXml(result.Content);
-            string json = JsonConvert.SerializeXmlNode(xml);
-            return JObject.Parse(json);
+            xml.LoadXml(Program.rclient.Execute(new RestRequest(board.resource + rnd.ToString(), Method.GET)).Content);
+            return JObject.Parse(JsonConvert.SerializeXmlNode(xml));
         }
 
         static string GetBooruImageLink(Board board, int rnd)
@@ -70,11 +63,7 @@ on {booru}. Please try something else.";
             return "**" + board.link + board.post + res["posts"]["post"]["@id"].ToString() + "** " + res["posts"]["post"]["@file_url"].ToString().Replace(" ", "%20");
         }
 
-        static int GetBooruPostCount(Board board)
-        {
-            JObject res = GetBooruCommon(board, 0);
-            return int.Parse(res["posts"]["@count"].ToString());
-        }
+        static int GetBooruPostCount(Board board) => int.Parse(GetBooruCommon(board, 0)["posts"]["@count"].ToString());
 
         static string ImageFolders(string folder)
         {
