@@ -130,6 +130,15 @@ namespace Nekobot
             await Stream(channel);
         }
 
+        static async Task Encore(Commands.CommandEventArgs e)
+        {
+            if (await AddVote(voteencore, e, "replay current song", "song will be replayed", "replay"))
+            {
+                var pl = playlist[e.User.VoiceChannel.Id];
+                pl.Insert(1, pl[0].Encore());
+            }
+        }
+
         static int CountVoiceChannelMembers(Channel chan)
         {
             if (chan.Type != "voice") return -1;
@@ -249,12 +258,21 @@ namespace Nekobot
                         if (System.IO.Path.GetFileNameWithoutExtension(file).ToLower().Contains(string.Join(" ", e.Args).ToLower()))
                         {
                             var pl = playlist[e.User.VoiceChannel.Id];
-                            if (InPlaylist(pl, file))
+                            var i = NonrequestedIndex(e);
+                            var cur_i = pl.FindIndex(song => song.Item1 == file);
+                            if (cur_i != -1)
                             {
-                                await Program.client.SendMessage(e.Channel, $"<@{e.User.Id}> Your request is already in the playlist.");
-                                return;
+                                if (i > cur_i)
+                                {
+                                    if (cur_i == 0)
+                                        await Encore(e);
+                                    else
+                                        await Program.client.SendMessage(e.Channel, $"<@{e.User.Id}> Your request is already in the playlist at {cur_i}.");
+                                    return;
+                                }
+                                pl.RemoveAt(cur_i);
                             }
-                            pl.Insert(NonrequestedIndex(e), new Song(file, "Request", e.User.Id));
+                            pl.Insert(i, new Song(file, "Request", e.User.Id));
                             await Program.client.SendMessage(e.Channel, $"<@{e.User.Id}> Your request has been added to the list.");
                             return;
                         }
@@ -285,14 +303,7 @@ namespace Nekobot
                 .Alias("ankoru")
                 .Description("Vote to replay the current song. (Will replay at 50% or more)")
                 .FlagMusic(true)
-                .Do(async e =>
-                {
-                    if (await AddVote(voteencore, e, "replay current song", "song will be replayed", "replay"))
-                    {
-                        var pl = playlist[e.User.VoiceChannel.Id];
-                        pl.Insert(1, pl[0].Encore());
-                    }
-                });
+                .Do(async e => await Encore(e));
 
             // Moderator commands
             group.CreateCommand("forceskip")
