@@ -33,7 +33,7 @@ namespace Nekobot
         static string[] exts = { ".wma", ".aac", ".mp3", ".m4a", ".wav", ".flac", ".ogg" };
 
         internal static IEnumerable<string> Files() => System.IO.Directory.EnumerateFiles(Folder, "*.*", UseSubdirs ? System.IO.SearchOption.AllDirectories : System.IO.SearchOption.TopDirectoryOnly).Where(s => exts.Contains(System.IO.Path.GetExtension(s)));
-        static bool InPlaylist(List<Song> playlist, string file) => playlist.Where(song => song.Item1 == file).Count() != 0;
+        static bool InPlaylist(List<Song> playlist, string file) => playlist.Exists(song => song.Item1 == file);
         static int NonrequestedIndex(Commands.CommandEventArgs e) => 1 + playlist[e.User.VoiceChannel.Id].Where(song => song.Item2 == "Encore" || song.Item2 == "Request" || song.Item2 == "Youtube").Count();
 
         static async Task Stream(long cid)
