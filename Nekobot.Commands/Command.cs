@@ -90,13 +90,42 @@ namespace Nekobot.Commands
             return true;
         }
 
+        // Copied from Discord.Net/Helpers/TaskHelper.cs
+        internal static class TaskHelper
+        {
+            public static Task CompletedTask { get; }
+            static TaskHelper()
+            {
+#if DOTNET54
+                CompletedTask = Task.CompletedTask;
+#else
+                CompletedTask = Task.Delay(0);
+#endif
+            }
+
+            public static Func<Task> ToAsync(Action action)
+            {
+                return () =>
+                {
+                    action(); return CompletedTask;
+                };
+            }
+            public static Func<T, Task> ToAsync<T>(Action<T> action)
+            {
+                return x =>
+                {
+                    action(x); return CompletedTask;
+                };
+            }
+        }
+
         internal void SetRunFunc(Func<CommandEventArgs, Task> func)
         {
             _runFunc = func;
         }
         internal void SetRunFunc(Action<CommandEventArgs> func)
         {
-            _runFunc = e => { func(e); return TaskHelper.CompletedTask; };
+            _runFunc = TaskHelper.ToAsync(func);
         }
         internal Task Run(CommandEventArgs args)
         {

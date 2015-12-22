@@ -14,32 +14,32 @@ namespace Nekobot
 {
     class Music
     {
-        class Song : Tuple<string, string, long, string>
+        class Song : Tuple<string, string, ulong, string>
         {
-            internal Song(string uri, string type, long requester = 0, string ext = null) : base(uri, type, requester, ext) { }
+            internal Song(string uri, string type, ulong requester = 0, string ext = null) : base(uri, type, requester, ext) { }
             internal Song Encore() => new Song(Item1, Item2 == "Youtube" ? Item2 : "Encore", 0, Item4);
         }
         // Music-related variables
         internal static string Folder;
         internal static bool UseSubdirs;
-        static List<long> streams = new List<long>();
-        static Dictionary<long, List<Song>> playlist = new Dictionary<long, List<Song>>();
-        static Dictionary<long, bool> skip = new Dictionary<long, bool>();
-        static Dictionary<long, bool> reset = new Dictionary<long, bool>();
-        internal static Dictionary<long, bool> pause = new Dictionary<long, bool>();
-        static Dictionary<long, List<long>> voteskip = new Dictionary<long, List<long>>();
-        static Dictionary<long, List<long>> votereset = new Dictionary<long, List<long>>();
-        static Dictionary<long, List<long>> voteencore = new Dictionary<long, List<long>>();
+        static List<ulong> streams = new List<ulong>();
+        static Dictionary<ulong, List<Song>> playlist = new Dictionary<ulong, List<Song>>();
+        static Dictionary<ulong, bool> skip = new Dictionary<ulong, bool>();
+        static Dictionary<ulong, bool> reset = new Dictionary<ulong, bool>();
+        internal static Dictionary<ulong, bool> pause = new Dictionary<ulong, bool>();
+        static Dictionary<ulong, List<ulong>> voteskip = new Dictionary<ulong, List<ulong>>();
+        static Dictionary<ulong, List<ulong>> votereset = new Dictionary<ulong, List<ulong>>();
+        static Dictionary<ulong, List<ulong>> voteencore = new Dictionary<ulong, List<ulong>>();
         static string[] exts = { ".wma", ".aac", ".mp3", ".m4a", ".wav", ".flac", ".ogg" };
 
         internal static IEnumerable<string> Files() => System.IO.Directory.EnumerateFiles(Folder, "*.*", UseSubdirs ? System.IO.SearchOption.AllDirectories : System.IO.SearchOption.TopDirectoryOnly).Where(s => exts.Contains(System.IO.Path.GetExtension(s)));
         static bool InPlaylist(List<Song> playlist, string file) => playlist.Exists(song => song.Item1 == file);
         static int NonrequestedIndex(Commands.CommandEventArgs e) => 1 + playlist[e.User.VoiceChannel.Id].Where(song => song.Item2 == "Encore" || song.Item2 == "Request" || song.Item2 == "Youtube").Count();
 
-        static async Task Stream(long cid)
+        static async Task Stream(ulong cid)
         {
             Channel c = Program.client.GetChannel(cid);
-            Discord.Audio.IDiscordVoiceClient _client = await Voice.JoinServer(c);
+            Discord.Audio.DiscordAudioClient _client = await Voice.JoinServer(c);
             Random rnd = new Random();
             if (!playlist.ContainsKey(cid))
                 playlist.Add(cid, new List<Song>());
@@ -51,9 +51,9 @@ namespace Nekobot
                 pause.Add(cid, false);
             while (streams.Contains(cid))
             {
-                voteskip[cid] = new List<long>();
-                votereset[cid] = new List<long>();
-                voteencore[cid] = new List<long>();
+                voteskip[cid] = new List<ulong>();
+                votereset[cid] = new List<ulong>();
+                voteencore[cid] = new List<ulong>();
                 var files = Files();
                 var filecount = files.Count();
                 while (playlist[cid].Count() < (filecount < 11 ? filecount : 11))
@@ -79,18 +79,18 @@ namespace Nekobot
                             {
                                 if (!streams.Contains(cid) || skip[cid] || reset[cid])
                                 {
-                                    _client.ClearVoicePCM();
+                                    _client.Clear();
                                     await Task.Delay(1000);
                                     break;
                                 }
                                 while(pause[cid]);// Play Voice.cs commands in here?
-                                _client.SendVoicePCM(buffer, blockSize);
+                                _client.Send(buffer, blockSize);
                             }
                         }
                     }
-                    catch (OperationCanceledException err) { Console.WriteLine(err.Message); }
+                    catch (OperationCanceledException err) { Program.client.Log(LogSeverity.Error, "Stream", err.Message); }
                 });
-                await _client.WaitVoice(); // Prevent endless queueing which would eventually eat up all the ram
+                await _client.Wait(); // Prevent endless queueing which would eventually eat up all the ram
                 skip[cid] = false;
                 if (reset[cid])
                 {
@@ -99,7 +99,7 @@ namespace Nekobot
                 }
                 playlist[cid].RemoveAt(0);
             }
-            await Program.client.LeaveVoiceServer(c.Server);
+            await Program.client.GetService<Discord.Audio.AudioService>().Leave(c.Server);
         }
 
         internal static Task StartStreams()
@@ -120,10 +120,10 @@ namespace Nekobot
         {
             SQLiteDataReader reader = SQL.ExecuteReader("select channel from flags where music = 1");
             while (reader.Read())
-                streams.Add(Convert.ToInt64(reader["channel"].ToString()));
+                streams.Add(Convert.ToUInt64(reader["channel"].ToString()));
         }
 
-        static async Task ResetStream(long channel)
+        static async Task ResetStream(ulong channel)
         {
             reset[channel] = true;
             await Task.Delay(5000);
@@ -145,7 +145,7 @@ namespace Nekobot
             return chan.Members.Where(u => u.VoiceChannel == chan).Count()-1;
         }
 
-        static async Task<bool> AddVote(Dictionary<long, List<long>> votes, Commands.CommandEventArgs e, string action, string success, string actionshort)
+        static async Task<bool> AddVote(Dictionary<ulong, List<ulong>> votes, Commands.CommandEventArgs e, string action, string success, string actionshort)
         {
             var vote = votes[e.User.VoiceChannel.Id];
             if (!vote.Contains(e.User.Id))
@@ -162,7 +162,7 @@ namespace Nekobot
             return false;
         }
 
-        internal static string GetTitle(Tuple<string,string,long,string> t)
+        internal static string GetTitle(Tuple<string,string,ulong,string> t)
         {
             if (t.Item2 == "Youtube")
                 return t.Item4;

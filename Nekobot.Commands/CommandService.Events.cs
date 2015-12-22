@@ -5,7 +5,7 @@ namespace Nekobot.Commands
 {
     public class NsfwFlagException : Exception { public NsfwFlagException() : base("This channel doesn't allow nsfw commands.") { } }
     public class MusicFlagException : Exception { public MusicFlagException() : base("You need to be in a music streaming channel to use this command.") { } }
-    public class CommandEventArgs
+    public class CommandEventArgs : EventArgs
     {
         private readonly string[] _args;
 

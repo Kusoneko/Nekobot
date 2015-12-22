@@ -4,7 +4,7 @@ namespace Nekobot.Commands
 {
     internal static class CommandParser
     {
-        private enum CommandParserPart
+        private enum ParserPart
         {
             None,
             Parameter,
@@ -32,9 +32,10 @@ namespace Nekobot.Commands
                 else if (currentChar == '\\')
                     isEscaped = true;
 
-                if ((!isEscaped && currentChar == ' ') || endPosition >= inputLength)
+                bool isWhitespace = IsWhiteSpace(currentChar);
+                if ((!isEscaped && isWhitespace) || endPosition >= inputLength)
                 {
-                    int length = (currentChar == ' ' ? endPosition - 1 : endPosition) - startPosition;
+                    int length = (isWhitespace ? endPosition - 1 : endPosition) - startPosition;
                     string temp = input.Substring(startPosition, length);
                     if (temp == "")
                         startPosition = endPosition;
@@ -55,11 +56,12 @@ namespace Nekobot.Commands
             commands = map.GetCommands(); //Work our way backwards to find a command that matches our input
             return commands != null;
         }
+        private static bool IsWhiteSpace(char c) => c == ' ' || c == '\n' || c == '\r' || c == '\t';
 
         //TODO: Check support for escaping
         public static CommandErrorType? ParseArgs(string input, int startPos, Command command, out string[] args)
         {
-            CommandParserPart currentPart = CommandParserPart.None;
+            ParserPart currentPart = ParserPart.None;
             int startPosition = startPos;
             int endPosition = startPos;
             int inputLength = input.Length;
@@ -94,49 +96,56 @@ namespace Nekobot.Commands
                 else if (currentChar == '\\')
                     isEscaped = true;
 
+                bool isWhitespace = IsWhiteSpace(currentChar);
+                if (endPosition == startPosition + 1 && isWhitespace) //Has no text yet, and is another whitespace
+                {
+                    startPosition = endPosition;
+                    continue;
+                }
+
                 switch (currentPart)
                 {
-                    case CommandParserPart.None:
+                    case ParserPart.None:
                         if ((!isEscaped && currentChar == '\"'))
                         {
-                            currentPart = CommandParserPart.DoubleQuotedParameter;
+                            currentPart = ParserPart.DoubleQuotedParameter;
                             startPosition = endPosition;
                         }
                         else if ((!isEscaped && currentChar == '\''))
                         {
-                            currentPart = CommandParserPart.QuotedParameter;
+                            currentPart = ParserPart.QuotedParameter;
                             startPosition = endPosition;
                         }
-                        else if ((!isEscaped && currentChar == ' ') || endPosition >= inputLength)
+                        else if ((!isEscaped && isWhitespace) || endPosition >= inputLength)
                         {
-                            int length = (currentChar == ' ' ? endPosition - 1 : endPosition) - startPosition;
+                            int length = (isWhitespace ? endPosition - 1 : endPosition) - startPosition;
                             string temp = input.Substring(startPosition, length);
                             if (temp == "")
                                 startPosition = endPosition;
                             else
                             {
-                                currentPart = CommandParserPart.None;
+                                currentPart = ParserPart.None;
                                 argList.Add(temp);
                                 startPosition = endPosition;
                             }
                         }
                         break;
-                    case CommandParserPart.QuotedParameter:
+                    case ParserPart.QuotedParameter:
                         if ((!isEscaped && currentChar == '\''))
                         {
                             string temp = input.Substring(startPosition, endPosition - startPosition - 1);
-                            currentPart = CommandParserPart.None;
+                            currentPart = ParserPart.None;
                             argList.Add(temp);
                             startPosition = endPosition;
                         }
                         else if (endPosition >= inputLength)
                             return CommandErrorType.InvalidInput;
                         break;
-                    case CommandParserPart.DoubleQuotedParameter:
+                    case ParserPart.DoubleQuotedParameter:
                         if ((!isEscaped && currentChar == '\"'))
                         {
                             string temp = input.Substring(startPosition, endPosition - startPosition - 1);
-                            currentPart = CommandParserPart.None;
+                            currentPart = ParserPart.None;
                             argList.Add(temp);
                             startPosition = endPosition;
                         }

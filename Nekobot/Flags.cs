@@ -14,7 +14,7 @@ namespace Nekobot
         internal static bool GetIgnored(User user) => GetIgnored("user", "users", user.Id);
         internal static bool GetIgnored(Channel chan) => GetIgnored("channel", "flags", chan.Id);
 
-        static bool GetIgnored(string row, string table, long id)
+        static bool GetIgnored(string row, string table, ulong id)
         {
             SQLiteDataReader reader = SQL.ExecuteReader($"select ignored from {table} where {row} = '{id}'");
             while (reader.Read())
@@ -23,7 +23,7 @@ namespace Nekobot
             return false;
         }
 
-        internal static async Task<string> SetIgnored(string row, string table, long id, string insertdata, char symbol, int perms, int their_perms = 0)
+        internal static async Task<string> SetIgnored(string row, string table, ulong id, string insertdata, char symbol, int perms, int their_perms = 0)
         {
             if (symbol == '#' && perms <3)
                 return $"You are not worthy of changing channel ignored status (permissions < 3).";
@@ -45,9 +45,9 @@ namespace Nekobot
         internal static bool GetMusic(User user)
         {
             SQLiteDataReader reader = SQL.ExecuteReader("select channel from flags where music = 1");
-            List<long> streams = new List<long>();
+            List<ulong> streams = new List<ulong>();
             while (reader.Read())
-                streams.Add(Convert.ToInt64(reader["channel"].ToString()));
+                streams.Add(Convert.ToUInt64(reader["channel"].ToString()));
             return user.VoiceChannel != null && streams.Contains(user.VoiceChannel.Id);
         }
 

@@ -8,7 +8,7 @@ using Discord;
 namespace Nekobot.Commands
 {
     /// <summary> A Discord.Net client with extensions for handling common bot operations like text commands. </summary>
-    public partial class CommandService : IService
+    public sealed partial class CommandService : IService
     {
         private const string DefaultPermissionError = "You do not have permission to access this command.";
 
@@ -59,7 +59,7 @@ namespace Nekobot.Commands
                     .Parameter("command", ParameterType.Multiple)
                     .Hide()
                     .Description("Returns information about commands.")
-                    .Do((Func<CommandEventArgs, Task>)(async e =>
+                    .Do(async e =>
                     {
                         Channel replyChannel = _config.HelpMode == HelpMode.Public ? e.Channel : await client.CreatePMChannel(e.User);
                         if (e.Args.Length > 0) //Show command help
@@ -71,9 +71,8 @@ namespace Nekobot.Commands
                                 await client.SendMessage(replyChannel, "Unable to display help: Unknown command.");
                         }
                         else //Show general help
-                            
                             await ShowGeneralHelp(e.User, e.Channel, replyChannel);
-                    }));
+                    });
             }
 
             client.MessageReceived += async (s, e) =>
@@ -81,7 +80,7 @@ namespace Nekobot.Commands
                 if (_allCommands.Count == 0)  return;
                 if (e.Message.IsAuthor) return;
 
-                string msg = e.Message.Text;
+                string msg = e.Message.RawText;
                 if (msg.Length == 0) return;
 
                 // Check ignored before doing work
@@ -98,7 +97,7 @@ namespace Nekobot.Commands
                         if (_config.MentionCommandChar >= 1 && e.Message.IsMentioningMe)
                         {
                             // It's lame we have to do this, but our User isn't exposed by Discord.Net, so we don't know our name
-                            User nekouser = client.GetUser(e.Server, client.CurrentUserId);
+                            User nekouser = client.GetUser(e.Server, client.CurrentUser.Id);
                             string neko = '@'+nekouser.Name;
                             if (neko.Length+2 > msg.Length || (e.Message.MentionedRoles.Contains(e.Server.EveryoneRole) && e.Message.MentionedUsers.Where(u => u == nekouser).Count() == 0))
                             {
@@ -159,7 +158,7 @@ namespace Nekobot.Commands
                             else
                             {
                                 var errorArgs = new CommandEventArgs(e.Message, command, null);
-                                RaiseCommandError(error.Value, errorArgs, new Exception("Error parsing args"));
+                                RaiseCommandError(error.Value, errorArgs);
                                 return;
                             }
                         }
@@ -208,16 +207,6 @@ namespace Nekobot.Commands
         public Task ShowGeneralHelp(User user, Channel channel, Channel replyChannel = null)
         {
             StringBuilder output = new StringBuilder();
-            /*output.AppendLine("These are the commands you can use:");
-            output.Append(string.Join(", ", _map.SubCommands
-                .Where(x => x.CanRun(user, channel) && !x.IsHidden)
-                .Select(x => '`' + x.Text + '`' +
-                (x.Aliases.Count() > 0 ? ", `" + string.Join("`, `", x.Aliases) + '`' : ""))));
-            output.AppendLine("\nThese are the groups you can access:");
-            output.Append(string.Join(", ", _map.SubGroups
-                .Where(x => /*x.CanRun(user, channel)*//* && !x.IsHidden)
-                .Select(x => '`' + x.Text + '`')));*/
-
             bool isFirstCategory = true;
             foreach (var category in _categories)
             {
@@ -225,7 +214,7 @@ namespace Nekobot.Commands
                 foreach (var group in category.Value.SubGroups)
                 {
                     string error;
-                    if (!group.IsHidden && group.CanRun(user, channel, out error))
+                    if (group.IsVisible && (group.HasSubGroups || group.HasNonAliases) && group.CanRun(user, channel, out error))
                     {
                         if (isFirstItem)
                         {
@@ -249,7 +238,7 @@ namespace Nekobot.Commands
                             output.Append(", ");
                         output.Append('`');
                         output.Append(group.Name);
-                        if (group.SubGroups.Any())
+                        if (group.HasSubGroups)
                             output.Append("*");
                         output.Append('`');
                     }
@@ -285,7 +274,7 @@ namespace Nekobot.Commands
             IEnumerable<Command> cmds = map.Commands;
             bool isFirstCmd = true;
             string error;
-            if (cmds != null)
+            if (cmds.Any())
             {
                 foreach (var cmd in cmds)
                 {
@@ -309,7 +298,7 @@ namespace Nekobot.Commands
             }
 
             bool isFirstSubCmd = true;
-            foreach (var subCmd in map.SubGroups.Where(x => x.CanRun(user, channel, out error) && !x.IsHidden))
+            foreach (var subCmd in map.SubGroups.Where(x => x.CanRun(user, channel, out error) && x.IsVisible))
             {
                 if (isFirstSubCmd)
                 {
@@ -366,7 +355,7 @@ namespace Nekobot.Commands
                 }
             }
             output.Append('`');
-            output.AppendLine($": {command.Description ?? "No description set for this command."}");
+            output.AppendLine($": {command.Description ?? "No description."}");
 
             if (command.Aliases.Any())
                 output.AppendLine($"**Aliases:** `" + string.Join("`, `", command.Aliases) + '`');
@@ -398,14 +387,14 @@ namespace Nekobot.Commands
             }
 
             //Add main command
-            category.AddCommand(command.Text, command);
-            _map.AddCommand(command.Text, command);
+            category.AddCommand(command.Text, command, false);
+            _map.AddCommand(command.Text, command, false);
 
             //Add aliases
             foreach (var alias in command.Aliases)
             {
-                category.AddCommand(alias, command);
-                _map.AddCommand(alias, command);
+                category.AddCommand(alias, command, true);
+                _map.AddCommand(alias, command, true);
             }
         }
     }
