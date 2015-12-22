@@ -210,36 +210,34 @@ namespace Nekobot
                 });
 
             group.CreateCommand("ytrequest")
-                .Parameter("youtube video link", Commands.ParameterType.Required)
-                .Description("I'll add a youtube video to the playlist")
+                .Parameter("youtube video link(s)", Commands.ParameterType.Unparsed)
+                .Description("I'll add youtube videos to the playlist")
                 .FlagMusic(true)
                 .Do(async e =>
                 {
-                    Regex re = new Regex(@"(?:https?:\/\/)?(?:youtu\.be\/|(?:www\.)?youtube\.com\/watch(?:\.php)?\?.*v=)([a-zA-Z0-9\-_]+)");
-                    if (re.IsMatch(e.Args[0]))
+                    MatchCollection m = Regex.Matches(e.Args[0], @"youtu(?:be\.com\/(?:v\/|e(?:mbed)?\/|watch\?v=)|\.be\/)([\w-_]{11}\b)", RegexOptions.IgnoreCase);
+                    foreach (Match match in m)
                     {
-                        var video = await YouTube.Default.GetVideoAsync(e.Args[0]);
-                        try
+                        var link = $"youtube.com/watch?v={match.Groups[1]}";
+                        var video = await YouTube.Default.GetVideoAsync(link);
+                        var pl = playlist[e.User.VoiceChannel.Id];
+                        string uri;
+                        try { uri = video.Uri; }
+                        catch
                         {
-                            var pl = playlist[e.User.VoiceChannel.Id];
-                            if (InPlaylist(pl, video.Uri))
-                            {
-                                await Program.client.SendMessage(e.Channel, $"<@{e.User.Id}> Your request is already in the playlist.");
-                                return;
-                            }
-                            pl.Insert(NonrequestedIndex(e), new Song(video.Uri, Song.EType.Youtube, e.User.Id, $"{video.Title} ({e.Args[0]})"));
+                            Program.rclient.BaseUrl = new Uri("http://www.youtubeinmp3.com/fetch/");
+                            uri = Newtonsoft.Json.Linq.JObject.Parse(Program.rclient.Execute(new RestSharp.RestRequest($"?format=JSON&video={System.Net.WebUtility.UrlEncode(link)}", RestSharp.Method.GET)).Content)["link"].ToString();
+                        }
+                        if (InPlaylist(pl, uri))
+                            await Program.client.SendMessage(e.Channel, $"<@{e.User.Id}> Your request ({video.Title}) is already in the playlist.");
+                        else
+                        {
+                            pl.Insert(NonrequestedIndex(e), new Song(uri, Song.EType.Youtube, e.User.Id, $"{video.Title} ({link})"));
                             await Program.client.SendMessage(e.Channel, $"{video.Title} added to the playlist.");
                         }
-                        catch (Exception)
-                        {
-                            // Possibly region locking due to licencing/music identification?
-                            await Program.client.SendMessage(e.Channel, $"{video.Title} couldn't be added to the playlist because of an issue under investigation.");
-                        }
                     }
-                    else
-                    {
-                        await Program.client.SendMessage(e.Channel, $"{e.Args[0]} couldn't be added to playlist because it's not a valid youtube link.");
-                    }
+                    if (m.Count == 0)
+                        await Program.client.SendMessage(e.Channel, $"None of {e.Args[0]} could be added to playlist because no valid youtube links were found within.");
                 });
 
             group.CreateCommand("request")
