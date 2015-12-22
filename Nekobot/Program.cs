@@ -706,7 +706,7 @@ The current topic is: {e.Channel.Topic}";
             commands.CommandError += CommandError;
 
             //Log to the console whenever someone uses a command
-            commands.RanCommand += (s, e) => client.Log(LogSeverity.Debug, "Command", $"{e.User.Name}: {e.Command.Text}");
+            commands.RanCommand += (s, e) => client.Log(LogSeverity.Verbose, "Command", $"{e.User.Name}: {e.Command.Text}");
 
             Voice.AddService();
 
@@ -824,8 +824,7 @@ The current topic is: {e.Channel.Topic}";
                 config = JObject.Parse(System.IO.File.ReadAllText(@"config.json"));
             else
             {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine("config.json file not found! Unable to initialize Nekobot!");
+                Extensions.LogOutput("config.json file not found! Unable to initialize Nekobot!", ConsoleColor.Red);
                 SQL.CloseAndDispose();
                 Console.ReadKey();
                 Environment.Exit(0);
@@ -852,12 +851,12 @@ The current topic is: {e.Channel.Topic}";
 
         private static void Disconnected(object sender, DisconnectedEventArgs e)
         {
-            client.Log(LogSeverity.Info, "Disconnected");
+            client.Log(LogSeverity.Warning, "Disconnected");
         }
 
         private static void Connected(object sender, EventArgs e)
         {
-            client.Log(LogSeverity.Info, "Connected.");
+            client.Log(LogSeverity.Warning, "Connected.");
         }
 
         private static void CommandError(object sender, CommandErrorEventArgs e)
@@ -890,7 +889,7 @@ The current topic is: {e.Channel.Topic}";
             if (msg != null)
             {
                 client.ReplyError(e, "Command Error: " + msg);
-                //client.Log(LogSeverity.Error, "Command", msg);
+                client.Log(LogSeverity.Error, "Command", msg);
             }
         }
 
