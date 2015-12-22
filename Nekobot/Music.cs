@@ -17,7 +17,9 @@ namespace Nekobot
         class Song
         {
             internal Song(string uri, EType type = EType.Playlist, long requester = 0, string ext = null) { Uri = uri; Type = type; Requester = requester; Ext = ext; }
-            internal Song Encore() => new Song(Uri, Type == EType.Youtube ? Type : EType.Encore, 0, Ext);
+            internal Song Encore() => new Song(Uri, IsYoutube ? Type : EType.Encore, 0, Ext);
+            internal bool IsYoutube => Type == EType.Youtube;
+            internal bool Nonrequested => Type != EType.Playlist;
             internal enum EType { Playlist, Request, Youtube, Encore }
             internal string Uri, Ext;
             internal EType Type;
@@ -38,7 +40,7 @@ namespace Nekobot
 
         internal static IEnumerable<string> Files() => System.IO.Directory.EnumerateFiles(Folder, "*.*", UseSubdirs ? System.IO.SearchOption.AllDirectories : System.IO.SearchOption.TopDirectoryOnly).Where(s => exts.Contains(System.IO.Path.GetExtension(s)));
         static bool InPlaylist(List<Song> playlist, string file) => playlist.Exists(song => song.Uri == file);
-        static int NonrequestedIndex(Commands.CommandEventArgs e) => 1 + playlist[e.User.VoiceChannel.Id].Skip(1).Where(song => song.Type != Song.EType.Playlist).Count();
+        static int NonrequestedIndex(Commands.CommandEventArgs e) => 1 + playlist[e.User.VoiceChannel.Id].Skip(1).Where(song => song.Nonrequested).Count();
 
         static async Task Stream(long cid)
         {
@@ -168,7 +170,7 @@ namespace Nekobot
 
         static string GetTitle(Song s)
         {
-            if (s.Type == Song.EType.Youtube)
+            if (s.IsYoutube)
                 return s.Ext;
             File song = File.Create(s.Uri);
             if (song.Tag.Title != null && song.Tag.Title != "")
