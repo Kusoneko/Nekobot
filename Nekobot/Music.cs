@@ -357,13 +357,17 @@ namespace Nekobot
                             }
                             else
                             {
-                                streams.Add(e.User.VoiceChannel.Id);
                                 SQL.ExecuteNonQuery(off ? $"update flags set music=0 where channel='{e.User.VoiceChannel.Id}'"
                                     : SQL.ExecuteScalarPos($"select count(channel) from flags where channel = '{e.User.VoiceChannel.Id}'")
                                     ? $"update flags set music=1 where channel='{e.User.VoiceChannel.Id}'"
                                     : $"insert into flags values ('{e.User.VoiceChannel.Id}', 0, 1, 0, -1)");
                                 await Program.client.SendMessage(e.Channel, $"<@{e.User.Id}>, I'm {status}ing the stream!");
-                                await Music.Stream(e.User.VoiceChannel.Id);
+                                if (on)
+                                {
+                                    streams.Add(e.User.VoiceChannel.Id);
+                                    await Stream(e.User.VoiceChannel.Id);
+                                }
+                                else streams.Remove(e.User.VoiceChannel.Id);
                             }
                         }
                         else await Program.client.SendMessage(e.Channel, $"<@{e.User.Id}>, the argument needs to be either on or off.");
