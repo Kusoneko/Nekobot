@@ -11,18 +11,22 @@ namespace Nekobot
     {
         static Dictionary<long, ChatterBotSession> chatbots = new Dictionary<long, ChatterBotSession>();
 
+        static bool HasNeko(string msg, string neko)
+        {
+            if (msg.ToLower().IndexOf(neko.ToLower()) != -1)
+            {
+                msg = msg.Replace(neko, "");
+                return true;
+            }
+            return false;
+        }
         internal static async void Do(MessageEventArgs e)
         {
             if (chatbots.Count() == 0) return; // No bot sessions
             string msg = e.Message.Text;
-            // It's lame we have to do this, but our User isn't exposed by Discord.Net, so we don't know our name
-            string neko = e.Channel.IsPrivate ? "" : Program.client.GetUser(e.Server, Program.client.CurrentUserId).Name;
-            if (chatbots.ContainsKey(e.Channel.Id) && (e.Channel.IsPrivate || msg.ToLower().IndexOf(neko.ToLower()) != -1))
-            {
-                if (!e.Channel.IsPrivate)
-                    msg = msg.Replace(neko, "");
+            string neko = e.Channel.IsPrivate ? "" : Program.GetNeko(e.Server).Name;
+            if (chatbots.ContainsKey(e.Channel.Id) && (e.Channel.IsPrivate || HasNeko(msg, neko) || HasNeko(msg, System.Text.RegularExpressions.Regex.Replace(neko, @"\p{Cs}", ""))))
                 await Program.client.SendMessage(e.Channel, System.Net.WebUtility.HtmlDecode(chatbots[e.Channel.Id].Think(msg)));
-            }
         }
 
         internal static void Load()

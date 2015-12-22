@@ -663,6 +663,8 @@ The current topic is: {e.Channel.Topic}";
         internal static long masterId;
         static string version;
 
+	internal static User GetNeko(Server s) => s.CurrentUser;
+
         static void InputThread()
         {
             for (;;)
@@ -921,7 +923,7 @@ The current topic is: {e.Channel.Topic}";
 
         private static async Task PerformAction(CommandEventArgs e, string action, string reaction, bool perform_when_empty)
         {
-            User neko = client.GetUser(e.Server, client.CurrentUserId);
+            User neko = GetNeko(e.Server);
             bool mentions_neko = e.Message.IsMentioningMe && string.Join(" ", e.Args).IndexOf($"@{neko.Name}") != -1;
             string message = $"<@{e.User.Id}> {action}s ";
             bool mentions_everyone = e.Message.MentionedRoles.Contains(e.Server.EveryoneRole);
