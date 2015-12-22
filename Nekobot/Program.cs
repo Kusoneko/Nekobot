@@ -663,7 +663,7 @@ The current topic is: {e.Channel.Topic}";
         internal static JObject config;
         internal static ulong masterId;
 
-        internal static User GetNeko(Server s) => client.GetUser(s, client.CurrentUser.Id);
+        internal static User GetNeko(Server s) => s.CurrentUser;
 
         static void InputThread()
         {
