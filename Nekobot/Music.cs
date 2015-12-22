@@ -18,8 +18,27 @@ namespace Nekobot
         {
             internal Song(string uri, EType type = EType.Playlist, long requester = 0, string ext = null) { Uri = uri; Type = type; Requester = requester; Ext = ext; }
             internal Song Encore() => new Song(Uri, IsYoutube ? Type : EType.Encore, 0, Ext);
+
+            internal string Title()
+            {
+                if (IsYoutube) return Ext;
+                File song = File.Create(Uri);
+                if (song.Tag.Title != null && song.Tag.Title != "")
+                {
+                    string title = "";
+                    if (song.Tag.Performers != null)
+                        foreach (string p in song.Tag.Performers)
+                            title += $", {p}";
+                    if (title != "")
+                        title = title.Substring(2) + " **-** ";
+                    return title + song.Tag.Title;
+                }
+                return System.IO.Path.GetFileNameWithoutExtension(Uri);
+            }
+            internal string ExtTitle => $"**[{Type}{(Requester != 0 ? $" by <@{Requester}>" : "")}]** {Title()}";
             internal bool IsYoutube => Type == EType.Youtube;
             internal bool Nonrequested => Type != EType.Playlist;
+
             internal enum EType { Playlist, Request, Youtube, Encore }
             internal string Uri, Ext;
             internal EType Type;
@@ -168,24 +187,6 @@ namespace Nekobot
             return false;
         }
 
-        static string GetTitle(Song s)
-        {
-            if (s.IsYoutube)
-                return s.Ext;
-            File song = File.Create(s.Uri);
-            if (song.Tag.Title != null && song.Tag.Title != "")
-            {
-                string title = "";
-                if (song.Tag.Performers != null)
-                    foreach (string p in song.Tag.Performers)
-                        title += $", {p}";
-                if (title != "")
-                    title = title.Substring(2) + " **-** ";
-                return title + song.Tag.Title;
-            }
-            return System.IO.Path.GetFileNameWithoutExtension(s.Uri);
-        }
-
         internal static void AddCommands(Commands.CommandGroupBuilder group)
         {
             group.CreateCommand("playlist")
@@ -196,18 +197,7 @@ namespace Nekobot
                     string reply = "";
                     int i = -1;
                     foreach(var t in playlist[e.User.VoiceChannel.Id])
-                    {
-                        string title = GetTitle(t);
-                        if (++i == 0)
-                        {
-                            reply = $"Currently playing: {title}.\nNext songs:";
-                            continue;
-                        }
-                        string ext = "";
-                        if (t.Requester != 0)
-                            ext = $" by <@{t.Requester}>";
-                        reply += $"\n{i} - **[{t.Type}{ext}]** {title}";
-                    }
+                        reply += (++i == 0) ? $"Currently playing: {t.Title()}.\nNext songs:" : $"\n{i} - {t.ExtTitle}";
                     await Program.client.SendMessage(e.Channel, reply);
                 });
 
@@ -216,7 +206,7 @@ namespace Nekobot
                 .FlagMusic(true)
                 .Do(async e =>
                 {
-                    await Program.client.SendMessage(e.Channel, $"Currently playing: {GetTitle(playlist[e.User.VoiceChannel.Id][0])}.");
+                    await Program.client.SendMessage(e.Channel, $"Currently playing: {playlist[e.User.VoiceChannel.Id][0].Title()}.");
                 });
 
             group.CreateCommand("ytrequest")
