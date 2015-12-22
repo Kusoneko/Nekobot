@@ -68,11 +68,9 @@ on {booru}. Please try something else.";
 
         static string ImageFolders(string folder)
         {
-            string[] imgexts = new string[] { ".jpg", ".jpeg", ".png", ".gif", ".bmp" };
+            string[] imgexts = { ".jpg", ".jpeg", ".png", ".gif", ".bmp" };
             var files = from file in System.IO.Directory.EnumerateFiles($@"{folder}", "*.*").Where(s => imgexts.Contains(System.IO.Path.GetExtension(s.ToLower()))) select new { File = file };
-            Random rnd = new Random();
-            int img = rnd.Next(0, files.Count());
-            return files.ElementAt(img).File;
+            return files.ElementAt(new Random().Next(0, files.Count())).File;
         }
 
         static string LewdSX(string chan)
