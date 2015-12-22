@@ -266,6 +266,7 @@ on {booru}. Please try something else.";
                 });
 
             group.CreateCommand("lolibooru")
+                .Alias("loli")
                 .Parameter("[-]tag1", Commands.ParameterType.Optional)
                 .Parameter("[-]tag2", Commands.ParameterType.Optional)
                 .Parameter("[-]tagn", Commands.ParameterType.Multiple)
@@ -277,6 +278,7 @@ on {booru}. Please try something else.";
                 });
 
             group.CreateCommand("e621")
+                .Alias("furry")
                 .Parameter("[-]tag1", Commands.ParameterType.Optional)
                 .Parameter("[-]tag2", Commands.ParameterType.Optional)
                 .Parameter("[-]tagn", Commands.ParameterType.Multiple)
