@@ -97,8 +97,7 @@ namespace Nekobot.Commands
                     {
                         if (_config.MentionCommandChar >= 1 && e.Message.IsMentioningMe)
                         {
-                            // It's lame we have to do this, but our User isn't exposed by Discord.Net, so we don't know our name
-                            User nekouser = client.GetUser(e.Server, client.CurrentUserId);
+                            User nekouser = e.Server.CurrentUser;
                             string neko = '@'+nekouser.Name;
                             if (neko.Length+2 > msg.Length || (e.Message.MentionedRoles.Contains(e.Server.EveryoneRole) && e.Message.MentionedUsers.Where(u => u == nekouser).Count() == 0))
                             {
