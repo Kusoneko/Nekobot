@@ -688,22 +688,22 @@ The current topic is: {e.Channel.Topic}";
             Thread input = new Thread(InputThread);
             input.Start();
             // Connection, join server if there is one in config, and start music streams
-            try
+            client.Run(async() =>
             {
-                client.Run(async() =>
+                try
                 {
                     await client.Connect(config["email"].ToString(), config["password"].ToString());
                     if (config["server"].ToString() != "")
                     {
                         await client.AcceptInvite(client.GetInvite(config["server"].ToString()).Result);
                     }
-                    await Music.StartStreams();
-                });
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine($"Error: {e.GetBaseException().Message}");
-            }
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine($"Error: {e.GetBaseException().Message}");
+                }
+                await Music.StartStreams();
+            });
         }
 
         protected static string CalculateTime(int minutes)
