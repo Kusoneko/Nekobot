@@ -357,12 +357,8 @@ The current topic is: {e.Channel.Topic}";
                             int roll = 0;
                             Random rnd = new Random();
                             for (int i = times; i > 0; i--)
-                            {
                                 for (int j = dice; j > 0; j--)
-                                {
                                     roll += rnd.Next(1, sides + 1);
-                                }
-                            }
                             await client.SendMessage(e.Channel, $"You rolled {dice} different {sides}-sided dice {times} times... Result: **{roll}**");
                         }
                         else
@@ -615,35 +611,14 @@ The current topic is: {e.Channel.Topic}";
                 .Description("I'll set a role's color to the hex(000000-FFFFFF) or rgb(0-255 0-255 0-255) color value provided.")
                 .Do(async e =>
                 {
-                    if (e.Args.Count() == 2)
+                    if (e.Args.Count() == 2 || e.Args.Count() == 4)
                     {
-                        // assume hex code was provided
-                        string r = e.Args[1].Substring(0, 2);
-                        string g = e.Args[1].Substring(2, 2);
-                        string b = e.Args[1].Substring(4, 2);
-                        int red = Convert.ToInt32(r, 16);
-                        int green = Convert.ToInt32(g, 16);
-                        int blue = Convert.ToInt32(b, 16);
-                        Role role = client.FindRoles(e.Server, e.Args[0]).FirstOrDefault();
-                        Discord.Color color = new Color(0);
-                        color.R = Convert.ToByte(red);
-                        color.B = Convert.ToByte(blue);
-                        color.G = Convert.ToByte(green);
-                        await client.EditRole(role, color: color);
-                        await client.SendMessage(e.Channel, $"Role {role.Name}'s color has been changed.");
-                    }
-                    else if (e.Args.Count() == 4)
-                    {
-                        // assume it's rgb color codes
-                        int red = int.Parse(e.Args[1]);
-                        int green = int.Parse(e.Args[2]);
-                        int blue = int.Parse(e.Args[3]);
-                        Role role = client.FindRoles(e.Server, e.Args[0]).FirstOrDefault();
-                        Discord.Color color = new Color(0);
-                        color.R = Convert.ToByte(red);
-                        color.B = Convert.ToByte(blue);
-                        color.G = Convert.ToByte(green);
-                        await client.EditRole(role, color: color);
+                        bool rgb = e.Args.Count() == 4; // assume hex code was provided when 2, rgb when 4
+                        byte red = Convert.ToByte(rgb ? int.Parse(e.Args[1]) : Convert.ToInt32(e.Args[1].Substring(0, 2), 16));
+                        byte green = Convert.ToByte(rgb ? int.Parse(e.Args[2]) : Convert.ToInt32(e.Args[1].Substring(2, 2), 16));
+                        byte blue = Convert.ToByte(rgb ? int.Parse(e.Args[3]) : Convert.ToInt32(e.Args[1].Substring(4, 2), 16));
+                        Role role = client.FindRoles(e.Server, e.Args[0]).FirstOrDefault(); // TODO: In the future, we will probably use MentionedRoles for this.
+                        await client.EditRole(role, color: new Color(red, green, blue));
                         await client.SendMessage(e.Channel, $"Role {role.Name}'s color has been changed.");
                     }
                     else
