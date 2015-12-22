@@ -16,9 +16,11 @@ namespace Nekobot
     {
         class Song
         {
-            internal Song(string uri, string type, long requester = 0, string ext = null) { Uri = uri; Type = type; Requester = requester; Ext = ext; }
-            internal Song Encore() => new Song(Uri, Type == "Youtube" ? Type : "Encore", 0, Ext);
-            internal string Uri, Type, Ext;
+            internal Song(string uri, EType type = EType.Playlist, long requester = 0, string ext = null) { Uri = uri; Type = type; Requester = requester; Ext = ext; }
+            internal Song Encore() => new Song(Uri, Type == EType.Youtube ? Type : EType.Encore, 0, Ext);
+            internal enum EType { Playlist, Request, Youtube, Encore }
+            internal string Uri, Ext;
+            internal EType Type;
             internal long Requester;
         }
         // Music-related variables
@@ -36,7 +38,7 @@ namespace Nekobot
 
         internal static IEnumerable<string> Files() => System.IO.Directory.EnumerateFiles(Folder, "*.*", UseSubdirs ? System.IO.SearchOption.AllDirectories : System.IO.SearchOption.TopDirectoryOnly).Where(s => exts.Contains(System.IO.Path.GetExtension(s)));
         static bool InPlaylist(List<Song> playlist, string file) => playlist.Exists(song => song.Uri == file);
-        static int NonrequestedIndex(Commands.CommandEventArgs e) => 1 + playlist[e.User.VoiceChannel.Id].Skip(1).Where(song => song.Type == "Encore" || song.Type == "Request" || song.Type == "Youtube").Count();
+        static int NonrequestedIndex(Commands.CommandEventArgs e) => 1 + playlist[e.User.VoiceChannel.Id].Skip(1).Where(song => song.Type == Song.EType.Encore || song.Type == Song.EType.Request || song.Type == Song.EType.Youtube).Count();
 
         static async Task Stream(long cid)
         {
@@ -63,7 +65,7 @@ namespace Nekobot
                     var mp3 = files.ElementAt(rnd.Next(0, filecount));
                     if (InPlaylist(playlist[cid], mp3))
                         continue;
-                    playlist[cid].Add(new Song(mp3, "Playlist"));
+                    playlist[cid].Add(new Song(mp3));
                 }
                 await Task.Run(async () =>
                 {
@@ -166,7 +168,7 @@ namespace Nekobot
 
         static string GetTitle(Song s)
         {
-            if (s.Type == "Youtube")
+            if (s.Type == Song.EType.Youtube)
                 return s.Ext;
             File song = File.Create(s.Uri);
             if (song.Tag.Title != null && song.Tag.Title != "")
@@ -233,7 +235,7 @@ namespace Nekobot
                                 await Program.client.SendMessage(e.Channel, $"<@{e.User.Id}> Your request is already in the playlist.");
                                 return;
                             }
-                            pl.Insert(NonrequestedIndex(e), new Song(video.Uri, "Youtube", e.User.Id, $"{video.Title} ({e.Args[0]})"));
+                            pl.Insert(NonrequestedIndex(e), new Song(video.Uri, Song.EType.Youtube, e.User.Id, $"{video.Title} ({e.Args[0]})"));
                             await Program.client.SendMessage(e.Channel, $"{video.Title} added to the playlist.");
                         }
                         catch (Exception)
@@ -274,7 +276,7 @@ namespace Nekobot
                                 }
                                 pl.RemoveAt(cur_i);
                             }
-                            pl.Insert(i, new Song(file, "Request", e.User.Id));
+                            pl.Insert(i, new Song(file, Song.EType.Request, e.User.Id));
                             await Program.client.SendMessage(e.Channel, $"<@{e.User.Id}> Your request has been added to the list.");
                             return;
                         }
