@@ -26,7 +26,11 @@ namespace Nekobot
             string msg = e.Message.Text;
             string neko = e.Channel.IsPrivate ? "" : Program.GetNeko(e.Server).Name;
             if (chatbots.ContainsKey(e.Channel.Id) && (e.Channel.IsPrivate || HasNeko(msg, neko) || HasNeko(msg, System.Text.RegularExpressions.Regex.Replace(neko, @"\p{Cs}", ""))))
-                await Program.client.SendMessage(e.Channel, System.Net.WebUtility.HtmlDecode(chatbots[e.Channel.Id].Think(msg)));
+            {
+                var chat = System.Net.WebUtility.HtmlDecode(chatbots[e.Channel.Id].Think(msg));
+                for (int i = 10; i != 0; --i) try { await Program.client.SendMessage(e.Channel, chat); break; }
+                    catch (HttpException ex) { if (i == 1) System.Console.WriteLine($"Error: {ex.Message}\n Could not SendMessage to {(e.Channel.IsPrivate ? "private" : "public")} channel {e.Channel} in response to {e.User}'s message: {e.Message.Text}"); }
+            }
         }
 
         internal static void Load()
