@@ -22,8 +22,9 @@ namespace Nekobot
             public string resource { get { return Item2; } }
             public string post { get { return Item3; } }
         }
-        static string ImageBooru(string booru, string tags)
+        static string ImageBooru(string booru, string[] targs)
         {
+            var tags = System.Net.WebUtility.UrlEncode(string.Join(" ", targs));
             Board board =
                 booru == "safebooru" ? Board.A("http://safebooru.org", tags) :
                 booru == "gelbooru" ? Board.A("http://gelbooru.com", tags) :
@@ -40,7 +41,7 @@ namespace Nekobot
                     int posts = GetBooruPostCount(board);
                     if (posts == 0)
                         return $@"There is nothing under the tag(s):
-{tags.Replace("%20", " ")}
+{System.Net.WebUtility.UrlDecode(tags)}
 on {booru}. Please try something else.";
                     return GetBooruImageLink(board, posts == 1 ? 0 : (new Random()).Next(1, posts - 1));
                 }
@@ -217,7 +218,7 @@ on {booru}. Please try something else.";
                 .Description("I'll give you a random image of the tags you entered from safebooru.")
                 .Do(async e =>
                 {
-                    await Program.client.SendMessage(e.Channel, ImageBooru("safebooru", String.Join("%20", e.Args)));
+                    await Program.client.SendMessage(e.Channel, ImageBooru("safebooru", e.Args));
                 });
 
             group.CreateCommand("gelbooru")
@@ -229,7 +230,7 @@ on {booru}. Please try something else.";
                 .Description("I'll give you a random image of the tags you entered from gelbooru.")
                 .Do(async e =>
                 {
-                    await Program.client.SendMessage(e.Channel, ImageBooru("gelbooru", String.Join("%20", e.Args)));
+                    await Program.client.SendMessage(e.Channel, ImageBooru("gelbooru", e.Args));
                 });
 
             group.CreateCommand("rule34")
@@ -240,7 +241,7 @@ on {booru}. Please try something else.";
                 .Description("I'll give you a random image of the tags you entered from rule34.")
                 .Do(async e =>
                 {
-                    await Program.client.SendMessage(e.Channel, ImageBooru("rule34", String.Join("%20", e.Args)));
+                    await Program.client.SendMessage(e.Channel, ImageBooru("rule34", e.Args));
                 });
 
             group.CreateCommand("konachan")
@@ -252,7 +253,7 @@ on {booru}. Please try something else.";
                 .Description("I'll give you a random image of the tags you entered from konachan.")
                 .Do(async e =>
                 {
-                    await Program.client.SendMessage(e.Channel, ImageBooru("konachan", String.Join("%20", e.Args)));
+                    await Program.client.SendMessage(e.Channel, ImageBooru("konachan", e.Args));
                 });
 
             group.CreateCommand("yandere")
@@ -263,7 +264,7 @@ on {booru}. Please try something else.";
                 .Description("I'll give you a random image of the tags you entered from yandere.")
                 .Do(async e =>
                 {
-                    await Program.client.SendMessage(e.Channel, ImageBooru("yandere", String.Join("%20", e.Args)));
+                    await Program.client.SendMessage(e.Channel, ImageBooru("yandere", e.Args));
                 });
 
             group.CreateCommand("lolibooru")
@@ -274,7 +275,7 @@ on {booru}. Please try something else.";
                 .Description("I'll give you a random image of the tags you entered from lolibooru.")
                 .Do(async e =>
                 {
-                    await Program.client.SendMessage(e.Channel, ImageBooru("lolibooru", String.Join("%20", e.Args)));
+                    await Program.client.SendMessage(e.Channel, ImageBooru("lolibooru", e.Args));
                 });
 
             group.CreateCommand("e621")
@@ -285,7 +286,7 @@ on {booru}. Please try something else.";
                 .Description("I'll give you a random image from e621 (optionally with tags)")
                 .Do(async e =>
                 {
-                    await Program.client.SendMessage(e.Channel, ImageBooru("e621", String.Join("%20", e.Args)));
+                    await Program.client.SendMessage(e.Channel, ImageBooru("e621", e.Args));
                 });
         }
     }
