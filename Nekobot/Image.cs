@@ -193,7 +193,7 @@ on {booru}. Please try something else.";
                 .Parameter("search query", Commands.ParameterType.Required)
                 .Parameter("extended query", Commands.ParameterType.Multiple)
                 .Description("I'll get a random image from Google!")
-                .Hide() // Until we can  update this to work
+                .AddCheck((h, i, d) => false).Hide() // Until we can  update this to work
                 .Do(async e =>
                 {
                     Random rnd = new Random();
@@ -225,7 +225,7 @@ on {booru}. Please try something else.";
                 .Parameter("[-]tag2", Commands.ParameterType.Optional)
                 .Parameter("[-]tagn", Commands.ParameterType.Multiple)
                 .FlagNsfw(true)
-                .Hide() // Disabled because of them disabling their API
+                .AddCheck((h, i, d) => false).Hide() // Disabled because of them disabling their API
                 .Description("I'll give you a random image of the tags you entered from gelbooru.")
                 .Do(async e =>
                 {
