@@ -83,12 +83,23 @@ namespace Nekobot
                 text = $"{text}: {ex.GetBaseException().Message}";
             if (severity <= LogSeverity.Info || (source != null && source is string))
             {
-                Console.ForegroundColor = color;
-                Console.WriteLine(text);
+                LogOutput(text, color);
             }
 
             text = $"{severityChar} {text}";
             Debug.WriteLine(text);
+        }
+
+        static object log = new object();
+        internal static void LogOutput(string text, ConsoleColor color)
+        {
+            lock (log)
+            {
+                ConsoleColor c = ConsoleColor.White;
+                Console.ForegroundColor = color;
+                Console.WriteLine(text);
+                Console.ForegroundColor = c;
+            }
         }
     }
 
