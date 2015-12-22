@@ -228,11 +228,12 @@ namespace Nekobot
                             Program.rclient.BaseUrl = new Uri("http://www.youtubeinmp3.com/fetch/");
                             uri = Newtonsoft.Json.Linq.JObject.Parse(Program.rclient.Execute(new RestSharp.RestRequest($"?format=JSON&video={System.Net.WebUtility.UrlEncode(link)}", RestSharp.Method.GET)).Content)["link"].ToString();
                         }
-                        if (InPlaylist(pl, uri))
+                        var ext = $"{video.Title} ({link})";
+                        if (pl.Exists(song => song.Ext == ext))
                             await Program.client.SendMessage(e.Channel, $"<@{e.User.Id}> Your request ({video.Title}) is already in the playlist.");
                         else
                         {
-                            pl.Insert(NonrequestedIndex(e), new Song(uri, Song.EType.Youtube, e.User.Id, $"{video.Title} ({link})"));
+                            pl.Insert(NonrequestedIndex(e), new Song(uri, Song.EType.Youtube, e.User.Id, ext));
                             await Program.client.SendMessage(e.Channel, $"{video.Title} added to the playlist.");
                         }
                     }
