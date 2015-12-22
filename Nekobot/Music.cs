@@ -14,10 +14,12 @@ namespace Nekobot
 {
     class Music
     {
-        class Song : Tuple<string, string, long, string>
+        class Song
         {
-            internal Song(string uri, string type, long requester = 0, string ext = null) : base(uri, type, requester, ext) { }
-            internal Song Encore() => new Song(Item1, Item2 == "Youtube" ? Item2 : "Encore", 0, Item4);
+            internal Song(string uri, string type, long requester = 0, string ext = null) { Uri = uri; Type = type; Requester = requester; Ext = ext; }
+            internal Song Encore() => new Song(Uri, Type == "Youtube" ? Type : "Encore", 0, Ext);
+            internal string Uri, Type, Ext;
+            internal long Requester;
         }
         // Music-related variables
         internal static string Folder;
@@ -33,8 +35,8 @@ namespace Nekobot
         static string[] exts = { ".wma", ".aac", ".mp3", ".m4a", ".wav", ".flac", ".ogg" };
 
         internal static IEnumerable<string> Files() => System.IO.Directory.EnumerateFiles(Folder, "*.*", UseSubdirs ? System.IO.SearchOption.AllDirectories : System.IO.SearchOption.TopDirectoryOnly).Where(s => exts.Contains(System.IO.Path.GetExtension(s)));
-        static bool InPlaylist(List<Song> playlist, string file) => playlist.Exists(song => song.Item1 == file);
-        static int NonrequestedIndex(Commands.CommandEventArgs e) => 1 + playlist[e.User.VoiceChannel.Id].Skip(1).Where(song => song.Item2 == "Encore" || song.Item2 == "Request" || song.Item2 == "Youtube").Count();
+        static bool InPlaylist(List<Song> playlist, string file) => playlist.Exists(song => song.Uri == file);
+        static int NonrequestedIndex(Commands.CommandEventArgs e) => 1 + playlist[e.User.VoiceChannel.Id].Skip(1).Where(song => song.Type == "Encore" || song.Type == "Request" || song.Type == "Youtube").Count();
 
         static async Task Stream(long cid)
         {
@@ -70,7 +72,7 @@ namespace Nekobot
                         var outFormat = new WaveFormat(48000, 16, 1);
                         int blockSize = outFormat.AverageBytesPerSecond; // 1 second
                         byte[] buffer = new byte[blockSize];
-                        string file = playlist[cid][0].Item1;
+                        string file = playlist[cid][0].Uri;
                         var musicReader = System.IO.Path.GetExtension(file) == ".ogg" ? (IWaveProvider)new NAudio.Vorbis.VorbisWaveReader(file) : new MediaFoundationReader(file);
                         using (var resampler = new MediaFoundationResampler(musicReader, outFormat) { ResamplerQuality = 60 })
                         {
@@ -162,11 +164,11 @@ namespace Nekobot
             return false;
         }
 
-        internal static string GetTitle(Tuple<string,string,long,string> t)
+        static string GetTitle(Song s)
         {
-            if (t.Item2 == "Youtube")
-                return t.Item4;
-            File song = File.Create(t.Item1);
+            if (s.Type == "Youtube")
+                return s.Ext;
+            File song = File.Create(s.Uri);
             if (song.Tag.Title != null && song.Tag.Title != "")
             {
                 string title = "";
@@ -177,7 +179,7 @@ namespace Nekobot
                     title = title.Substring(2) + " **-** ";
                 return title + song.Tag.Title;
             }
-            return System.IO.Path.GetFileNameWithoutExtension(t.Item1);
+            return System.IO.Path.GetFileNameWithoutExtension(s.Uri);
         }
 
         internal static void AddCommands(Commands.CommandGroupBuilder group)
@@ -198,9 +200,9 @@ namespace Nekobot
                             continue;
                         }
                         string ext = "";
-                        if (t.Item3 != 0)
-                            ext = $" by <@{t.Item3}>";
-                        reply += $"\n{i} - **[{t.Item2}{ext}]** {title}";
+                        if (t.Requester != 0)
+                            ext = $" by <@{t.Requester}>";
+                        reply += $"\n{i} - **[{t.Type}{ext}]** {title}";
                     }
                     await Program.client.SendMessage(e.Channel, reply);
                 });
@@ -259,7 +261,7 @@ namespace Nekobot
                         {
                             var pl = playlist[e.User.VoiceChannel.Id];
                             var i = NonrequestedIndex(e);
-                            var cur_i = pl.FindIndex(song => song.Item1 == file);
+                            var cur_i = pl.FindIndex(song => song.Uri == file);
                             if (cur_i != -1)
                             {
                                 if (i > cur_i)
