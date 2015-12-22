@@ -21,19 +21,22 @@ namespace Nekobot
 
             internal string Title()
             {
-                if (IsYoutube) return Ext;
-                File song = File.Create(Uri);
-                if (song.Tag.Title != null && song.Tag.Title != "")
+                if (Ext == null)
                 {
-                    string title = "";
-                    if (song.Tag.Performers != null)
-                        foreach (string p in song.Tag.Performers)
-                            title += $", {p}";
-                    if (title != "")
-                        title = title.Substring(2) + " **-** ";
-                    return title + song.Tag.Title;
+                    File song = File.Create(Uri);
+                    if (song.Tag.Title != null && song.Tag.Title != "")
+                    {
+                        Ext = "";
+                        if (song.Tag.Performers != null)
+                            foreach (string p in song.Tag.Performers)
+                                Ext += $", {p}";
+                        if (Ext != "")
+                            Ext = Ext.Substring(2) + " **-** ";
+                        Ext += song.Tag.Title;
+                    }
+                    else Ext = System.IO.Path.GetFileNameWithoutExtension(Uri);
                 }
-                return System.IO.Path.GetFileNameWithoutExtension(Uri);
+                return Ext;
             }
             internal string ExtTitle => $"**[{Type}{(Requester != 0 ? $" by <@{Requester}>" : "")}]** {Title()}";
             internal bool IsYoutube => Type == EType.Youtube;
