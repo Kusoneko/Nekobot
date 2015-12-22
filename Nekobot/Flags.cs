@@ -12,9 +12,9 @@ namespace Nekobot
         internal static bool GetIgnored(Channel chan, User user) => GetIgnored(chan) || GetIgnored(user);
         internal static bool GetIgnored(User user) => GetIgnored("user", "users", user.Id);
         internal static bool GetIgnored(Channel chan) => GetIgnored("channel", "flags", chan.Id);
-        static bool GetIgnored(string row, string table, long id) => SQL.ReadBool(SQL.ReadSingle(row, table, id, "ignored"));
+        static bool GetIgnored(string row, string table, ulong id) => SQL.ReadBool(SQL.ReadSingle(row, table, id, "ignored"));
 
-        internal static async Task<string> SetIgnored(string row, string table, long id, char symbol, int perms, int their_perms = 0)
+        internal static async Task<string> SetIgnored(string row, string table, ulong id, char symbol, int perms, int their_perms = 0)
         {
             if (symbol == '#' && perms <3)
                 return $"You are not worthy of changing channel ignored status (permissions < 3).";
@@ -34,9 +34,9 @@ namespace Nekobot
         internal static bool GetMusic(User user)
         {
             var reader = SQL.ReadChannels("music = 1");
-            List<long> streams = new List<long>();
+            List<ulong> streams = new List<ulong>();
             while (reader.Read())
-                streams.Add(Convert.ToInt64(reader["channel"].ToString()));
+                streams.Add(Convert.ToUInt64(reader["channel"].ToString()));
             return user.VoiceChannel != null && streams.Contains(user.VoiceChannel.Id);
         }
 

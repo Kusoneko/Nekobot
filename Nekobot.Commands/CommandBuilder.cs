@@ -1,8 +1,8 @@
 ﻿using System;
-using Discord;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Discord;
 
 namespace Nekobot.Commands
 {
@@ -64,7 +64,6 @@ namespace Nekobot.Commands
             _command.Description = description;
             return this;
         }
-
         public CommandBuilder Parameter(string name, ParameterType type = ParameterType.Required)
         {
             if (_areParamsClosed)
@@ -164,15 +163,8 @@ namespace Nekobot.Commands
             _checks.Add(new GenericPermissionChecker(checkFunc));
         }
 
-        public void DefaultNsfwFlag(bool isNsfw)
-        {
-            _defaultNsfwFlag = isNsfw;
-        }
-
-        public void DefaultMusicFlag(bool isMusicRelated)
-        {
-            _defaultMusicFlag = isMusicRelated;
-        }
+        public void DefaultNsfwFlag(bool isNsfw) => _defaultNsfwFlag = isNsfw;
+        public void DefaultMusicFlag(bool isMusicRelated) => _defaultMusicFlag = isMusicRelated;
 
         public CommandGroupBuilder CreateGroup(string cmd, Action<CommandGroupBuilder> config = null)
         {

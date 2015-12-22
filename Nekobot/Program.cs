@@ -80,6 +80,7 @@ namespace Nekobot
                 .Description("I'll tell you the current version and check if a newer version is available.")
                 .Do(async e =>
                 {
+                    var version = client.Config.AppVersion;
                     string[] versions = version.Split('.');
                     rclient.BaseUrl = new Uri("https://raw.githubusercontent.com");
                     var request = new RestRequest("Kusoneko/Nekobot/master/version.json", Method.GET);
@@ -252,8 +253,8 @@ namespace Nekobot
                         int index = message.IndexOf(">");
                         if (index+2 < message.Length)
                         {
-                            long mentionid = Convert.ToInt64(message.Substring(2, index-2));
-                            if (mentionid != client.CurrentUserId)
+                            ulong mentionid = Convert.ToUInt64(message.Substring(2, index-2));
+                            if (mentionid != client.CurrentUser.Id)
                             {
                                 channel = usermention ? await client.CreatePMChannel(e.Message.MentionedUsers.Where(u => u.Id == mentionid).Single())
                                     : e.Message.MentionedChannels.Where(c => c.Id == mentionid).Single();
@@ -269,7 +270,7 @@ namespace Nekobot
                             string chanstr = message.Split(' ').First();
                             if (chanstr.Length+1 < message.Length)
                             {
-                                long id = Convert.ToInt64(chanstr);
+                                ulong id = Convert.ToUInt64(chanstr);
                                 channel = client.GetChannel(id) ?? await client.CreatePMChannel(client.AllServers.Select(x => client.GetUser(x, id)).FirstOrDefault());
                                 if (CanSay(ref channel, e.User, e.Channel))
                                     message = message.Substring(message.IndexOf(" ")+1);
@@ -667,8 +668,7 @@ The current topic is: {e.Channel.Topic}";
         internal static RestClient rclient = new RestClient();
         static LastFM.LastfmClient lfclient;
         internal static JObject config;
-        internal static long masterId;
-        static string version;
+        internal static ulong masterId;
 
 	internal static User GetNeko(Server s) => s.CurrentUser;
 
@@ -687,53 +687,64 @@ The current topic is: {e.Channel.Topic}";
             // Load up the config file
             LoadConfig();
 
-            Console.Title = $"Nekobot v{version}";
+            client = new DiscordClient(new DiscordConfig
+            {
+                AppName = "Nekobot",
+                AppVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString(),
+                LogLevel = config["loglevel"].ToObject<LogSeverity>(),
+                UseMessageQueue = false,
+                UseLargeThreshold = true,
+            });
+            Console.Title = $"{client.Config.AppName} v{client.Config.AppVersion} (Discord.Net v{DiscordClient.Version})";
+
             // Load the stream channels
             Music.LoadStreams();
             // Initialize rest client
             RCInit();
 
-            client = new DiscordClient(new DiscordClientConfig
-            {
-                AckMessages = true,
-                LogLevel = LogMessageSeverity.Verbose,
-                TrackActivity = false, // TODO: ?
-                UseMessageQueue = false,
-                UseLargeThreshold = true,
-                EnableVoiceMultiserver = true,
-                VoiceMode = DiscordVoiceMode.Outgoing,
-            });
-
             // Set up the events and enforce use of the command prefix
-            commands.CommandError += CommandError;
             client.Connected += Connected;
             client.Disconnected += Disconnected;
             client.UserJoined += UserJoined;
-            client.LogMessage += LogMessage;
-            client.AddService(commands);
+            client.Log().LogMessage += (s, e) => client.Log(e);
             client.AddService(new PermissionLevelService(GetPermissions));
+            client.AddService(commands);
+            //Display errors that occur when a user tries to run a command
+            commands.CommandError += CommandError;
+
+            //Log to the console whenever someone uses a command
+            commands.RanCommand += (s, e) => client.Log(LogSeverity.Debug, "Command", $"{e.User.Name}: {e.Command.Text}");
+
+            Voice.AddService();
+
             commands.CreateGroup("", group => GenerateCommands(group));
             commands.NonCommands += Chatbot.Do;
             // Load the chatbots
             Chatbot.Load();
+
             // Keep the window open in case of crashes elsewhere... (hopefully)
             Thread input = new Thread(InputThread);
             input.Start();
-            // Connection, join server if there is one in config, and start music streams
+
+            //DiscordClient will automatically reconnect once we've established a connection, until then we loop on our end
             client.Run(async() =>
             {
-                try
+                while (true)
                 {
-                    await client.Connect(config["email"].ToString(), config["password"].ToString());
-                    if (config["server"].ToString() != "")
+                    try
                     {
-                        await client.AcceptInvite(client.GetInvite(config["server"].ToString()).Result);
+                        await client.Connect(config["email"].ToString(), config["password"].ToString());
+                        break;
+                    }
+                    catch (Exception ex)
+                    {
+                        client.Log(LogSeverity.Error, $"Login Failed", ex);
+                        await Task.Delay(5000);
                     }
                 }
-                catch (Exception e)
-                {
-                    Console.WriteLine($"Error: {e.GetBaseException().Message}");
-                }
+                // Connection, join server if there is one in config, and start music streams
+                if (config["server"].ToString() != "")
+                    try { await client.AcceptInvite(client.GetInvite(config["server"].ToString()).Result); } catch { }
                 await Music.StartStreams();
             });
         }
@@ -812,15 +823,7 @@ The current topic is: {e.Channel.Topic}";
             return animeWatched;
         }
 
-        private static void RCInit()
-        {
-            rclient.UserAgent = $"Nekobot {version}";
-        }
-
-        private static void LogMessage(object sender, LogMessageEventArgs e)
-        {
-            System.Diagnostics.Debug.WriteLine($"[{e.Severity}] {e.Source} : {e.Message}");
-        }
+        private static void RCInit() => rclient.UserAgent = Console.Title;
 
         private static void LoadConfig()
         {
@@ -828,12 +831,13 @@ The current topic is: {e.Channel.Topic}";
                 config = JObject.Parse(System.IO.File.ReadAllText(@"config.json"));
             else
             {
+                Console.ForegroundColor = ConsoleColor.Red;
                 Console.WriteLine("config.json file not found! Unable to initialize Nekobot!");
                 SQL.CloseAndDispose();
                 Console.ReadKey();
                 Environment.Exit(0);
             }
-            masterId = config["master"].ToObject<long>();
+            masterId = config["master"].ToObject<ulong>();
             Music.Folder = config["musicFolder"].ToString();
             Music.UseSubdirs = config["musicUseSubfolders"].ToObject<bool>();
 
@@ -846,8 +850,6 @@ The current topic is: {e.Channel.Topic}";
                 MentionCommandChar = config["mentioncommand"].ToObject<short>(),
                 HelpMode = helpmode.Equals("public") ? HelpMode.Public : helpmode.Equals("private") ? HelpMode.Private : HelpMode.Disable
             }, Flags.GetNsfw, Flags.GetMusic, Flags.GetIgnored);
-
-            version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString();
         }
 
         private static void UserJoined(object sender, UserEventArgs e)
@@ -858,18 +860,18 @@ The current topic is: {e.Channel.Topic}";
 
         private static void Disconnected(object sender, DisconnectedEventArgs e)
         {
-            Console.WriteLine("Disconnected");
+            client.Log(LogSeverity.Info, "Disconnected");
         }
 
         private static void Connected(object sender, EventArgs e)
         {
-            Console.WriteLine("Connected.");
+            client.Log(LogSeverity.Info, "Connected.");
         }
 
         private static void CommandError(object sender, CommandErrorEventArgs e)
         {
             string msg = e.Exception?.GetBaseException().Message;
-            if (msg == null) //No mxception - show a generic message
+            if (msg == null) //No exception - show a generic message
             {
                 switch (e.ErrorType)
                 {
@@ -895,8 +897,8 @@ The current topic is: {e.Channel.Topic}";
             }
             if (msg != null)
             {
-                client.SendMessage(e.Channel, "Command Error: " + msg);
-                //Console.WriteLine(msg);
+                client.ReplyError(e, "Command Error: " + msg);
+                //client.Log(LogSeverity.Error, "Command", msg);
             }
         }
 
@@ -931,11 +933,11 @@ The current topic is: {e.Channel.Topic}";
             string message = $"<@{e.User.Id}> {action}s ";
             bool mentions_everyone = e.Message.MentionedRoles.Contains(e.Server.EveryoneRole);
             if (mentions_everyone)
-                await client.SendMessage(e.Channel, $"{message}{Mention.Everyone()}");
+                await client.SendMessage(e.Channel, $"{message}{e.Server.EveryoneRole.Mention}");
             else
             {
                 if (e.Message.MentionedUsers.Count() == (!mentions_neko && e.Message.IsMentioningMe ? 1 : 0))
-                    message = perform_when_empty ? $"*{action}s <@{e.User.Id}>.*" : message + $"<@{client.CurrentUserId}>";
+                    message = perform_when_empty ? $"*{action}s <@{e.User.Id}>.*" : message + $"<@{client.CurrentUser.Id}>";
                 else
                     foreach (User u in e.Message.MentionedUsers)
                         if (u != neko || mentions_neko)

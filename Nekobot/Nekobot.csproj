@@ -122,6 +122,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Chatbot.cs" />
+    <Compile Include="Extensions.cs" />
     <Compile Include="Flags.cs" />
     <Compile Include="Image.cs" />
     <Compile Include="SQL.cs" />
@@ -138,6 +139,10 @@
     <ProjectReference Include="..\chatter-bot-api\dotnet\ChatterBotAPI\ChatterBotAPI.csproj">
       <Project>{2e624962-f155-432c-a90a-e1ce75dee9ea}</Project>
       <Name>ChatterBotAPI</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Discord.Net\src\Discord.Net.Audio.Net5\Discord.Net.Audio.csproj">
+      <Project>{7bfef748-b934-4621-9b11-6302e3a9f6b3}</Project>
+      <Name>Discord.Net.Audio</Name>
     </ProjectReference>
     <ProjectReference Include="..\Discord.Net\src\Discord.Net.Net45\Discord.Net.csproj">
       <Project>{8d71a857-879a-4a10-859e-5ff824ed6688}</Project>
@@ -176,7 +181,8 @@
     <Error Condition="!Exists('..\packages\System.Data.SQLite.Core.1.0.99.0\build\net451\System.Data.SQLite.Core.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\System.Data.SQLite.Core.1.0.99.0\build\net451\System.Data.SQLite.Core.targets'))" />
   </Target>
   <PropertyGroup>
-    <PostBuildEvent>xcopy /d /y /r "$(ProjectDir)\..\Discord.Net\src\Discord.Net\lib\*.dll" "$(TargetDir)\lib\" &gt; nul</PostBuildEvent>
+    <PostBuildEvent>
+    </PostBuildEvent>
   </PropertyGroup>
   <Import Project="..\packages\Microsoft.Bcl.Build.1.0.14\tools\Microsoft.Bcl.Build.targets" Condition="Exists('..\packages\Microsoft.Bcl.Build.1.0.14\tools\Microsoft.Bcl.Build.targets')" />
   <Target Name="EnsureBclBuildImported" BeforeTargets="BeforeBuild" Condition="'$(BclBuildImported)' == ''">

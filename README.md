@@ -17,6 +17,7 @@ You'll need to make a config.json file in the same place as the executable using
     "prefixprivate" : true,
     "prefixpublic" : true,
     "mentioncommand" : 1,
+    "loglevel" : 2,
     "musicFolder" : "",
     "musicUseSubfolders" : false,
     "pitur" : "",
@@ -36,6 +37,7 @@ The helpmode setting has three settings "public", "private", and disabled, if it
 The prefixprivate setting requires the use of prefix in PMs when true
 The prefixpublic setting requires the use of prefix in channels when true
 The mentioncommand setting allows @mentioning the bot instead of using prefix in channels when 1, when 2 allows you to mention after the command and its args as well.
+The loglevel setting is how verbose your console output should be, between 1 and 5, 5 being the noisiest, you probably don't want that.
 The musicFolder setting should be set to the full path to a folder containing a bunch of music files to be used for music streaming.
 The musicUseSubfolders setting is whether or not to include files buried in folders within your musicFolder.
 The pitur, gold and cosplay settings should be set to full paths to image folders containing whatever images you please. If they're not set, the commands will be disabled.

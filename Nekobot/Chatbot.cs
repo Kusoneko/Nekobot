@@ -8,7 +8,7 @@ namespace Nekobot
 {
     class Chatbot
     {
-        static Dictionary<long, ChatterBotSession> chatbots = new Dictionary<long, ChatterBotSession>();
+        static Dictionary<ulong, ChatterBotSession> chatbots = new Dictionary<ulong, ChatterBotSession>();
 
         static bool HasNeko(string msg, string neko)
         {
@@ -28,7 +28,7 @@ namespace Nekobot
             {
                 var chat = System.Net.WebUtility.HtmlDecode(chatbots[e.Channel.Id].Think(msg));
                 for (int i = 10; i != 0; --i) try { await Program.client.SendMessage(e.Channel, chat); break; }
-                    catch (HttpException ex) { if (i == 1) System.Console.WriteLine($"Error: {ex.Message}\n Could not SendMessage to {(e.Channel.IsPrivate ? "private" : "public")} channel {e.Channel} in response to {e.User}'s message: {e.Message.Text}"); }
+                    catch (Discord.Net.HttpException ex) { if (i == 1) Program.client.Log(LogSeverity.Error, $"{ex.Message}\n Could not SendMessage to {(e.Channel.IsPrivate ? "private" : "public")} channel {e.Channel} in response to {e.User}'s message: {e.Message.Text}"); }
             }
         }
 
@@ -36,7 +36,7 @@ namespace Nekobot
         {
             var reader = SQL.ReadChannels("chatbot <> -1", "channel,chatbot");
             while (reader.Read())
-                chatbots[System.Convert.ToInt64(reader["channel"].ToString())] =
+                chatbots[System.Convert.ToUInt64(reader["channel"].ToString())] =
                     CreateBotSession((ChatterBotType)System.Convert.ToInt32(reader["chatbot"]));
         }
 
