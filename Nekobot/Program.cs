@@ -846,7 +846,8 @@ The current topic is: {e.Channel.Topic}";
 
         private static void UserJoined(object sender, UserEventArgs e)
         {
-            client.SendMessage(e.Server.DefaultChannel, $"Welcome to {e.Server.Name}, <@{e.User.Id}>!");
+            if (!Flags.GetIgnored(e.User))
+                client.SendMessage(e.Server.DefaultChannel, $"Welcome to {e.Server.Name}, <@{e.User.Id}>!");
         }
 
         private static void Disconnected(object sender, DisconnectedEventArgs e)
