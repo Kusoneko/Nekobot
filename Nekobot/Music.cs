@@ -222,22 +222,22 @@ namespace Nekobot
                     foreach (Match match in m)
                     {
                         var link = $"youtube.com/watch?v={match.Groups[1]}";
-                        var video = await YouTube.Default.GetVideoAsync(link);
-                        var pl = playlist[e.User.VoiceChannel.Id];
-                        string uri;
-                        try { uri = video.Uri; }
+                        Tuple<string,string> uri_title;
+                        try { var video = await YouTube.Default.GetVideoAsync(link); uri_title = Tuple.Create(video.Uri, video.Title); }
                         catch
                         {
                             Program.rclient.BaseUrl = new Uri("http://www.youtubeinmp3.com/fetch/");
-                            uri = Newtonsoft.Json.Linq.JObject.Parse(Program.rclient.Execute(new RestSharp.RestRequest($"?format=JSON&video={System.Net.WebUtility.UrlEncode(link)}", RestSharp.Method.GET)).Content)["link"].ToString();
+                            var json = Newtonsoft.Json.Linq.JObject.Parse(Program.rclient.Execute(new RestSharp.RestRequest($"?format=JSON&video={System.Net.WebUtility.UrlEncode(link)}", RestSharp.Method.GET)).Content);
+                            uri_title = Tuple.Create(json["link"].ToString(), json["title"].ToString());
                         }
-                        var ext = $"{video.Title} ({link})";
+                        var pl = playlist[e.User.VoiceChannel.Id];
+                        var ext = $"{uri_title.Item2} ({link})";
                         if (pl.Exists(song => song.Ext == ext))
-                            await Program.client.SendMessage(e.Channel, $"<@{e.User.Id}> Your request ({video.Title}) is already in the playlist.");
+                            await Program.client.SendMessage(e.Channel, $"<@{e.User.Id}> Your request ({uri_title.Item2}) is already in the playlist.");
                         else
                         {
-                            pl.Insert(NonrequestedIndex(e), new Song(uri, Song.EType.Youtube, e.User.Id, ext));
-                            await Program.client.SendMessage(e.Channel, $"{video.Title} added to the playlist.");
+                            pl.Insert(NonrequestedIndex(e), new Song(uri_title.Item1, Song.EType.Youtube, e.User.Id, ext));
+                            await Program.client.SendMessage(e.Channel, $"{uri_title.Item2} added to the playlist.");
                         }
                     }
                     if (m.Count == 0)
