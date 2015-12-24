@@ -169,7 +169,7 @@ namespace Nekobot
                             }
                         }
                     }
-                    catch (OperationCanceledException err) { Program.client.Log(LogSeverity.Error, "Stream", err.Message); }
+                    catch (OperationCanceledException err) { Program.log.Error("Stream", err.Message); }
                 });
                 await _client.Wait(); // Prevent endless queueing which would eventually eat up all the ram
                 skip[cid] = false;

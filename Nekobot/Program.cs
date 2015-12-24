@@ -1,18 +1,18 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Discord;
+﻿using Discord;
 using Nekobot.Commands;
 using Nekobot.Commands.Permissions.Levels;
 using Newtonsoft.Json.Linq;
 using RestSharp;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using LastFM = IF.Lastfm.Core.Api;
 
 namespace Nekobot
 {
-    partial class Program
+    class Program
     {
         // Commands first to help with adding new commands
         static void GenerateCommands(CommandGroupBuilder group)
@@ -668,7 +668,8 @@ The current topic is: {e.Channel.Topic}";
         internal static JObject config;
         internal static ulong masterId;
 
-	internal static User GetNeko(Server s) => s.CurrentUser;
+        internal static User GetNeko(Server s) => s.CurrentUser;
+        internal static Discord.Logging.LogManager log => client.Log;
 
         static void InputThread()
         {
@@ -704,14 +705,14 @@ The current topic is: {e.Channel.Topic}";
             client.Connected += Connected;
             client.Disconnected += Disconnected;
             client.UserJoined += UserJoined;
-            client.Log.Message += (s, e) => client.Log(e);
+            client.Log.Message += (s, e) => Log.Write(e);
             client.Services.Add(new PermissionLevelService(GetPermissions));
             client.Services.Add(commands);
             //Display errors that occur when a user tries to run a command
             commands.CommandError += CommandError;
 
             //Log to the console whenever someone uses a command
-            commands.RanCommand += (s, e) => client.Log(LogSeverity.Verbose, "Command", $"{e.User.Name}: {e.Command.Text}");
+            commands.RanCommand += (s, e) => client.Log.Verbose("Command", $"{e.User.Name}: {e.Command.Text}");
 
             client.Services.Add(Voice.NewService);
 
@@ -736,7 +737,7 @@ The current topic is: {e.Channel.Topic}";
                     }
                     catch (Exception ex)
                     {
-                        client.Log(LogSeverity.Error, $"Login Failed", ex);
+                        client.Log.Error($"Login Failed", ex);
                         await Task.Delay(5000);
                     }
                 }
@@ -829,7 +830,7 @@ The current topic is: {e.Channel.Topic}";
                 config = JObject.Parse(System.IO.File.ReadAllText(@"config.json"));
             else
             {
-                Extensions.LogOutput("config.json file not found! Unable to initialize Nekobot!", ConsoleColor.Red);
+                Log.Output("config.json file not found! Unable to initialize Nekobot!", ConsoleColor.Red);
                 SQL.CloseAndDispose();
                 Console.ReadKey();
                 Environment.Exit(0);
@@ -857,12 +858,12 @@ The current topic is: {e.Channel.Topic}";
 
         private static void Disconnected(object sender, DisconnectedEventArgs e)
         {
-            client.Log(LogSeverity.Warning, "Disconnected");
+            Log.Write(LogSeverity.Warning, "Disconnected");
         }
 
         private static void Connected(object sender, EventArgs e)
         {
-            client.Log(LogSeverity.Warning, "Connected.");
+            Log.Write(LogSeverity.Warning, "Connected.");
         }
 
         private static void CommandError(object sender, CommandErrorEventArgs e)
@@ -895,7 +896,7 @@ The current topic is: {e.Channel.Topic}";
             if (msg != null)
             {
                 client.ReplyError(e, "Command Error: " + msg);
-                client.Log(LogSeverity.Error, "Command", msg);
+                client.Log.Error("Command", msg);
             }
         }
 

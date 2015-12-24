@@ -21,7 +21,7 @@ namespace Nekobot
             try { return await Program.client.Audio().Join(c); }
             catch (Exception e)
             {
-                Program.client.Log(LogSeverity.Error, "Join Voice Server Error: " + e.Message);
+                Program.log.Error("Voice", "Join Server Error: " + e.Message);
                 return null;
             }
         }

@@ -28,7 +28,7 @@ namespace Nekobot
             {
                 var chat = System.Net.WebUtility.HtmlDecode(chatbots[e.Channel.Id].Think(msg));
                 for (int i = 10; i != 0; --i) try { await e.Channel.SendMessage(chat); break; }
-                    catch (Discord.Net.HttpException ex) { if (i == 1) Program.client.Log(LogSeverity.Error, $"{ex.Message}\n Could not SendMessage to {(e.Channel.IsPrivate ? "private" : "public")} channel {e.Channel} in response to {e.User}'s message: {e.Message.Text}"); }
+                    catch (Discord.Net.HttpException ex) { if (i == 1) Log.Write(LogSeverity.Error, $"{ex.Message}\nCould not SendMessage to {(e.Channel.IsPrivate ? "private" : "public")} channel {e.Channel} in response to {e.User}'s message: {e.Message.Text}"); }
             }
         }
 

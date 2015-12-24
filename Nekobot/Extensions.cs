@@ -35,67 +35,6 @@ namespace Nekobot
             => Reply(client, e.User, e.Channel, "Error: " + ex.GetBaseException().Message);
         public static Task ReplyError(this DiscordClient client, User user, Channel channel, Exception ex)
             => Reply(client, user, channel, "Error: " + ex.GetBaseException().Message);
-
-        public static void Log(this DiscordClient client, LogMessageEventArgs e)
-            => Log(client, e.Severity, e.Source, e.Message, e.Exception);
-        public static void Log(this DiscordClient client, LogSeverity severity, string text, Exception ex = null)
-            => Log(client, severity, null, text, ex);
-        public static void Log(this DiscordClient client, LogSeverity severity, object source, string text, Exception ex = null)
-        {
-            char severityChar;
-            ConsoleColor color;
-            switch (severity)
-            {
-                case LogSeverity.Error:
-                    severityChar = 'E';
-                    color = ConsoleColor.Red;
-                    break;
-                case LogSeverity.Warning:
-                    severityChar = 'W';
-                    color = ConsoleColor.Yellow;
-                    break;
-                case LogSeverity.Info:
-                    severityChar = 'I';
-                    color = ConsoleColor.White;
-                    break;
-                case LogSeverity.Verbose:
-                    severityChar = 'V';
-                    color = ConsoleColor.Gray;
-                    break;
-                case LogSeverity.Debug:
-                    severityChar = 'D';
-                    color = ConsoleColor.DarkGray;
-                    break;
-                default:
-                    severityChar = '?';
-                    color = ConsoleColor.Gray;
-                    break;
-            }
-
-            if (source != null)
-                text = $"[{source}] {text}";
-            if (ex != null)
-                text = $"{text}: {ex.GetBaseException().Message}";
-            if (severity <= LogSeverity.Info || (source != null && source is string))
-            {
-                LogOutput(text, color);
-            }
-
-            text = $"{severityChar} {text}";
-            Debug.WriteLine(text);
-        }
-
-        static object log = new object();
-        internal static void LogOutput(string text, ConsoleColor color)
-        {
-            lock (log)
-            {
-                ConsoleColor c = ConsoleColor.White;
-                Console.ForegroundColor = color;
-                Console.WriteLine(text);
-                Console.ForegroundColor = c;
-            }
-        }
     }
 
     internal static class InternalExtensions
