@@ -12,7 +12,7 @@ using LastFM = IF.Lastfm.Core.Api;
 
 namespace Nekobot
 {
-    class Program
+    partial class Program
     {
         // Commands first to help with adding new commands
         static void GenerateCommands(CommandGroupBuilder group)
@@ -80,7 +80,7 @@ namespace Nekobot
                 .Description("I'll tell you the current version and check if a newer version is available.")
                 .Do(async e =>
                 {
-                    var version = client.Config.AppVersion;
+                    var version = Config.AppVersion;
                     string[] versions = version.Split('.');
                     rclient.BaseUrl = new Uri("https://raw.githubusercontent.com");
                     var request = new RestRequest("Kusoneko/Nekobot/master/version.json", Method.GET);
@@ -661,7 +661,7 @@ The current topic is: {e.Channel.Topic}";
         }
 
         // Variables
-        internal static DiscordClient client;
+        static DiscordClient client;
         static CommandService commands;
         internal static RestClient rclient = new RestClient();
         static LastFM.LastfmClient lfclient;
@@ -669,7 +669,7 @@ The current topic is: {e.Channel.Topic}";
         internal static ulong masterId;
 
         internal static User GetNeko(Server s) => s.CurrentUser;
-        internal static Discord.Logging.LogManager log => client.Log;
+        internal static DiscordConfig Config => client.Config;
 
         static void InputThread()
         {
@@ -694,7 +694,7 @@ The current topic is: {e.Channel.Topic}";
                 UseMessageQueue = false,
                 UseLargeThreshold = true,
             });
-            Console.Title = $"{client.Config.AppName} v{client.Config.AppVersion} (Discord.Net v{DiscordConfig.LibVersion})";
+            Console.Title = $"{Config.AppName} v{Config.AppVersion} (Discord.Net v{DiscordConfig.LibVersion})";
 
             // Load the stream channels
             Music.LoadStreams();
@@ -744,7 +744,7 @@ The current topic is: {e.Channel.Topic}";
                 // Connection, join server if there is one in config, and start music streams
                 if (config["server"].ToString() != "")
                     try { await client.GetInvite(config["server"].ToString()).Result.Accept(); } catch { }
-                await Music.StartStreams();
+                await Music.StartStreams(client);
             });
         }
 

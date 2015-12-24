@@ -113,9 +113,9 @@ namespace Nekobot
             } catch { }
             return null;
         }
-        static async Task Stream(ulong cid)
+        static async Task Stream(Channel c)
         {
-            Channel c = Program.client.GetChannel(cid);
+            ulong cid = c.Id;
             Discord.Audio.DiscordAudioClient _client = await Voice.JoinServer(c);
             Random rnd = new Random();
             if (!playlist.ContainsKey(cid))
@@ -150,7 +150,7 @@ namespace Nekobot
                         var musicReader = Reader(playlist[cid][0].Uri);
                         if (musicReader == null)
                         {
-                            Program.client.Log(LogSeverity.Warning, "Stream", $"{playlist[cid][0].Uri} couldn't be read.");
+                            Program.log.Warning("Stream", $"{playlist[cid][0].Uri} couldn't be read.");
                             return;
                         }
                         using (var resampler = new MediaFoundationResampler(musicReader, outFormat) { ResamplerQuality = 60 })
@@ -186,16 +186,17 @@ namespace Nekobot
             skip.Remove(cid);
             reset.Remove(cid);
             pause.Remove(cid);
-            await Program.client.Services.Get<Discord.Audio.AudioService>().Leave(c.Server);
+            await Program.Audio.Leave(c.Server);
         }
 
-        internal static Task StartStreams()
+        internal static Task StartStreams(DiscordClient client)
         {
             return Task.WhenAll(
               streams.Select(s =>
               {
-                  if (Program.client.GetChannel(s).Type == ChannelType.Voice)
-                      return Task.Run(() => Stream(s));
+                  Channel c = client.GetChannel(s);
+                  if (c.Type == ChannelType.Voice)
+                      return Task.Run(() => Stream(c));
                   else
                       return null;
               })
@@ -210,16 +211,16 @@ namespace Nekobot
                 streams.Add(Convert.ToUInt64(reader["channel"].ToString()));
         }
 
-        static async Task ResetStream(ulong channel)
+        static async Task ResetStream(Channel c)
         {
-            reset[channel] = true;
+            reset[c.Id] = true;
             await Task.Delay(5000);
-            await Stream(channel);
+            await Stream(c);
         }
 
         internal static async Task StopStreams(Server server)
         {
-            var serverstreams = streams.Where(stream => Program.client.GetChannel(stream).Server == server).ToArray();
+            var serverstreams = streams.Where(stream => server.GetChannel(stream) != null).ToArray();
             foreach (var stream in serverstreams)
             {
                 SQL.AddOrUpdateFlag(stream, "music", "0");
@@ -436,7 +437,7 @@ namespace Nekobot
                 .Do(async e =>
                 {
                     if (await AddVote(votereset, e, "reset the stream", "resetting stream", "reset"))
-                        await ResetStream(e.User.VoiceChannel.Id);
+                        await ResetStream(e.User.VoiceChannel);
                 });
 
             group.CreateCommand("encore")
@@ -464,7 +465,7 @@ namespace Nekobot
                 .Do(async e =>
                 {
                     await e.Channel.SendMessage("Reseting stream...");
-                    await ResetStream(e.User.VoiceChannel.Id);
+                    await ResetStream(e.User.VoiceChannel);
                 });
 
             group.CreateCommand("pause")
@@ -508,7 +509,7 @@ namespace Nekobot
                                 {
                                     await StopStreams(e.Server);
                                     streams.Add(e.User.VoiceChannel.Id);
-                                    await Stream(e.User.VoiceChannel.Id);
+                                    await Stream(e.User.VoiceChannel);
                                 }
                                 else streams.Remove(e.User.VoiceChannel.Id);
                             }

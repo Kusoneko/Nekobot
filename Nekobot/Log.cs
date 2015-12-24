@@ -1,9 +1,14 @@
 ﻿using Discord;
+using Discord.Logging;
 using System;
 using System.Text;
 
 namespace Nekobot
 {
+    partial class Program
+    {
+        internal static LogManager log => client.Log;
+    }
     class Log
     {
         static LogMessageEventArgs Args(LogSeverity s, string msg, Exception e = null) => new LogMessageEventArgs(s, null, msg, e);
@@ -68,7 +73,7 @@ namespace Nekobot
             }
 
             text = builder.ToString();
-            if (e.Severity <= Program.client.Config.LogLevel)
+            if (e.Severity <= Program.Config.LogLevel)
             {
                 Output(text, color);
             }
