@@ -111,7 +111,7 @@ namespace Nekobot
                                     await Task.Delay(1000);
                                     break;
                                 }
-                                while(pause[cid]);// Play Voice.cs commands in here?
+                                while(pause[cid]) await Task.Delay(500); // Play Voice.cs commands in here?
                                 _client.SendVoicePCM(buffer, blockSize);
                             }
                         }
