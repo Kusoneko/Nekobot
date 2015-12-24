@@ -47,14 +47,7 @@ namespace Nekobot
             group.CreateCommand("nsfw status")
                 .Alias("canlewd status")
                 .Description("I'll tell you if this channel allows nsfw commands.")
-                .Do(async e =>
-                {
-                    bool nsfw = GetNsfw(e.Channel);
-                    if (nsfw)
-                        await Program.client.SendMessage(e.Channel, "This channel allows nsfw commands.");
-                    else
-                        await Program.client.SendMessage(e.Channel, "This channel doesn't allow nsfw commands.");
-                });
+                .Do(async e => await e.Channel.SendMessage($"This channel {(GetNsfw(e.Channel) ? "allows" : "doesn't allow")} nsfw commands."));
 
             // Moderator Commands
             group.CreateCommand("nsfw")
@@ -71,14 +64,14 @@ namespace Nekobot
                         bool nsfw = GetNsfw(e.Channel);
                         string status = on ? "allow" : "disallow";
                         if (nsfw == on || nsfw != off)
-                            await Program.client.SendMessage(e.Channel, $"<@{e.User.Id}>, this channel is already {status}ing nsfw commands.");
+                            await e.Channel.SendMessage($"<@{e.User.Id}>, this channel is already {status}ing nsfw commands.");
                         else
                         {
                             await SQL.AddOrUpdateFlagAsync(e.Channel.Id, "nsfw", off ? "0" : "1");
-                            await Program.client.SendMessage(e.Channel, $"I've set this channel to {status} nsfw commands.");
+                            await e.Channel.SendMessage($"I've set this channel to {status} nsfw commands.");
                         }
                     }
-                    else await Program.client.SendMessage(e.Channel, $"<@{e.User.Id}>, '{String.Join(" ", e.Args)}' isn't a valid argument. Please use on or off instead.");
+                    else await e.Channel.SendMessage($"<@{e.User.Id}>, '{string.Join(" ", e.Args)}' isn't a valid argument. Please use on or off instead.");
                 });
 
             // Administrator Commands
@@ -98,12 +91,9 @@ namespace Nekobot
                             reply += (reply != "" ? "\n" : "") + await SetIgnored("channel", "flags", c.Id, '#', perms);
                         foreach (User u in e.Message.MentionedUsers)
                             reply += (reply != "" ? "\n" : "") + await SetIgnored("user", "users", u.Id, '@', perms, Program.GetPermissions(u, e.Channel));
-                        await Program.client.SendMessage(e.Channel, reply);
+                        await e.Channel.SendMessage(reply);
                     }
-                    else
-                    {
-                        await Program.client.SendMessage(e.Channel, "You need to mention at least one user or channel!");
-                    }
+                    else await e.Channel.SendMessage("You need to mention at least one user or channel!");
                 });
         }
     }

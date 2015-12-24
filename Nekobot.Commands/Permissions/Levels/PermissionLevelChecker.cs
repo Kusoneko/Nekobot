@@ -12,7 +12,7 @@ namespace Nekobot.Commands.Permissions.Levels
 
         internal PermissionLevelChecker(DiscordClient client, int minPermissions)
         {
-            _service = client.GetService<PermissionLevelService>(true);
+            _service = client.Services.Get<PermissionLevelService>(true);
             _minPermissions = minPermissions;
         }
 

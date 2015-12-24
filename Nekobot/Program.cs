@@ -25,14 +25,14 @@ namespace Nekobot
                 .Description("I'll reply with 'Pong!'")
                 .Do(async e =>
                 {
-                    await client.SendMessage(e.Channel, $"<@{e.User.Id}>, Pong!");
+                    await e.Channel.SendMessage($"<@{e.User.Id}>, Pong!");
                 });
 
             group.CreateCommand("status")
                 .Description("I'll give statistics about the servers, channels and users.")
                 .Do(async e =>
                 {
-                    await client.SendMessage(e.Channel, $"I'm connected to {client.AllServers.Count()} servers, which have a total of {client.AllServers.SelectMany(x => x.Channels).Count()} channels, and see a total of {client.AllServers.SelectMany(x => x.Members).Distinct().Count()} different users.");
+                    await e.Channel.SendMessage($"I'm connected to {client.Servers.Count()} servers, which have a total of {client.Servers.SelectMany(x => x.TextChannels).Count()} text and {client.Servers.SelectMany(x => x.VoiceChannels).Count()} voice channels, and see a total of {client.Servers.SelectMany(x => x.Users).Distinct().Count()} different users.");
                 });
 
             group.CreateCommand("whois")
@@ -58,7 +58,7 @@ namespace Nekobot
 ";
                         }
                     }
-                    await client.SendMessage(e.Channel, reply);
+                    await e.Channel.SendMessage(reply);
                 });
 
             Music.AddCommands(group);
@@ -73,7 +73,7 @@ namespace Nekobot
                     string quote = result["quote"]["quote"].ToString();
                     string author = result["quote"]["author"].ToString();
                     string date = result["quote"]["date"].ToString();
-                    await client.SendMessage(e.Channel, $"\"{quote}\" - {author} {date}");
+                    await e.Channel.SendMessage($"\"{quote}\" - {author} {date}");
                 });
 
             group.CreateCommand("version")
@@ -88,19 +88,19 @@ namespace Nekobot
                     string remoteversion = result["version"].ToString();
                     string[] remoteversions = remoteversion.Split('.');
                     if (int.Parse(versions[0]) < int.Parse(remoteversions[0]))
-                        await client.SendMessage(e.Channel, $"I'm currently {(int.Parse(remoteversions[0]) - int.Parse(versions[0]))} major version(s) behind. (Current version: {version}, latest version: {remoteversion})");
+                        await e.Channel.SendMessage($"I'm currently {(int.Parse(remoteversions[0]) - int.Parse(versions[0]))} major version(s) behind. (Current version: {version}, latest version: {remoteversion})");
                     else if (int.Parse(versions[0]) > int.Parse(remoteversions[0]))
-                        await client.SendMessage(e.Channel, $"I'm currently {(int.Parse(versions[0]) - int.Parse(remoteversions[0]))} major version(s) ahead. (Current version: {version}, latest released version: {remoteversion})");
+                        await e.Channel.SendMessage($"I'm currently {(int.Parse(versions[0]) - int.Parse(remoteversions[0]))} major version(s) ahead. (Current version: {version}, latest released version: {remoteversion})");
                     else if (int.Parse(versions[1]) < int.Parse(remoteversions[1]))
-                        await client.SendMessage(e.Channel, $"I'm currently {(int.Parse(remoteversions[1]) - int.Parse(versions[1]))} minor version(s) behind. (Current version: {version}, latest version: {remoteversion})");
+                        await e.Channel.SendMessage($"I'm currently {(int.Parse(remoteversions[1]) - int.Parse(versions[1]))} minor version(s) behind. (Current version: {version}, latest version: {remoteversion})");
                     else if (int.Parse(versions[1]) > int.Parse(remoteversions[1]))
-                        await client.SendMessage(e.Channel, $"I'm currently {(int.Parse(versions[1]) - int.Parse(remoteversions[1]))} minor version(s) ahead. (Current version: {version}, latest released version: {remoteversion})");
+                        await e.Channel.SendMessage($"I'm currently {(int.Parse(versions[1]) - int.Parse(remoteversions[1]))} minor version(s) ahead. (Current version: {version}, latest released version: {remoteversion})");
                     else if (int.Parse(versions[2]) < int.Parse(remoteversions[2]))
-                        await client.SendMessage(e.Channel, $"I'm currently {(int.Parse(remoteversions[2]) - int.Parse(versions[2]))} patch(es) behind. (Current version: {version}, latest version: {remoteversion})");
+                        await e.Channel.SendMessage($"I'm currently {(int.Parse(remoteversions[2]) - int.Parse(versions[2]))} patch(es) behind. (Current version: {version}, latest version: {remoteversion})");
                     else if (int.Parse(versions[2]) > int.Parse(remoteversions[2]))
-                        await client.SendMessage(e.Channel, $"I'm currently {(int.Parse(versions[2]) - int.Parse(remoteversions[2]))} patch(es) ahead. (Current version: {version}, latest released version: {remoteversion})");
+                        await e.Channel.SendMessage($"I'm currently {(int.Parse(versions[2]) - int.Parse(remoteversions[2]))} patch(es) ahead. (Current version: {version}, latest released version: {remoteversion})");
                     else
-                        await client.SendMessage(e.Channel, $"I'm up to date! (Current version: {version})");
+                        await e.Channel.SendMessage($"I'm up to date! (Current version: {version})");
                 });
 
             Image.AddCommands(group);
@@ -111,7 +111,7 @@ namespace Nekobot
                 {
                     string[] fortunes = new string[] { "Don't sleep for too long, or you'll miss naptime!", "Before crying over spilt milk, remember it can still be delicious without a bowl.", "A bird in the paw is worth nom nom nom...", "Let no surface, no matter how high or cluttered, go unexplored.", "Neko never catches the laser if neko never tries.", "Our greatest glory is not in never falling, but in making sure master doesn't find the mess.", "A mouse shared halves the food but doubles the happiness.", "There exists nary a toy as pertinent as the box from whence that toy came.", "Neko will never be fed if neko does not meow all day!", "Ignore physics, and physics will ignore you.", "Never bite the hand that feeds you!", "Before finding the red dot, you must first find yourself.", "Some see the glass half empty. Some see the glass half full. Neko sees the glass and knocks it over.", "Make purrs not war.", "Give a neko fish and you feed them for a day; Teach a neko to fish and... mmmm fish.", "Wheresoever you go, go with all of master's things.", "Live your dreams every day! Why do you think neko naps so much?", "The hardest thing of all is to find a black cat in a dark room, especially if there is no cat.", "Meow meow meow meow, meow meow. Meow meow meow." };
                     Random rnd = new Random();
-                    await client.SendMessage(e.Channel, fortunes[rnd.Next(0, fortunes.Count())]);
+                    await e.Channel.SendMessage(fortunes[rnd.Next(0, fortunes.Count())]);
                 });
 
             group.CreateCommand("playeravatar")
@@ -128,11 +128,11 @@ namespace Nekobot
                         request.AddQueryParameter("login", s);
                         JObject result = JObject.Parse(rclient.Execute(request).Content);
                         if (Convert.ToBoolean(result["success"]) == false)
-                            await client.SendMessage(e.Channel, $"{s} was not found.");
+                            await e.Channel.SendMessage($"{s} was not found.");
                         else
                         {
                             string avatar = result["results"]["avatar"]["original"].ToString();
-                            await client.SendMessage(e.Channel, $"{s}'s avatar: https:{avatar}");
+                            await e.Channel.SendMessage($"{s}'s avatar: https:{avatar}");
                         }
                     }
                 });
@@ -151,9 +151,9 @@ namespace Nekobot
                         if (user != null)
                         {
                             var d = (await api.GetRecentScrobbles(user, count: 1)).First();
-                            await client.SendMessage(e.Channel, $"{(e.Args[0] == "" ? e.User.Name : user)} last listened to **{d.Name}** by **{d.ArtistName}**");
+                            await e.Channel.SendMessage($"{(e.Args[0] == "" ? e.User.Name : user)} last listened to **{d.Name}** by **{d.ArtistName}**");
                         }
-                        else await client.SendMessage(e.Channel, $"I don't know your lastfm yet, please use the `setlastfm <username>` command.");
+                        else await e.Channel.SendMessage($"I don't know your lastfm yet, please use the `setlastfm <username>` command.");
                     });
 
                 group.CreateCommand("setlastfm")
@@ -165,9 +165,9 @@ namespace Nekobot
                         if (lastfm.Length > 2 && lastfm.Length < 18)
                         {
                             await SQL.AddOrUpdateUserAsync(e.User.Id, "lastfm", lastfm);
-                            await client.SendMessage(e.Channel, $"I'll remember your lastfm is {lastfm} now, {e.User.Name}.");
+                            await e.Channel.SendMessage($"I'll remember your lastfm is {lastfm} now, {e.User.Name}.");
                         }
-                        else await client.SendMessage(e.Channel, $"{lastfm} is not a valid lastfm username.");
+                        else await e.Channel.SendMessage($"{lastfm} is not a valid lastfm username.");
                     });
             }
 
@@ -177,14 +177,14 @@ namespace Nekobot
                 .Description("I'll say 'Nyaa~'")
                 .Do(async e =>
                 {
-                    await client.SendMessage(e.Channel, "Nyaa~");
+                    await e.Channel.SendMessage("Nyaa~");
                 });
 
             group.CreateCommand("poi")
                 .Description("I'll say 'Poi!'")
                 .Do(async e =>
                 {
-                    await client.SendMessage(e.Channel, "Poi!");
+                    await e.Channel.SendMessage("Poi!");
                 });
 
             group.CreateCommand("aicrai")
@@ -195,7 +195,7 @@ namespace Nekobot
                 .Description("When sad things happen...")
                 .Do(async e =>
                 {
-                    await client.SendMessage(e.Channel, "https://www.youtube.com/watch?v=0JAn8eShOo8");
+                    await e.Channel.SendMessage("https://www.youtube.com/watch?v=0JAn8eShOo8");
                 });
 
             group.CreateCommand("notnow")
@@ -203,14 +203,14 @@ namespace Nekobot
                 .Description("How to Rekt: Rin 101")
                 .Do(async e =>
                 {
-                    await client.SendMessage(e.Channel, "https://www.youtube.com/watch?v=2BZUzJfKFwM");
+                    await e.Channel.SendMessage("https://www.youtube.com/watch?v=2BZUzJfKFwM");
                 });
 
             group.CreateCommand("uninstall")
                 .Description("A great advice in any situation.")
                 .Do(async e =>
                 {
-                    await client.SendMessage(e.Channel, "https://www.youtube.com/watch?v=5sQzi0dn_dA");
+                    await e.Channel.SendMessage("https://www.youtube.com/watch?v=5sQzi0dn_dA");
                 });
 
             group.CreateCommand("killyourself")
@@ -218,7 +218,7 @@ namespace Nekobot
                 .Description("Another great advice.")
                 .Do(async e =>
                 {
-                    await client.SendMessage(e.Channel, "https://www.youtube.com/watch?v=2dbR2JZmlWo");
+                    await e.Channel.SendMessage("https://www.youtube.com/watch?v=2dbR2JZmlWo");
                 });
 
             group.CreateCommand("congratulations")
@@ -228,7 +228,7 @@ namespace Nekobot
                 .Description("Congratulate someone for whatever reason.")
                 .Do(async e =>
                 {
-                    await client.SendMessage(e.Channel, "https://www.youtube.com/watch?v=oyFQVZ2h0V8");
+                    await e.Channel.SendMessage("https://www.youtube.com/watch?v=oyFQVZ2h0V8");
                 });
 
             group.CreateCommand("say")
@@ -256,7 +256,7 @@ namespace Nekobot
                             ulong mentionid = Convert.ToUInt64(message.Substring(2, index-2));
                             if (mentionid != client.CurrentUser.Id)
                             {
-                                channel = usermention ? await client.CreatePMChannel(e.Message.MentionedUsers.Where(u => u.Id == mentionid).Single())
+                                channel = usermention ? await e.Message.MentionedUsers.Where(u => u.Id == mentionid).Single().CreateChannel()
                                     : e.Message.MentionedChannels.Where(c => c.Id == mentionid).Single();
                                 if (CanSay(ref channel, e.User, e.Channel))
                                     message = message.Substring(index + 2);
@@ -271,14 +271,14 @@ namespace Nekobot
                             if (chanstr.Length+1 < message.Length)
                             {
                                 ulong id = Convert.ToUInt64(chanstr);
-                                channel = client.GetChannel(id) ?? await client.CreatePMChannel(client.AllServers.Select(x => client.GetUser(x, id)).FirstOrDefault());
+                                channel = client.GetChannel(id) ?? await client.Servers.Select(x => x.GetUser(id)).FirstOrDefault().CreateChannel();
                                 if (CanSay(ref channel, e.User, e.Channel))
                                     message = message.Substring(message.IndexOf(" ")+1);
                             }
-                        } catch (Exception) { }
+                        } catch { }
                     }
                     if (message.TrimEnd() != "")
-                        await client.SendMessage(channel, message);
+                        await channel.SendMessage(message);
                 });
 
             group.CreateCommand("reverse")
@@ -290,7 +290,7 @@ namespace Nekobot
                 {
                     var text = e.Args[0];
                     if (text.Length != 0)
-                        await client.SendMessage(e.Channel, String.Join("", GraphemeClusters(text).Reverse().ToArray()));
+                        await e.Channel.SendMessage(string.Join("", GraphemeClusters(text).Reverse().ToArray()));
                 });
 
             group.CreateCommand("whereami")
@@ -302,7 +302,7 @@ namespace Nekobot
                 .Do(async e =>
                 {
                     if (e.Channel.IsPrivate)
-                        await client.SendMessage(e.Channel, "You're in a private message with me, baka.");
+                        await e.Channel.SendMessage("You're in a private message with me, baka.");
                     else
                     {
                         string message = $@"You are currently in {e.Channel.Name} (id: {e.Channel.Id})
@@ -311,7 +311,7 @@ owned by {e.Server.Owner.Name} (id {e.Server.Owner.Id}).";
                         if (e.Channel.Topic != "" || e.Channel.Topic != null)
                             message = message + $@"
 The current topic is: {e.Channel.Topic}";
-                        await client.SendMessage(e.Channel, message);
+                        await e.Channel.SendMessage(message);
                     }
                 });
 
@@ -324,9 +324,9 @@ The current topic is: {e.Channel.Topic}";
                     foreach (User u in e.Message.MentionedUsers)
                     {
                         if (u.AvatarUrl == null)
-                            await client.SendMessage(e.Channel, $"<@{u.Id}> has no avatar.");
+                            await e.Channel.SendMessage($"<@{u.Id}> has no avatar.");
                         else
-                            await client.SendMessage(e.Channel, $"<@{u.Id}>'s avatar is: https://discordapp.com/api/{u.AvatarUrl}");
+                            await e.Channel.SendMessage($"<@{u.Id}>'s avatar is: https://discordapp.com/api/{u.AvatarUrl}");
                     }
                 });
 
@@ -341,7 +341,7 @@ The current topic is: {e.Channel.Topic}";
                         int dummy = 0;
                         if (!int.TryParse(s, out dummy))
                         {
-                            await client.SendMessage(e.Channel, $"{s} is not a number!");
+                            await e.Channel.SendMessage($"{s} is not a number!");
                             return;
                         }
                     }
@@ -349,7 +349,7 @@ The current topic is: {e.Channel.Topic}";
                     int max = e.Args.Length > 0 ? int.Parse(e.Args[e.Args.Length == 1 ? 0 : 1]) : 100;
                     if (min == max)
                     {
-                        await client.SendMessage(e.Channel, $"You're joking right? It's {min}.");
+                        await e.Channel.SendMessage($"You're joking right? It's {min}.");
                         return;
                     }
                     if (min > max)
@@ -359,7 +359,7 @@ The current topic is: {e.Channel.Topic}";
                         max = z;
                     }
                     ++max;
-                    await client.SendMessage(e.Channel, $"Your number is **{new Random().Next(min,max)}**.");
+                    await e.Channel.SendMessage($"Your number is **{new Random().Next(min,max)}**.");
                 });
 
             group.CreateCommand("roll")
@@ -394,13 +394,13 @@ The current topic is: {e.Channel.Topic}";
                             for (int i = times; i > 0; i--)
                                 for (int j = dice; j > 0; j--)
                                     roll += rnd.Next(1, sides + 1);
-                            await client.SendMessage(e.Channel, $"You rolled {dice} different {sides}-sided dice {times} times... Result: **{roll}**");
+                            await e.Channel.SendMessage($"You rolled {dice} different {sides}-sided dice {times} times... Result: **{roll}**");
                         }
                         else
-                            await client.SendMessage(e.Channel, $"Arguments are not all numbers!");
+                            await e.Channel.SendMessage($"Arguments are not all numbers!");
                     }
                     else
-                        await client.SendMessage(e.Channel, $"https://www.youtube.com/watch?v=dQw4w9WgXcQ");
+                        await e.Channel.SendMessage($"https://www.youtube.com/watch?v=dQw4w9WgXcQ");
                 });
 
             group.CreateCommand("lotto")
@@ -422,7 +422,7 @@ The current topic is: {e.Channel.Topic}";
                         }
                         lotto.Add(number);
                     }
-                    await client.SendMessage(e.Channel, $"Your lucky numbers are **{lotto[0]}, {lotto[1]}, {lotto[2]}, {lotto[3]}, {lotto[4]}, {lotto[5]}**.");
+                    await e.Channel.SendMessage($"Your lucky numbers are **{lotto[0]}, {lotto[1]}, {lotto[2]}, {lotto[3]}, {lotto[4]}, {lotto[5]}**.");
                 });
 
             group.CreateCommand("pet")
@@ -449,12 +449,13 @@ The current topic is: {e.Channel.Topic}";
                 .Description("The magic eightball can answer any question!")
                 .Do(async e =>
                 {
+                    if (!string.Join(" ", e.Args).EndsWith("?"))
+                    {
+                        await e.Channel.SendMessage("You must ask a proper question!");
+                        return;
+                    }
                     string[] eightball = new string[] { "It is certain.", "It is decidedly so.", "Without a doubt.", "Yes, definitely.", "You may rely on it.", "As I see it, yes.", "Most likely.", "Outlook good.", "Yes.", "Signs point to yes.", "Reply hazy try again...", "Ask again later...", "Better not tell you now...", "Cannot predict now...", "Concentrate and ask again...", "Don't count on it.", "My reply is no.", "My sources say no.", "Outlook not so good.", "Very doubtful.", "Nyas.", "Why not?", "zzzzz...", "No." };
-                    Random rnd = new Random();
-                    if (String.Join(" ", e.Args)[String.Join(" ", e.Args).Length - 1] != '?')
-                        await client.SendMessage(e.Channel, "You must ask a proper question!");
-                    else
-                        await client.SendMessage(e.Channel, $"*{eightball[rnd.Next(eightball.Length)]}*");
+                    await e.Channel.SendMessage($"*{eightball[new Random().Next(eightball.Length)]}*");
                 });
 
             group.CreateCommand("hbavatar")
@@ -483,7 +484,7 @@ The current topic is: {e.Channel.Topic}";
 {username}'s avatar: {avatar}";
                         }
                     }
-                    await client.SendMessage(e.Channel, message);
+                    await e.Channel.SendMessage(message);
                 });
 
             group.CreateCommand("hb")
@@ -532,7 +533,7 @@ The current topic is: {e.Channel.Topic}";
                             message += $@"
 **Hummingbird page**: {userurl}";
                         }
-                        await client.SendMessage(e.Channel, message);
+                        await e.Channel.SendMessage(message);
                     }
                 });
 
@@ -550,7 +551,7 @@ The current topic is: {e.Channel.Topic}";
                         request.AddQueryParameter("login", s);
                         JObject result = JObject.Parse(rclient.Execute(request).Content);
                         if (Convert.ToBoolean(result["success"]) == false)
-                            await client.SendMessage(e.Channel, $"{s} was not found.");
+                            await e.Channel.SendMessage($"{s} was not found.");
                         else
                         {
                             string username = result["results"]["username"].ToString();
@@ -560,7 +561,7 @@ The current topic is: {e.Channel.Topic}";
                             string joined = date.ToString("yyyy-MM-dd");
                             int followers = Convert.ToInt32(result["results"]["followers_count"]);
                             int following = Convert.ToInt32(result["results"]["following_count"]);
-                            await client.SendMessage(e.Channel, $@"
+                            await e.Channel.SendMessage($@"
 **User**: {username}
 **Avatar**: {avatar}
 **Bio**: {bio}
@@ -576,10 +577,7 @@ The current topic is: {e.Channel.Topic}";
                 .Parameter("invite code or link", Commands.ParameterType.Required)
                 .MinPermissions(1)
                 .Description("I'll join a new server using the provided invite code or link.")
-                .Do(async e =>
-                {
-                    await client.AcceptInvite(client.GetInvite(e.Args[0]).Result);
-                });
+                .Do(async e => await client.GetInvite(e.Args[0]).Result.Accept());
 
             // Administrator commands
             group.CreateCommand("setpermissions")
@@ -594,11 +592,11 @@ The current topic is: {e.Channel.Topic}";
                     int newPermLevel = 0;
                     int eUserPerm = GetPermissions(e.User, e.Channel);
                     if (e.Args[1] == "" || e.Message.MentionedUsers.Count() < 1)
-                        await client.SendMessage(e.Channel, "You need to at least specify a permission level and mention one user.");
+                        await e.Channel.SendMessage("You need to at least specify a permission level and mention one user.");
                     else if (!int.TryParse(e.Args[0], out newPermLevel))
-                        await client.SendMessage(e.Channel, "The first argument needs to be the new permission level.");
+                        await e.Channel.SendMessage("The first argument needs to be the new permission level.");
                     else if (eUserPerm <= newPermLevel)
-                        await client.SendMessage(e.Channel, "You can only set permission level to lower than your own.");
+                        await e.Channel.SendMessage("You can only set permission level to lower than your own.");
                     else
                     {
                         string reply = "";
@@ -617,7 +615,7 @@ The current topic is: {e.Channel.Topic}";
                                 reply += '\n';
                             reply += $"<@{u.Id}>'s permission level is "+(change_needed ? "now" : "already at")+$" {newPermLevel}.";
                         }
-                        await client.SendMessage(e.Channel, reply);
+                        await e.Channel.SendMessage(reply);
                     }
                 });
 
@@ -628,9 +626,9 @@ The current topic is: {e.Channel.Topic}";
                 .Description("I'll leave the server this command was used in.")
                 .Do(async e =>
                 {
-                    await client.SendMessage(e.Channel, "Bye bye!");
+                    await e.Channel.SendMessage("Bye bye!");
                     await Music.StopStreams(e.Server);
-                    await client.LeaveServer(e.Server);
+                    await e.Server.Leave();
                 });
 
             group.CreateCommand("color")
@@ -649,12 +647,12 @@ The current topic is: {e.Channel.Topic}";
                         byte red = Convert.ToByte(rgb ? int.Parse(e.Args[1]) : Convert.ToInt32(e.Args[1].Substring(0, 2), 16));
                         byte green = Convert.ToByte(rgb ? int.Parse(e.Args[2]) : Convert.ToInt32(e.Args[1].Substring(2, 2), 16));
                         byte blue = Convert.ToByte(rgb ? int.Parse(e.Args[3]) : Convert.ToInt32(e.Args[1].Substring(4, 2), 16));
-                        Role role = client.FindRoles(e.Server, e.Args[0]).FirstOrDefault(); // TODO: In the future, we will probably use MentionedRoles for this.
-                        await client.EditRole(role, color: new Color(red, green, blue));
-                        await client.SendMessage(e.Channel, $"Role {role.Name}'s color has been changed.");
+                        Role role = e.Server.FindRoles(e.Args[0]).FirstOrDefault(); // TODO: In the future, we will probably use MentionedRoles for this.
+                        await role.Edit(color: new Color(red, green, blue));
+                        await e.Channel.SendMessage($"Role {role.Name}'s color has been changed.");
                     }
                     else
-                        await client.SendMessage(e.Channel, "The parameters are invalid.");
+                        await e.Channel.SendMessage("The parameters are invalid.");
                 });
 
             Flags.AddCommands(group);
@@ -690,12 +688,12 @@ The current topic is: {e.Channel.Topic}";
             client = new DiscordClient(new DiscordConfig
             {
                 AppName = "Nekobot",
-                AppVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString(),
+                AppVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString(3),
                 LogLevel = config["loglevel"].ToObject<LogSeverity>(),
                 UseMessageQueue = false,
                 UseLargeThreshold = true,
             });
-            Console.Title = $"{client.Config.AppName} v{client.Config.AppVersion} (Discord.Net v{DiscordClient.Version})";
+            Console.Title = $"{client.Config.AppName} v{client.Config.AppVersion} (Discord.Net v{DiscordConfig.LibVersion})";
 
             // Load the stream channels
             Music.LoadStreams();
@@ -706,16 +704,16 @@ The current topic is: {e.Channel.Topic}";
             client.Connected += Connected;
             client.Disconnected += Disconnected;
             client.UserJoined += UserJoined;
-            client.Log().LogMessage += (s, e) => client.Log(e);
-            client.AddService(new PermissionLevelService(GetPermissions));
-            client.AddService(commands);
+            client.Log.Message += (s, e) => client.Log(e);
+            client.Services.Add(new PermissionLevelService(GetPermissions));
+            client.Services.Add(commands);
             //Display errors that occur when a user tries to run a command
             commands.CommandError += CommandError;
 
             //Log to the console whenever someone uses a command
             commands.RanCommand += (s, e) => client.Log(LogSeverity.Verbose, "Command", $"{e.User.Name}: {e.Command.Text}");
 
-            Voice.AddService();
+            client.Services.Add(Voice.NewService);
 
             commands.CreateGroup("", group => GenerateCommands(group));
             commands.NonCommands += Chatbot.Do;
@@ -744,7 +742,7 @@ The current topic is: {e.Channel.Topic}";
                 }
                 // Connection, join server if there is one in config, and start music streams
                 if (config["server"].ToString() != "")
-                    try { await client.AcceptInvite(client.GetInvite(config["server"].ToString()).Result); } catch { }
+                    try { await client.GetInvite(config["server"].ToString()).Result.Accept(); } catch { }
                 await Music.StartStreams();
             });
         }
@@ -854,7 +852,7 @@ The current topic is: {e.Channel.Topic}";
         private static void UserJoined(object sender, UserEventArgs e)
         {
             if (!Flags.GetIgnored(e.User))
-                client.SendMessage(e.Server.DefaultChannel, $"Welcome to {e.Server.Name}, <@{e.User.Id}>!");
+                e.Server.DefaultChannel.SendMessage($"Welcome to {e.Server.Name}, <@{e.User.Id}>!");
         }
 
         private static void Disconnected(object sender, DisconnectedEventArgs e)
@@ -910,7 +908,7 @@ The current topic is: {e.Channel.Topic}";
             return 0;
         }
 
-        internal static bool CanSay(Channel c, User u) => c.IsPrivate || c.Members.Where(m => m.Id == u.Id).SingleOrDefault().GetPermissions(c).SendMessages;
+        internal static bool CanSay(Channel c, User u) => c.IsPrivate || c.Users.Where(m => m.Id == u.Id).SingleOrDefault().GetPermissions(c).SendMessages;
         internal static bool CanSay(ref Channel c, User u, Channel old)
         {
             if (CanSay(c, u))
@@ -932,7 +930,7 @@ The current topic is: {e.Channel.Topic}";
             string message = $"<@{e.User.Id}> {action}s ";
             bool mentions_everyone = e.Message.MentionedRoles.Contains(e.Server.EveryoneRole);
             if (mentions_everyone)
-                await client.SendMessage(e.Channel, $"{message}{e.Server.EveryoneRole.Mention}");
+                await e.Channel.SendMessage($"{message}{e.Server.EveryoneRole.Mention}");
             else
             {
                 if (e.Message.MentionedUsers.Count() == (!mentions_neko && e.Message.IsMentioningMe ? 1 : 0))
@@ -941,10 +939,10 @@ The current topic is: {e.Channel.Topic}";
                     foreach (User u in e.Message.MentionedUsers)
                         if (u != neko || mentions_neko)
                             message += $"<@{u.Id}> ";
-                await client.SendMessage(e.Channel, message);
+                await e.Channel.SendMessage(message);
             }
             if (mentions_everyone || mentions_neko || (!perform_when_empty && e.Message.MentionedUsers.Count() == (e.Message.IsMentioningMe ? 1 : 0)))
-                await client.SendMessage(e.Channel, $"{reaction}");
+                await e.Channel.SendMessage(reaction);
         }
     }
 }

@@ -7,7 +7,7 @@ namespace Nekobot.Commands.Permissions.Userlist
 
         internal BlacklistChecker(DiscordClient client)
         {
-            _service = client.GetService<BlacklistService>(true);
+            _service = client.Services.Get<BlacklistService>(true);
         }
 
         public bool CanRun(Command command, User user, Channel channel, out string error)

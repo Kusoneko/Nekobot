@@ -27,7 +27,7 @@ namespace Nekobot
             if (chatbots.ContainsKey(e.Channel.Id) && (e.Channel.IsPrivate || HasNeko(msg, neko) || HasNeko(msg, System.Text.RegularExpressions.Regex.Replace(neko, @"\p{Cs}", ""))))
             {
                 var chat = System.Net.WebUtility.HtmlDecode(chatbots[e.Channel.Id].Think(msg));
-                for (int i = 10; i != 0; --i) try { await Program.client.SendMessage(e.Channel, chat); break; }
+                for (int i = 10; i != 0; --i) try { await e.Channel.SendMessage(chat); break; }
                     catch (Discord.Net.HttpException ex) { if (i == 1) Program.client.Log(LogSeverity.Error, $"{ex.Message}\n Could not SendMessage to {(e.Channel.IsPrivate ? "private" : "public")} channel {e.Channel} in response to {e.User}'s message: {e.Message.Text}"); }
             }
         }
@@ -63,7 +63,7 @@ namespace Nekobot
                         if (on || off)
                         {
                             if (botstatus == on || botstatus != off)
-                                await Program.client.SendMessage(e.Channel, "The bot is already " + (botstatus ? "on" : "off") + $" for {e.Channel}");
+                                await e.Channel.SendMessage("The bot is already " + (botstatus ? "on" : "off") + $" for {e.Channel}");
                             else
                             {
                                 int bottype = -1;
@@ -74,13 +74,13 @@ namespace Nekobot
                                     bottype = GetBotType(e.Args.Count() == 1 ? "" : e.Args[0]);
                                     chatbots[e.Channel.Id] = CreateBotSession((ChatterBotType)bottype);
                                 }
-                                await Program.client.SendMessage(e.Channel, "The bot is now " + (!botstatus ? "on" : "off") + $" for {e.Channel}");
+                                await e.Channel.SendMessage("The bot is now " + (!botstatus ? "on" : "off") + $" for {e.Channel}");
                                 SQL.AddOrUpdateFlag(e.Channel.Id, "chatbot", bottype.ToString());
                             }
                         }
-                        else await Program.client.SendMessage(e.Channel, "First argument must be on or off.");
+                        else await e.Channel.SendMessage("First argument must be on or off.");
                     }
-                    else await Program.client.SendMessage(e.Channel, "The bot is currently " + (botstatus ? "on" : "off") + $" for {e.Channel}.");
+                    else await e.Channel.SendMessage("The bot is currently " + (botstatus ? "on" : "off") + $" for {e.Channel}.");
                 });
         }
     }

@@ -22,6 +22,7 @@ namespace Nekobot.Commands
         //AllCommands store a flattened collection of all commands
         public IEnumerable<Command> AllCommands => _allCommands;
         private readonly List<Command> _allCommands;
+
         private Func<Channel, bool> _getNsfwFlag;
         private Func<User, bool> _getMusicFlag;
         private Func<Channel, User, bool> _getIgnoredChannelFlag;
@@ -61,14 +62,14 @@ namespace Nekobot.Commands
                     .Description("Returns information about commands.")
                     .Do(async e =>
                     {
-                        Channel replyChannel = _config.HelpMode == HelpMode.Public ? e.Channel : await client.CreatePMChannel(e.User);
+                        Channel replyChannel = _config.HelpMode == HelpMode.Public ? e.Channel : await e.User.CreateChannel();
                         if (e.Args.Length > 0) //Show command help
                         {
                             var map = _map.GetItem(string.Join(" ", e.Args));
                             if (map != null)
                                 await ShowCommandHelp(map, e.User, e.Channel, replyChannel);
                             else
-                                await client.SendMessage(replyChannel, "Unable to display help: Unknown command.");
+                                await replyChannel.SendMessage("Unable to display help: Unknown command.");
                         }
                         else //Show general help
                             await ShowGeneralHelp(e.User, e.Channel, replyChannel);
@@ -78,7 +79,7 @@ namespace Nekobot.Commands
             client.MessageReceived += async (s, e) =>
             {
                 if (_allCommands.Count == 0)  return;
-                if (e.Message.IsAuthor) return;
+                if (e.Message.User == null || e.Message.User.Id == _client.CurrentUser.Id) return;
 
                 string msg = e.Message.RawText;
                 if (msg.Length == 0) return;
@@ -263,7 +264,7 @@ namespace Nekobot.Commands
                     output.AppendLine($"`help <command>` can tell you more about how to use a command.");
             }
 
-            return _client.SendMessage(replyChannel ?? channel, output.ToString());
+            return (replyChannel ?? channel).SendMessage(output.ToString());
         }
 
         private Task ShowCommandHelp(CommandMap map, User user, Channel channel, Channel replyChannel = null)
@@ -319,7 +320,7 @@ namespace Nekobot.Commands
                 output.AppendLine("There are no commands you have permission to run.");
             }
 
-            return _client.SendMessage(replyChannel ?? channel, output.ToString());
+            return (replyChannel ?? channel).SendMessage(output.ToString());
         }
         public Task ShowCommandHelp(Command command, User user, Channel channel, Channel replyChannel = null)
         {
@@ -329,7 +330,7 @@ namespace Nekobot.Commands
                 output.AppendLine(error ?? DefaultPermissionError);
             else
                 ShowCommandHelpInternal(command, user, channel, output);
-            return _client.SendMessage(replyChannel ?? channel, output.ToString());
+            return (replyChannel ?? channel).SendMessage(output.ToString());
         }
         private void ShowCommandHelpInternal(Command command, User user, Channel channel, StringBuilder output)
         {
