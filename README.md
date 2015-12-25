@@ -1,5 +1,5 @@
 # Nekobot
-Version 2.3.72
+Version 2.3.74
 
 Bot for Discord using the [Discord.Net](https://github.com/RogueException/Discord.Net) Library.
 
@@ -9,6 +9,7 @@ You'll need to make a config.json file in the same place as the executable using
 {
     "email" : "myemail@example.com",
     "password" : "MySuperSecretPassword123",
+    "SoundCloud" : {},
     "prefix" : "!",
     "master" : 63296013791666176,
     "server" : "https://discord.gg/0Lv5NLFEoz3P07Aq",
@@ -25,6 +26,7 @@ You'll need to make a config.json file in the same place as the executable using
 ```
 
 The email and password lines are self explanatory.
+The SoundCloud line holds credentials for SoundCloud, enabling the soundcloud commands. [You'll need to register the app](https://soundcloud.com/you/apps/). At the moment all that's needed is the Client ID `"client_id" : "Put Client ID here"`
 The prefix is a list of characters that can be the character used in front of literally every command.
 As for the master, it's value should be the 17-digits id of the Discord account that should be recognized as the master. (The master id gets a level 10 permission level, although no official commands are above level 3.)
 The server line allows you to make the bot join a server on startup using that. The value can either be the full invite link as shown above, or only the characters at the end (ex.: the "0Lv5NLFEoz3P07Aq" part of "https://discord.gg/0Lv5NLFEoz3P07Aq".)
@@ -48,6 +50,7 @@ Requires the following NuGet Packages (Latest official version will do):
 - [NAudio.Vorbis](https://www.nuget.org/packages/NAudio.Vorbis)
 - [NVorbis](https://www.nuget.org/packages/NVorbis)
 - [Newtonsoft.Json](https://www.nuget.org/packages/Newtonsoft.Json)
+- [SoundCloud.NET](https://www.nuget.org/packages/SoundCloud.NET)
 - [TagLib#](https://www.nuget.org/packages/taglib)
 - [VideoLibrary](https://www.nuget.org/packages/VideoLibrary)
 

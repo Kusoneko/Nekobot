@@ -17,7 +17,7 @@ namespace Nekobot
         class Song
         {
             internal Song(string uri, EType type = EType.Playlist, long requester = 0, string ext = null) { Uri = uri; Type = type; Requester = requester; Ext = ext; }
-            internal Song Encore() => new Song(Uri, IsYoutube ? Type : EType.Encore, 0, Ext);
+            internal Song Encore() => new Song(Uri, IsOnline ? Type : EType.Encore, 0, Ext);
 
             internal string Title()
             {
@@ -39,10 +39,10 @@ namespace Nekobot
                 return Ext;
             }
             internal string ExtTitle => $"**[{Type}{(Requester != 0 ? $" by <@{Requester}>" : "")}]** {Title()}";
-            internal bool IsYoutube => Type == EType.Youtube;
+            internal bool IsOnline => Type == EType.Youtube || Type == EType.SoundCloud;
             internal bool Nonrequested => Type != EType.Playlist;
 
-            internal enum EType { Playlist, Request, Youtube, Encore }
+            internal enum EType { Playlist, Request, Youtube, SoundCloud, Encore }
             internal string Uri, Ext;
             internal EType Type;
             internal long Requester;
@@ -61,8 +61,38 @@ namespace Nekobot
         static string[] exts = { ".wma", ".aac", ".mp3", ".m4a", ".wav", ".flac", ".ogg" };
 
         internal static IEnumerable<string> Files() => System.IO.Directory.EnumerateFiles(Folder, "*.*", UseSubdirs ? System.IO.SearchOption.AllDirectories : System.IO.SearchOption.TopDirectoryOnly).Where(s => exts.Contains(System.IO.Path.GetExtension(s)));
-        static bool InPlaylist(List<Song> playlist, string file) => playlist.Exists(song => song.Uri == file);
+        static bool InPlaylist(List<Song> playlist, string common, bool online = false) => playlist.Exists(song => (song.IsOnline == online) && (online ? song.Ext : song.Uri) == common);
         static int NonrequestedIndex(Commands.CommandEventArgs e) => 1 + playlist[e.User.VoiceChannel.Id].Skip(1).Where(song => song.Nonrequested).Count();
+
+        static SoundCloud.NET.Models.Track SCGetTrack(string permalink, string client_id)
+        {
+            // This sucks, but mgr.GetTrack wasn't working, so just cobble it together as quick as possible with just the stuff we use in the functions below.
+            Program.rclient.BaseUrl = new Uri("http://api.soundcloud.com/");
+            var json = Newtonsoft.Json.Linq.JObject.Parse(Program.rclient.Execute(new RestSharp.RestRequest($"resolve?client_id={client_id}&url={permalink}", RestSharp.Method.GET)).Content);
+            return new SoundCloud.NET.Models.Track { Title = json["title"].ToString(), User = new SoundCloud.NET.Models.User { Username = json["user"]["username"].ToString() }, Streamable = json["streamable"].ToObject<bool>(), PermalinkUrl = json["permalink_url"].ToString(), StreamUrl = json["stream_url"].ToString() };
+        }
+        static async Task<bool> SCTriad(Commands.CommandEventArgs e, string permalink, bool multiple, string client_id) => await SCTriad(e, SCGetTrack(permalink, client_id), multiple, client_id);
+        static async Task<bool> SCTriad(Commands.CommandEventArgs e, SoundCloud.NET.Models.Track track, bool multiple, string client_id)
+        {
+            var pl = playlist[e.User.VoiceChannel.Id];
+            var title = $"{track.Title} by {track.User.Username}";
+            if (!track.Streamable)
+            {
+                if (multiple) await Program.client.SendMessage(e.Channel, $"{title} is not streamable.");
+                return false;
+            }
+            var ext = $"{title} (**{track.PermalinkUrl}**)";
+            if (!InPlaylist(pl, ext, true))
+            {
+                var uri = track.StreamUrl;
+                pl.Insert(NonrequestedIndex(e), new Song($"{uri}?client_id={client_id}", Song.EType.SoundCloud, e.User.Id, ext));
+                await Program.client.SendMessage(e.Channel, $"{title} added to the playlist.");
+                return true;
+            }
+            if (multiple)
+                await Program.client.SendMessage(e.Channel, $"{title} is already in the playlist.");
+            return false;
+        }
 
         static async Task Stream(long cid)
         {
@@ -212,6 +242,7 @@ namespace Nekobot
                     await Program.client.SendMessage(e.Channel, $"Currently playing: {playlist[e.User.VoiceChannel.Id][0].Title()}.");
                 });
 
+            // TODO: Clean up the request commands, they share too much code.
             group.CreateCommand("ytrequest")
                 .Parameter("youtube video link(s)", Commands.ParameterType.Unparsed)
                 .Description("I'll add youtube videos to the playlist")
@@ -227,12 +258,13 @@ namespace Nekobot
                         catch
                         {
                             Program.rclient.BaseUrl = new Uri("http://www.youtubeinmp3.com/fetch/");
+                            // Content is sometimes an html page instead of JSON, we should ask why.
                             var json = Newtonsoft.Json.Linq.JObject.Parse(Program.rclient.Execute(new RestSharp.RestRequest($"?format=JSON&video={System.Net.WebUtility.UrlEncode(link)}", RestSharp.Method.GET)).Content);
                             uri_title = Tuple.Create(json["link"].ToString(), json["title"].ToString());
                         }
                         var pl = playlist[e.User.VoiceChannel.Id];
                         var ext = $"{uri_title.Item2} ({link})";
-                        if (pl.Exists(song => song.Ext == ext))
+                        if (InPlaylist(pl, ext, true))
                             await Program.client.SendMessage(e.Channel, $"<@{e.User.Id}> Your request ({uri_title.Item2}) is already in the playlist.");
                         else
                         {
@@ -243,6 +275,42 @@ namespace Nekobot
                     if (m.Count == 0)
                         await Program.client.SendMessage(e.Channel, $"None of {e.Args[0]} could be added to playlist because no valid youtube links were found within.");
                 });
+
+            if (Program.config["SoundCloud"].HasValues)
+            {
+                var client_id = Program.config["SoundCloud"]["client_id"].ToString();
+                var mgr = new SoundCloud.NET.SoundCloudManager(client_id);
+                group.CreateCommand("scsearch")
+                    .Parameter("song to find", Commands.ParameterType.Required)
+                    .Parameter("...", Commands.ParameterType.Multiple)
+                    .Description("I'll search for your request on SoundCloud!\nResults will be considered in order until one not in the playlist is found.")
+                    .FlagMusic(true)
+                    .Do(async e =>
+                    {
+                        var tracks = mgr.SearchTrack(string.Join(" ", e.Args));
+                        if (tracks.Count() == 0)
+                        {
+                            await Program.client.SendMessage(e.Channel, $"<@{e.User.Id}> Your request was not found.");
+                            return;
+                        }
+                        foreach (var track in tracks)
+                            if (await SCTriad(e, track, false, client_id)) return;
+                        await Program.client.SendMessage(e.Channel, $"<@{e.User.Id}> No results for your requested search aren't already in the playlist.");
+                    });
+
+                group.CreateCommand("screquest")
+                    .Parameter("SoundCloud Permalink"/*(s)"*/, Commands.ParameterType.Unparsed)
+                    .Description("I'll add SoundCloud songs to the playlist!")
+                    .FlagMusic(true)
+                    .Do(async e =>
+                    {
+                        //MatchCollection m = Regex.Matches(e.Args[0], @"", RegexOptions.IgnoreCase);
+                        if (e.Args[0] == ""/*m.Count == 0*/)
+                            await Program.client.SendMessage(e.Channel, $"<@{e.User.Id}> No SoundCloud permalink matches.");
+                        else //foreach (Match match in m)
+                            await SCTriad(e, e.Args[0]/*match.Groups[1]*/, true, client_id);
+                    });
+            }
 
             group.CreateCommand("request")
                 .Parameter("song to find", Commands.ParameterType.Required)

@@ -89,6 +89,10 @@
       <HintPath>..\packages\RestSharp.105.2.3\lib\net452\RestSharp.dll</HintPath>
       <Private>True</Private>
     </Reference>
+    <Reference Include="SoundCloud.NET, Version=1.0.5717.37484, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\SoundCloud.NET.1.0.5717.37484\lib\net45\SoundCloud.NET.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.DataAnnotations" />
     <Reference Include="System.Core" />
