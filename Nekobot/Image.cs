@@ -213,7 +213,7 @@ on {booru}. Please try something else.";
                 .Parameter("[-]tag2", Commands.ParameterType.Optional)
                 .Parameter("[-]tagn", Commands.ParameterType.Multiple)
                 .FlagNsfw(true)
-                .Description("I'll give you a random image of the tags you entered from safebooru.")
+                .Description("I'll give you a random image from safebooru (optionally with tags)")
                 .Do(async e =>
                 {
                     await Program.client.SendMessage(e.Channel, ImageBooru("safebooru", e.Args));
@@ -225,7 +225,7 @@ on {booru}. Please try something else.";
                 .Parameter("[-]tagn", Commands.ParameterType.Multiple)
                 .FlagNsfw(true)
                 .AddCheck((h, i, d) => false).Hide() // Disabled because of them disabling their API
-                .Description("I'll give you a random image of the tags you entered from gelbooru.")
+                .Description("I'll give you a random image from gelbooru (optionally with tags)")
                 .Do(async e =>
                 {
                     await Program.client.SendMessage(e.Channel, ImageBooru("gelbooru", e.Args));
@@ -236,7 +236,7 @@ on {booru}. Please try something else.";
                 .Parameter("[-]tag2", Commands.ParameterType.Optional)
                 .Parameter("[-]tagn", Commands.ParameterType.Multiple)
                 .FlagNsfw(true)
-                .Description("I'll give you a random image of the tags you entered from rule34.")
+                .Description("I'll give you a random image from rule34 (optionally with tags)")
                 .Do(async e =>
                 {
                     await Program.client.SendMessage(e.Channel, ImageBooru("rule34", e.Args));
@@ -248,7 +248,7 @@ on {booru}. Please try something else.";
                 .Parameter("[-]tag2", Commands.ParameterType.Optional)
                 .Parameter("[-]tagn", Commands.ParameterType.Multiple)
                 .FlagNsfw(true)
-                .Description("I'll give you a random image of the tags you entered from konachan.")
+                .Description("I'll give you a random image from konachan (optionally with tags)")
                 .Do(async e =>
                 {
                     await Program.client.SendMessage(e.Channel, ImageBooru("konachan", e.Args));
@@ -259,7 +259,7 @@ on {booru}. Please try something else.";
                 .Parameter("[-]tag2", Commands.ParameterType.Optional)
                 .Parameter("[-]tagn", Commands.ParameterType.Multiple)
                 .FlagNsfw(true)
-                .Description("I'll give you a random image of the tags you entered from yandere.")
+                .Description("I'll give you a random image from yandere (optionally with tags)")
                 .Do(async e =>
                 {
                     await Program.client.SendMessage(e.Channel, ImageBooru("yandere", e.Args));
@@ -271,7 +271,7 @@ on {booru}. Please try something else.";
                 .Parameter("[-]tag2", Commands.ParameterType.Optional)
                 .Parameter("[-]tagn", Commands.ParameterType.Multiple)
                 .FlagNsfw(true)
-                .Description("I'll give you a random image of the tags you entered from lolibooru.")
+                .Description("I'll give you a random image from lolibooru (optionally with tags)")
                 .Do(async e =>
                 {
                     await Program.client.SendMessage(e.Channel, ImageBooru("lolibooru", e.Args));
