@@ -230,7 +230,14 @@ namespace Nekobot
                     string reply = "";
                     int i = -1;
                     foreach(var t in playlist[e.User.VoiceChannel.Id])
+                    {
                         reply += (++i == 0) ? $"Currently playing: {t.Title()}.\nNext songs:" : $"\n{i} - {t.ExtTitle}";
+                        if (reply.Length > 2000)
+                        {
+                            reply = reply.Substring(0, reply.LastIndexOf('\n'));
+                            break;
+                        }
+                    }
                     await Program.client.SendMessage(e.Channel, reply);
                 });
 
