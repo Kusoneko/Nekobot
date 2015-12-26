@@ -47,7 +47,7 @@ Server where the bot is being tested: https://discord.gg/0Lv5NLFEoz3P07Aq
 Requires the following NuGet Packages (Latest official version will do):
 - [RestSharp](https://www.nuget.org/packages/RestSharp)
 - [System.Data.SQLite](https://www.nuget.org/packages/System.Data.SQLite/)
-- [Inflatable.Lastfm](https://www.nuget.org/packages/Inflatable.Lastfm/)
+- [Inflatable.Lastfm](https://www.nuget.org/packages/Inflatable.Lastfm/) [From this nuget repo](https://ci.appveyor.com/nuget/lastfm)
 - [NAudio](https://www.nuget.org/packages/NAudio)
 - [NAudio.Vorbis](https://www.nuget.org/packages/NAudio.Vorbis)
 - [NVorbis](https://www.nuget.org/packages/NVorbis)
