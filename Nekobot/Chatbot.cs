@@ -1,5 +1,4 @@
 ﻿using System.Collections.Generic;
-using System.Data.SQLite;
 using System.Linq;
 using Discord;
 using ChatterBotAPI;
@@ -76,9 +75,7 @@ namespace Nekobot
                                     chatbots[e.Channel.Id] = CreateBotSession((ChatterBotType)bottype);
                                 }
                                 await Program.client.SendMessage(e.Channel, "The bot is now " + (!botstatus ? "on" : "off") + $" for {e.Channel}");
-                                SQL.ExecuteNonQuery(SQL.ExecuteScalarPos($"select count(channel) from flags where channel = '{e.Channel.Id}'")
-                                    ? $"update flags set chatbot={bottype} where channel='{e.Channel.Id}'"
-                                    : $"insert into flags values ('{e.Channel.Id}', 0, 0, 0, {bottype})");
+                                SQL.AddOrUpdateFlag(e.Channel.Id, "chatbot", bottype.ToString(), $"0, 0, 0, {bottype}");
                             }
                         }
                         else await Program.client.SendMessage(e.Channel, "First argument must be on or off.");

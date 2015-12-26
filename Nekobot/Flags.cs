@@ -25,11 +25,9 @@ namespace Nekobot
                 if (perms <= their_perms)
                     return $"You are no more powerful than <@{id}>.";
             }
-            bool in_table = SQL.ExecuteScalarPos($"select count({row}) from {table} where {row}='{id}'");
+            bool in_table = SQL.InTable(row, table, id);
             bool isIgnored = in_table && GetIgnored(row, table, id);
-            await SQL.ExecuteNonQueryAsync(in_table
-                ? $"update {table} set ignored={Convert.ToInt32(!isIgnored)} where {row}='{id}'"
-                : $"insert into {table} values ('{id}', {insertdata})");
+            await SQL.ExecuteNonQueryAsync(SQL.AddOrUpdateCommand(row, table, id, "ignored", Convert.ToInt32(!isIgnored).ToString(), insertdata, in_table));
             return $"<{symbol}{id}> is " + (!isIgnored ? "now" : "no longer") + " ignored.";
         }
 
@@ -76,10 +74,7 @@ namespace Nekobot
                             await Program.client.SendMessage(e.Channel, $"<@{e.User.Id}>, this channel is already {status}ing nsfw commands.");
                         else
                         {
-                            await SQL.ExecuteNonQueryAsync(off ? $"update flags set nsfw=0 where channel='{e.Channel.Id}'"
-                                : SQL.ExecuteScalarPos($"select count(channel) from flags where channel='{e.Channel.Id}'")
-                                ? $"update flags set nsfw=1 where channel='{e.Channel.Id}'"
-                                : $"insert into flags values ('{e.Channel.Id}', 1, 0, 0, -1)");
+                            await SQL.AddOrUpdateFlagAsync(e.Channel.Id, "nsfw", off ? "0" : "1", "1, 0, 0, -1");
                             await Program.client.SendMessage(e.Channel, $"I've set this channel to {status} nsfw commands.");
                         }
                     }
