@@ -75,7 +75,7 @@ namespace Nekobot
                                     chatbots[e.Channel.Id] = CreateBotSession((ChatterBotType)bottype);
                                 }
                                 await Program.client.SendMessage(e.Channel, "The bot is now " + (!botstatus ? "on" : "off") + $" for {e.Channel}");
-                                SQL.AddOrUpdateFlag(e.Channel.Id, "chatbot", bottype.ToString(), $"0, 0, 0, {bottype}");
+                                SQL.AddOrUpdateFlag(e.Channel.Id, "chatbot", bottype.ToString());
                             }
                         }
                         else await Program.client.SendMessage(e.Channel, "First argument must be on or off.");

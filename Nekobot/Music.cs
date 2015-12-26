@@ -433,7 +433,7 @@ namespace Nekobot
                             }
                             else
                             {
-                                SQL.AddOrUpdateFlag(e.User.VoiceChannel.Id, "music", off ? "0" : "1", "0, 1, 0, -1");
+                                SQL.AddOrUpdateFlag(e.User.VoiceChannel.Id, "music", off ? "0" : "1");
                                 await Program.client.SendMessage(e.Channel, $"<@{e.User.Id}>, I'm {status}ing the stream!");
                                 if (on)
                                 {

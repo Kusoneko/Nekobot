@@ -14,7 +14,7 @@ namespace Nekobot
         internal static bool GetIgnored(Channel chan) => GetIgnored("channel", "flags", chan.Id);
         static bool GetIgnored(string row, string table, long id) => SQL.ReadBool(SQL.ReadSingle(row, table, id, "ignored"));
 
-        internal static async Task<string> SetIgnored(string row, string table, long id, string insertdata, char symbol, int perms, int their_perms = 0)
+        internal static async Task<string> SetIgnored(string row, string table, long id, char symbol, int perms, int their_perms = 0)
         {
             if (symbol == '#' && perms <3)
                 return $"You are not worthy of changing channel ignored status (permissions < 3).";
@@ -27,7 +27,7 @@ namespace Nekobot
             }
             bool in_table = SQL.InTable(row, table, id);
             bool isIgnored = in_table && GetIgnored(row, table, id);
-            await SQL.ExecuteNonQueryAsync(SQL.AddOrUpdateCommand(row, table, id, "ignored", Convert.ToInt32(!isIgnored).ToString(), insertdata, in_table));
+            await SQL.ExecuteNonQueryAsync(SQL.AddOrUpdateCommand(row, table, id, "ignored", Convert.ToInt32(!isIgnored).ToString(), in_table));
             return $"<{symbol}{id}> is " + (!isIgnored ? "now" : "no longer") + " ignored.";
         }
 
@@ -74,7 +74,7 @@ namespace Nekobot
                             await Program.client.SendMessage(e.Channel, $"<@{e.User.Id}>, this channel is already {status}ing nsfw commands.");
                         else
                         {
-                            await SQL.AddOrUpdateFlagAsync(e.Channel.Id, "nsfw", off ? "0" : "1", "1, 0, 0, -1");
+                            await SQL.AddOrUpdateFlagAsync(e.Channel.Id, "nsfw", off ? "0" : "1");
                             await Program.client.SendMessage(e.Channel, $"I've set this channel to {status} nsfw commands.");
                         }
                     }
@@ -95,9 +95,9 @@ namespace Nekobot
                         int perms = Program.GetPermissions(e.User, e.Channel);
                         string reply = "";
                         foreach (Channel c in e.Message.MentionedChannels)
-                            reply += (reply != "" ? "\n" : "") + await SetIgnored("channel", "flags", c.Id, "0, 0, 1, -1", '#', perms);
+                            reply += (reply != "" ? "\n" : "") + await SetIgnored("channel", "flags", c.Id, '#', perms);
                         foreach (User u in e.Message.MentionedUsers)
-                            reply += (reply != "" ? "\n" : "") + await SetIgnored("user", "users", u.Id, "0, 1, 0, ''", '@', perms, Program.GetPermissions(u, e.Channel));
+                            reply += (reply != "" ? "\n" : "") + await SetIgnored("user", "users", u.Id, '@', perms, Program.GetPermissions(u, e.Channel));
                         await Program.client.SendMessage(e.Channel, reply);
                     }
                     else

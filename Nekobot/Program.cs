@@ -163,7 +163,7 @@ namespace Nekobot
                         var lastfm = $"'{e.Args[0]}'";
                         if (lastfm.Length > 2 && lastfm.Length < 18)
                         {
-                            await SQL.AddOrUpdateUserAsync(e.User.Id, "lastfm", lastfm, $"0, 0, {lastfm}");
+                            await SQL.AddOrUpdateUserAsync(e.User.Id, "lastfm", lastfm);
                             await client.SendMessage(e.Channel, $"I'll remember your lastfm is {lastfm} now, {e.User.Name}.");
                         }
                         else await client.SendMessage(e.Channel, $"{lastfm} is not a valid lastfm username.");
@@ -611,7 +611,7 @@ The current topic is: {e.Channel.Topic}";
                             }
                             bool change_needed = oldPerm != newPermLevel;
                             if (change_needed)
-                                await SQL.AddOrUpdateUserAsync(u.Id, "perms", newPermLevel.ToString(), $"{newPermLevel}, 0, ''");
+                                await SQL.AddOrUpdateUserAsync(u.Id, "perms", newPermLevel.ToString());
                             if (reply != "")
                                 reply += '\n';
                             reply += $"<@{u.Id}>'s permission level is "+(change_needed ? "now" : "already at")+$" {newPermLevel}.";
