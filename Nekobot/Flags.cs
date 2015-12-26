@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
 using System.Collections.Generic;
-using System.Data.SQLite;
 using System.Threading.Tasks;
 using Discord;
 using Nekobot.Commands.Permissions.Levels;
@@ -13,15 +12,7 @@ namespace Nekobot
         internal static bool GetIgnored(Channel chan, User user) => GetIgnored(chan) || GetIgnored(user);
         internal static bool GetIgnored(User user) => GetIgnored("user", "users", user.Id);
         internal static bool GetIgnored(Channel chan) => GetIgnored("channel", "flags", chan.Id);
-
-        static bool GetIgnored(string row, string table, long id)
-        {
-            SQLiteDataReader reader = SQL.ExecuteReader($"select ignored from {table} where {row} = '{id}'");
-            while (reader.Read())
-                if (int.Parse(reader["ignored"].ToString()) == 1)
-                    return true;
-            return false;
-        }
+        static bool GetIgnored(string row, string table, long id) => SQL.ReadBool(SQL.ReadSingle(row, table, id, "ignored"));
 
         internal static async Task<string> SetIgnored(string row, string table, long id, string insertdata, char symbol, int perms, int their_perms = 0)
         {
@@ -44,21 +35,14 @@ namespace Nekobot
 
         internal static bool GetMusic(User user)
         {
-            SQLiteDataReader reader = SQL.ExecuteReader("select channel from flags where music = 1");
+            var reader = SQL.ReadChannels("music = 1");
             List<long> streams = new List<long>();
             while (reader.Read())
                 streams.Add(Convert.ToInt64(reader["channel"].ToString()));
             return user.VoiceChannel != null && streams.Contains(user.VoiceChannel.Id);
         }
 
-        internal static bool GetNsfw(Channel chan)
-        {
-            SQLiteDataReader reader = SQL.ExecuteReader("select nsfw from flags where channel = '" + chan.Id + "'");
-            while (reader.Read())
-                if (int.Parse(reader["nsfw"].ToString()) == 1)
-                    return true;
-            return false;
-        }
+        internal static bool GetNsfw(Channel chan) => SQL.ReadBool(SQL.ReadChannel(chan.Id, "nsfw"));
 
         internal static void AddCommands(Commands.CommandGroupBuilder group)
         {
@@ -118,7 +102,7 @@ namespace Nekobot
                         foreach (Channel c in e.Message.MentionedChannels)
                             reply += (reply != "" ? "\n" : "") + await SetIgnored("channel", "flags", c.Id, "0, 0, 1, -1", '#', perms);
                         foreach (User u in e.Message.MentionedUsers)
-                            reply += (reply != "" ? "\n" : "") + await SetIgnored("user", "users", u.Id, "0, 1", '@', perms, Program.GetPermissions(u, e.Channel));
+                            reply += (reply != "" ? "\n" : "") + await SetIgnored("user", "users", u.Id, "0, 1, 0, ''", '@', perms, Program.GetPermissions(u, e.Channel));
                         await Program.client.SendMessage(e.Channel, reply);
                     }
                     else

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data.SQLite;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -176,7 +175,7 @@ namespace Nekobot
 
         internal static void LoadStreams()
         {
-            SQLiteDataReader reader = SQL.ExecuteReader("select channel from flags where music = 1");
+            var reader = SQL.ReadChannels("music = 1");
             while (reader.Read())
                 streams.Add(Convert.ToInt64(reader["channel"].ToString()));
         }

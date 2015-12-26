@@ -35,7 +35,7 @@ namespace Nekobot
 
         internal static void Load()
         {
-            SQLiteDataReader reader = SQL.ExecuteReader("select channel,chatbot from flags where chatbot <> -1");
+            var reader = SQL.ReadChannels("chatbot <> -1", "channel,chatbot");
             while (reader.Read())
                 chatbots[System.Convert.ToInt64(reader["channel"].ToString())] =
                     CreateBotSession((ChatterBotType)System.Convert.ToInt32(reader["chatbot"]));

@@ -7,8 +7,8 @@ using Nekobot.Commands;
 using Nekobot.Commands.Permissions.Levels;
 using Newtonsoft.Json.Linq;
 using RestSharp;
-using System.Data.SQLite;
 using System.Threading;
+using LastFM = IF.Lastfm.Core.Api;
 
 namespace Nekobot
 {
@@ -120,7 +120,7 @@ namespace Nekobot
                 .Description("I'll get you the avatar of each Player.me username provided.")
                 .Do(async e =>
                 {
-                    rclient.BaseUrl = new System.Uri("https://player.me/api/v1/auth");
+                    rclient.BaseUrl = new Uri("https://player.me/api/v1/auth");
                     var request = new RestRequest("pre-login", Method.POST);
                     foreach (string s in e.Args)
                     {
@@ -135,6 +135,44 @@ namespace Nekobot
                         }
                     }
                 });
+
+            if (config["LastFM"].HasValues)
+            {
+                lfclient = new LastFM.LastfmClient(config["LastFM"]["apikey"].ToString(), config["LastFM"]["apisecret"].ToString());
+                group.CreateCommand("lastfm")
+                    .Parameter("username", Commands.ParameterType.Unparsed)
+                    .Description("I'll tell you the last thing a lastfm user listened to.")
+                    .Do(async e =>
+                    {
+                        var api = new LastFM.UserApi(lfclient.Auth, lfclient.HttpClient);
+                        var user = e.Args[0];
+                        if (user == "") user = SQL.ReadUser(e.User.Id, "lastfm");
+                        if (user != null)
+                        {
+                            var d = (await api.GetRecentScrobbles(user, count: 1)).Single();
+                            await client.SendMessage(e.Channel, $"{(e.Args[0] == "" ? e.User.Name : user)} last listened to {d.Name} by {d.ArtistName}");
+                        }
+                        else await client.SendMessage(e.Channel, $"I don't know your lastfm yet, please use the `setlastfm <username>` command.");
+                    });
+
+                group.CreateCommand("setlastfm")
+                    .Parameter("username", Commands.ParameterType.Unparsed)
+                    .Description("I'll remember your lastfm username.")
+                    .Do(async e =>
+                    {
+                        var lastfm = $"'{e.Args[0]}'";
+                        if (lastfm.Length > 2 && lastfm.Length < 18)
+                        {
+                            var id = e.User.Id;
+                            bool in_table = SQL.ExecuteScalarPos($"select count(user) from users where user='{id}'");
+                            await SQL.ExecuteNonQueryAsync(in_table
+                                ? $"update users set lastfm={lastfm} where user='{id}'"
+                                : $"insert into users values ('{id}', 0, 0, {lastfm})");
+                            await client.SendMessage(e.Channel, $"I'll remember your lastfm is {lastfm} now, {e.User.Name}.");
+                        }
+                        else await client.SendMessage(e.Channel, $"{lastfm} is not a valid lastfm username.");
+                    });
+            }
 
             group.CreateCommand("nya")
                 .Alias("nyaa")
@@ -580,7 +618,7 @@ The current topic is: {e.Channel.Topic}";
                             {
                                 await SQL.ExecuteNonQueryAsync(SQL.ExecuteScalarPos($"select count(user) from users where user='{u.Id}'")
                                     ? $"update users set perms={newPermLevel} where user='{u.Id}'"
-                                    : $"insert into users values ('{u.Id}', {newPermLevel}, 0)");
+                                    : $"insert into users values ('{u.Id}', {newPermLevel}, 0, '')");
                             }
                             if (reply != "")
                                 reply += '\n';
@@ -634,6 +672,7 @@ The current topic is: {e.Channel.Topic}";
         internal static DiscordClient client;
         static CommandService commands;
         internal static RestClient rclient = new RestClient();
+        static LastFM.LastfmClient lfclient;
         internal static JObject config;
         internal static long masterId;
         static string version;
@@ -873,11 +912,7 @@ The current topic is: {e.Channel.Topic}";
             if (user.Id == masterId)
                 return 10;
             if (SQL.ExecuteScalarPos($"select count(perms) from users where user = '{user.Id}'"))
-            {
-                SQLiteDataReader reader = SQL.ExecuteReader($"select perms from users where user = '{user.Id}'");
-                while (reader.Read())
-                    return int.Parse(reader["perms"].ToString());
-            }
+                return SQL.ReadInt(SQL.ReadUser(user.Id, "perms"));
             return 0;
         }
 
