@@ -117,6 +117,7 @@ namespace Nekobot
         {
             ulong cid = c.Id;
             Discord.Audio.DiscordAudioClient _client = await Voice.JoinServer(c);
+            if (_client == null) return; // TODO: Remove when voice works.
             Random rnd = new Random();
             if (!playlist.ContainsKey(cid))
                 playlist.Add(cid, new List<Song>());
