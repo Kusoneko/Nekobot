@@ -103,17 +103,16 @@ on {booru}. Please try something else." :
                     .Description($"I'll give you a random {type} image from {owner}'s collection")
                     .Do(async e => await e.Channel.SendFile(ImageFolders(folder)));
         }
-        static Commands.CommandBuilder CreateBooruCommand(Commands.CommandGroupBuilder group, string booru)
+        static void CreateBooruCommand(Commands.CommandGroupBuilder group, string booru, string[] aliases = null)
         {
             var cmd = group.CreateCommand(booru);
-            cmd
-            .Parameter("[-]tag1", Commands.ParameterType.Optional)
-            .Parameter("[-]tag2", Commands.ParameterType.Optional)
-            .Parameter("[-]tagn", Commands.ParameterType.Multiple)
-            .FlagNsfw(true)
-            .Description($"I'll give you a random image from {booru} (optionally with tags)")
-            .Do(async e => await ImageBooru(booru, e));
-            return cmd;
+            cmd.Parameter("[-]tag1", Commands.ParameterType.Optional)
+                .Parameter("[-]tag2", Commands.ParameterType.Optional)
+                .Parameter("[-]tagn", Commands.ParameterType.Multiple)
+                .FlagNsfw(true)
+                .Description($"I'll give you a random image from {booru} (optionally with tags)");
+            if (aliases != null) foreach (var alias in aliases) cmd.Alias(alias);
+            cmd.Do(async e => await ImageBooru(booru, e));
         }
 
         internal static void AddCommands(Commands.CommandGroupBuilder group)
@@ -167,12 +166,12 @@ on {booru}. Please try something else." :
                 });
 
             CreateBooruCommand(group, "safebooru");
-            CreateBooruCommand(group, "gelbooru").AddCheck((h, i, d) => false).Hide(); // Disabled because of them disabling their API
+            //CreateBooruCommand(group, "gelbooru"); // Disabled because of them disabling their API
             CreateBooruCommand(group, "rule34");
-            CreateBooruCommand(group, "konachan").Alias("kona");
+            CreateBooruCommand(group, "konachan", new string[]{"kona"});
             CreateBooruCommand(group, "yandere");
-            CreateBooruCommand(group, "lolibooru").Alias("loli");
-            CreateBooruCommand(group, "e621").Alias("furry");
+            CreateBooruCommand(group, "lolibooru", new string[]{"loli"});
+            CreateBooruCommand(group, "e621", new string[]{"furry"});
         }
     }
 }
