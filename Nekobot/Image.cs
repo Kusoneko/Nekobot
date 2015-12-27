@@ -12,6 +12,18 @@ namespace Nekobot
 {
     class Image
     {
+        static Commands.CommandBuilder CreateBooruCommand(Commands.CommandGroupBuilder group, string booru)
+        {
+            var cmd = group.CreateCommand(booru);
+                cmd
+                .Parameter("[-]tag1", Commands.ParameterType.Optional)
+                .Parameter("[-]tag2", Commands.ParameterType.Optional)
+                .Parameter("[-]tagn", Commands.ParameterType.Multiple)
+                .FlagNsfw(true)
+                .Description($"I'll give you a random image from {booru} (optionally with tags)")
+                .Do(async e => await ImageBooru(booru, e));
+            return cmd;
+        }
         class Board : Tuple<string, string, string>
         {
             public Board(string link, string resource, string post) : base(link, resource, post) { }
@@ -175,65 +187,13 @@ on {booru}. Please try something else." :
                     await e.Channel.SendMessage(images[rnd.Next(images.Count())].ToString());
                 });
 
-            group.CreateCommand("safebooru")
-                .Parameter("[-]tag1", Commands.ParameterType.Optional)
-                .Parameter("[-]tag2", Commands.ParameterType.Optional)
-                .Parameter("[-]tagn", Commands.ParameterType.Multiple)
-                .FlagNsfw(true)
-                .Description("I'll give you a random image from safebooru (optionally with tags)")
-                .Do(async e => await ImageBooru("safebooru", e));
-
-            group.CreateCommand("gelbooru")
-                .Parameter("[-]tag1", Commands.ParameterType.Optional)
-                .Parameter("[-]tag2", Commands.ParameterType.Optional)
-                .Parameter("[-]tagn", Commands.ParameterType.Multiple)
-                .FlagNsfw(true)
-                .AddCheck((h, i, d) => false).Hide() // Disabled because of them disabling their API
-                .Description("I'll give you a random image from gelbooru (optionally with tags)")
-                .Do(async e => await ImageBooru("gelbooru", e));
-
-            group.CreateCommand("rule34")
-                .Parameter("[-]tag1", Commands.ParameterType.Optional)
-                .Parameter("[-]tag2", Commands.ParameterType.Optional)
-                .Parameter("[-]tagn", Commands.ParameterType.Multiple)
-                .FlagNsfw(true)
-                .Description("I'll give you a random image from rule34 (optionally with tags)")
-                .Do(async e => await ImageBooru("rule34", e));
-
-            group.CreateCommand("konachan")
-                .Alias("kona")
-                .Parameter("[-]tag1", Commands.ParameterType.Optional)
-                .Parameter("[-]tag2", Commands.ParameterType.Optional)
-                .Parameter("[-]tagn", Commands.ParameterType.Multiple)
-                .FlagNsfw(true)
-                .Description("I'll give you a random image from konachan (optionally with tags)")
-                .Do(async e => await ImageBooru("konachan", e));
-
-            group.CreateCommand("yandere")
-                .Parameter("[-]tag1", Commands.ParameterType.Optional)
-                .Parameter("[-]tag2", Commands.ParameterType.Optional)
-                .Parameter("[-]tagn", Commands.ParameterType.Multiple)
-                .FlagNsfw(true)
-                .Description("I'll give you a random image from yandere (optionally with tags)")
-                .Do(async e => await ImageBooru("yandere", e));
-
-            group.CreateCommand("lolibooru")
-                .Alias("loli")
-                .Parameter("[-]tag1", Commands.ParameterType.Optional)
-                .Parameter("[-]tag2", Commands.ParameterType.Optional)
-                .Parameter("[-]tagn", Commands.ParameterType.Multiple)
-                .FlagNsfw(true)
-                .Description("I'll give you a random image from lolibooru (optionally with tags)")
-                .Do(async e => await ImageBooru("lolibooru", e));
-
-            group.CreateCommand("e621")
-                .Alias("furry")
-                .Parameter("[-]tag1", Commands.ParameterType.Optional)
-                .Parameter("[-]tag2", Commands.ParameterType.Optional)
-                .Parameter("[-]tagn", Commands.ParameterType.Multiple)
-                .FlagNsfw(true)
-                .Description("I'll give you a random image from e621 (optionally with tags)")
-                .Do(async e => await ImageBooru("e621", e));
+            CreateBooruCommand(group, "safebooru");
+            CreateBooruCommand(group, "gelbooru").AddCheck((h, i, d) => false).Hide(); // Disabled because of them disabling their API
+            CreateBooruCommand(group, "rule34");
+            CreateBooruCommand(group, "konachan").Alias("kona");
+            CreateBooruCommand(group, "yandere");
+            CreateBooruCommand(group, "lolibooru").Alias("loli");
+            CreateBooruCommand(group, "e621").Alias("furry");
         }
     }
 }
