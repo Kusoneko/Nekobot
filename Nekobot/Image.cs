@@ -12,35 +12,6 @@ namespace Nekobot
 {
     class Image
     {
-        static void CreateLewdCommand(Commands.CommandGroupBuilder group, string chan)
-        {
-            group.CreateCommand(chan)
-                .FlagNsfw(true)
-                .Description($"I'll give you a random image from https://lewdchan.com/{chan}/")
-                .Do(async e => await LewdSX(chan, e.Channel));
-        }
-        static void CreateFolderCommand(Commands.CommandGroupBuilder group, string name, string type, string owner)
-        {
-            string folder = Program.config[name].ToString();
-            if (folder != "")
-                group.CreateCommand(name)
-                    .FlagNsfw(true)
-                    .Description($"I'll give you a random {type} image from {owner}'s collection")
-                    .Do(async e => await e.Channel.SendFile(ImageFolders(folder)));
-        }
-        static Commands.CommandBuilder CreateBooruCommand(Commands.CommandGroupBuilder group, string booru)
-        {
-            var cmd = group.CreateCommand(booru);
-                cmd
-                .Parameter("[-]tag1", Commands.ParameterType.Optional)
-                .Parameter("[-]tag2", Commands.ParameterType.Optional)
-                .Parameter("[-]tagn", Commands.ParameterType.Multiple)
-                .FlagNsfw(true)
-                .Description($"I'll give you a random image from {booru} (optionally with tags)")
-                .Do(async e => await ImageBooru(booru, e));
-            return cmd;
-        }
-
         class Board : Tuple<string, string, string>
         {
             public Board(string link, string resource, string post) : base(link, resource, post) { }
@@ -114,6 +85,35 @@ on {booru}. Please try something else." :
             foreach (Match m in re.Matches(result))
                 list.Add(m.Value);
             await c.SendMessage($"https://lewdchan.com/{chan}/src/{list[new Random().Next(0, list.Count())]}");
+        }
+
+        static void CreateLewdCommand(Commands.CommandGroupBuilder group, string chan)
+        {
+            group.CreateCommand(chan)
+                .FlagNsfw(true)
+                .Description($"I'll give you a random image from https://lewdchan.com/{chan}/")
+                .Do(async e => await LewdSX(chan, e.Channel));
+        }
+        static void CreateFolderCommand(Commands.CommandGroupBuilder group, string name, string type, string owner)
+        {
+            string folder = Program.config[name].ToString();
+            if (folder != "")
+                group.CreateCommand(name)
+                    .FlagNsfw(true)
+                    .Description($"I'll give you a random {type} image from {owner}'s collection")
+                    .Do(async e => await e.Channel.SendFile(ImageFolders(folder)));
+        }
+        static Commands.CommandBuilder CreateBooruCommand(Commands.CommandGroupBuilder group, string booru)
+        {
+            var cmd = group.CreateCommand(booru);
+            cmd
+            .Parameter("[-]tag1", Commands.ParameterType.Optional)
+            .Parameter("[-]tag2", Commands.ParameterType.Optional)
+            .Parameter("[-]tagn", Commands.ParameterType.Multiple)
+            .FlagNsfw(true)
+            .Description($"I'll give you a random image from {booru} (optionally with tags)")
+            .Do(async e => await ImageBooru(booru, e));
+            return cmd;
         }
 
         internal static void AddCommands(Commands.CommandGroupBuilder group)
