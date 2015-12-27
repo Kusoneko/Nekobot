@@ -23,7 +23,7 @@ namespace Nekobot
             public string resource { get { return Item2; } }
             public string post { get { return Item3; } }
         }
-        static async Task ImageBooru(string booru, Commands.CommandEventArgs e)
+        static async Task Booru(string booru, Commands.CommandEventArgs e)
         {
             var tags = System.Net.WebUtility.UrlEncode(string.Join(" ", e.Args));
             Board board =
@@ -68,7 +68,7 @@ on {booru}. Please try something else." :
 
         static int GetBooruPostCount(Board board) => int.Parse(GetBooruCommon(board, 0)["posts"]["@count"].ToString());
 
-        static string ImageFolders(string folder)
+        static string Folders(string folder)
         {
             string[] imgexts = { ".jpg", ".jpeg", ".png", ".gif", ".bmp" };
             var files = from file in System.IO.Directory.EnumerateFiles($@"{folder}", "*.*").Where(s => imgexts.Contains(System.IO.Path.GetExtension(s.ToLower()))) select new { File = file };
@@ -101,7 +101,7 @@ on {booru}. Please try something else." :
                 group.CreateCommand(name)
                     .FlagNsfw(true)
                     .Description($"I'll give you a random {type} image from {owner}'s collection")
-                    .Do(async e => await e.Channel.SendFile(ImageFolders(folder)));
+                    .Do(async e => await e.Channel.SendFile(Folders(folder)));
         }
         static void CreateBooruCommand(Commands.CommandGroupBuilder group, string booru, string[] aliases = null)
         {
@@ -112,7 +112,7 @@ on {booru}. Please try something else." :
                 .FlagNsfw(true)
                 .Description($"I'll give you a random image from {booru} (optionally with tags)");
             if (aliases != null) foreach (var alias in aliases) cmd.Alias(alias);
-            cmd.Do(async e => await ImageBooru(booru, e));
+            cmd.Do(async e => await Booru(booru, e));
         }
 
         internal static void AddCommands(Commands.CommandGroupBuilder group)
