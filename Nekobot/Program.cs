@@ -150,7 +150,7 @@ namespace Nekobot
                         if (user != null)
                         {
                             var d = (await api.GetRecentScrobbles(user, count: 1)).First();
-                            await client.SendMessage(e.Channel, $"{(e.Args[0] == "" ? e.User.Name : user)} last listened to {d.Name} by {d.ArtistName}");
+                            await client.SendMessage(e.Channel, $"{(e.Args[0] == "" ? e.User.Name : user)} last listened to **{d.Name}** by **{d.ArtistName}**");
                         }
                         else await client.SendMessage(e.Channel, $"I don't know your lastfm yet, please use the `setlastfm <username>` command.");
                     });
