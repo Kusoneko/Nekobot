@@ -15,8 +15,8 @@ namespace Nekobot
     {
         class Song
         {
-            internal Song(string uri, EType type = EType.Playlist, ulong requester = 0, string ext = null) { Uri = uri; Type = type; Requester = requester; Ext = ext; }
-            internal Song Encore() => new Song(Uri, IsOnline ? Type : EType.Encore, 0, Ext);
+            internal Song(string uri, EType type = EType.Playlist, User requester = null, string ext = null) { Uri = uri; Type = type; Requester = requester?.Mention; Ext = ext; }
+            internal Song Encore() => new Song(Uri, IsOnline ? Type : EType.Encore, null, Ext);
 
             internal string Title()
             {
@@ -37,14 +37,13 @@ namespace Nekobot
                 }
                 return Ext;
             }
-            internal string ExtTitle => $"**[{Type}{(Requester != 0 ? $" by <@{Requester}>" : "")}]** {Title()}";
+            internal string ExtTitle => $"**[{Type}{(Requester != null ? $" by {Requester}" : "")}]** {Title()}";
             internal bool IsOnline => Type == EType.Youtube || Type == EType.SoundCloud;
             internal bool Nonrequested => Type != EType.Playlist;
 
             internal enum EType { Playlist, Request, Youtube, SoundCloud, Encore }
-            internal string Uri, Ext;
+            internal string Uri, Requester, Ext;
             internal EType Type;
-            internal ulong Requester;
         }
         // Music-related variables
         internal static string Folder;
@@ -78,7 +77,7 @@ namespace Nekobot
                 if (!InPlaylist(pl, ext, true))
                 {
                     var uri = track.StreamUrl;
-                    pl.Insert(NonrequestedIndex(e), new Song($"{uri}?client_id={client_id}", Song.EType.SoundCloud, e.User.Id, ext));
+                    pl.Insert(NonrequestedIndex(e), new Song($"{uri}?client_id={client_id}", Song.EType.SoundCloud, e.User, ext));
                     if (!isplaylist) await e.Channel.SendMessage($"{title} added to the playlist.");
                     return true;
                 }
@@ -311,10 +310,10 @@ namespace Nekobot
                         var pl = playlist[e.User.VoiceChannel.Id];
                         var ext = $"{uri_title.Item2} ({link})";
                         if (InPlaylist(pl, ext, true))
-                            await e.Channel.SendMessage($"<@{e.User.Id}> Your request ({uri_title.Item2}) is already in the playlist.");
+                            await e.Channel.SendMessage($"{e.User.Mention} Your request ({uri_title.Item2}) is already in the playlist.");
                         else
                         {
-                            pl.Insert(NonrequestedIndex(e), new Song(uri_title.Item1, Song.EType.Youtube, e.User.Id, ext));
+                            pl.Insert(NonrequestedIndex(e), new Song(uri_title.Item1, Song.EType.Youtube, e.User, ext));
                             await e.Channel.SendMessage($"{uri_title.Item2} added to the playlist.");
                         }
                     }
@@ -337,12 +336,12 @@ namespace Nekobot
                         var tracks = mgr.SearchTrack(SC.SearchArgs(e.Args));
                         if (tracks.Count() == 0)
                         {
-                            await e.Channel.SendMessage($"<@{e.User.Id}> Your request was not found.");
+                            await e.Channel.SendMessage($"{e.User.Mention} Your request was not found.");
                             return;
                         }
                         foreach (var track in tracks)
                             if (await SC.Triad(e, track, false, client_id)) return;
-                        await e.Channel.SendMessage($"<@{e.User.Id}> No results for your requested search aren't already in the playlist.");
+                        await e.Channel.SendMessage($"{e.User.Mention} No results for your requested search aren't already in the playlist.");
                     });
 
                 group.CreateCommand("screquest")
@@ -355,7 +354,7 @@ namespace Nekobot
                     {
                         //MatchCollection m = Regex.Matches(e.Args[0], @"", RegexOptions.IgnoreCase);
                         if (e.Args[0] == ""/*m.Count == 0*/)
-                            await e.Channel.SendMessage($"<@{e.User.Id}> No SoundCloud track permalink matches.");
+                            await e.Channel.SendMessage($"{e.User.Mention} No SoundCloud permalink matches.");
                         else //foreach (Match match in m)
                             await SC.Triad(e, mgr.GetTrack(e.Args[0])/*match.Groups[1]*/, true, client_id);
                     });
@@ -369,7 +368,7 @@ namespace Nekobot
                     {
                         //MatchCollection m = Regex.Matches(e.Args[0], @"", RegexOptions.IgnoreCase);
                         if (e.Args[0] == ""/*m.Count == 0*/)
-                            await e.Channel.SendMessage($"<@{e.User.Id}> No SoundCloud playlist permalink matches.");
+                            await e.Channel.SendMessage($"{e.User.Mention} No SoundCloud playlist permalink matches.");
                         else //foreach (Match match in m)
                             await SC.PLTriad(e, mgr.GetPlaylist(e.Args[0]/*match.Groups[1]*/), false, client_id);
                     });
@@ -385,7 +384,7 @@ namespace Nekobot
                         var pls = mgr.SearchPlaylist(SC.SearchArgs(e.Args));
                         foreach (var pl in pls)
                             if (await SC.PLTriad(e, pl, true, client_id)) return;
-                        await e.Channel.SendMessage($"<@{e.User.Id}> No results for your requested search aren't already in the playlist.");
+                        await e.Channel.SendMessage($"{e.User.Mention} No results for your requested search aren't already in the playlist.");
                     });
             }
 
@@ -410,17 +409,17 @@ namespace Nekobot
                                     if (cur_i == 0)
                                         await Encore(e);
                                     else
-                                        await e.Channel.SendMessage($"<@{e.User.Id}> Your request is already in the playlist at {cur_i}.");
+                                        await e.Channel.SendMessage($"{e.User.Mention} Your request is already in the playlist at {cur_i}.");
                                     return;
                                 }
                                 pl.RemoveAt(cur_i);
                             }
-                            pl.Insert(i, new Song(file, Song.EType.Request, e.User.Id));
-                            await e.Channel.SendMessage($"<@{e.User.Id}> Your request has been added to the list.");
+                            pl.Insert(i, new Song(file, Song.EType.Request, e.User));
+                            await e.Channel.SendMessage($"{e.User.Mention} Your request has been added to the list.");
                             return;
                         }
                     }
-                    await e.Channel.SendMessage($"<@{e.User.Id}> Your request was not found.");
+                    await e.Channel.SendMessage($"{e.User.Mention} Your request was not found.");
                 });
 
             group.CreateCommand("skip")
@@ -488,7 +487,7 @@ namespace Nekobot
                 .Do(async e =>
                 {
                     if (e.User.VoiceChannel?.Id <= 0)
-                        await e.Channel.SendMessage($"<@{e.User.Id}>, you need to be in a voice channel to use this.");
+                        await e.Channel.SendMessage($"{e.User.Mention}, you need to be in a voice channel to use this.");
                     else
                     {
                         bool on = e.Args[0] == "on";
@@ -500,12 +499,12 @@ namespace Nekobot
                             if (has_stream == on || has_stream != off)
                             {
                                 string blah = on ? "streaming in! Did you mean to !reset or !forcereset the stream?" : "not streaming in!";
-                                await e.Channel.SendMessage($"<@{e.User.Id}>, I can't {status} streaming in a channel that I'm already {blah}");
+                                await e.Channel.SendMessage($"{e.User.Mention}, I can't {status} streaming in a channel that I'm already {blah}");
                             }
                             else
                             {
                                 SQL.AddOrUpdateFlag(e.User.VoiceChannel.Id, "music", off ? "0" : "1");
-                                await e.Channel.SendMessage($"<@{e.User.Id}>, I'm {status}ing the stream!");
+                                await e.Channel.SendMessage($"{e.User.Mention}, I'm {status}ing the stream!");
                                 if (on)
                                 {
                                     await StopStreams(e.Server);
@@ -515,7 +514,7 @@ namespace Nekobot
                                 else streams.Remove(e.User.VoiceChannel.Id);
                             }
                         }
-                        else await e.Channel.SendMessage($"<@{e.User.Id}>, the argument needs to be either on or off.");
+                        else await e.Channel.SendMessage($"{e.User.Mention}, the argument needs to be either on or off.");
                     }
                 });
         }

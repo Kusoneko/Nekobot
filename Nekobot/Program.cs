@@ -25,7 +25,7 @@ namespace Nekobot
                 .Description("I'll reply with 'Pong!'")
                 .Do(async e =>
                 {
-                    await e.Channel.SendMessage($"<@{e.User.Id}>, Pong!");
+                    await e.Channel.SendMessage($"{e.User.Mention}, Pong!");
                 });
 
             group.CreateCommand("status")
@@ -48,13 +48,13 @@ namespace Nekobot
                         if (u.Id == 63296013791666176 && e.User.Id == 63299786798796800)
                         {
                             reply += $@"
-<@{u.Id}> is your onii-chan <3 and his id is {u.Id} and his permission level is {GetPermissions(u, e.Channel)}.
+{u.Mention} is your onii-chan <3 and his id is {u.Id} and his permission level is {GetPermissions(u, e.Channel)}.
 ";
                         }
                         else
                         {
                             reply += $@"
-<@{u.Id}>'s id is {u.Id} and their permission level is {GetPermissions(u, e.Channel)}.
+{u.Mention}'s id is {u.Id} and their permission level is {GetPermissions(u, e.Channel)}.
 ";
                         }
                     }
@@ -243,9 +243,9 @@ namespace Nekobot
                     if (message == "") return; // Unparsed can be empty
 
                     foreach (User user in e.Message.MentionedUsers)
-                        message = message.Replace($"@{user.Name}", $"<@{user.Id}>");
+                        message = message.Replace($"@{user.Name}", user.Mention);
                     foreach (Channel chan in e.Message.MentionedChannels)
-                        message = message.Replace($"#{chan.Name}", $"<#{chan.Id}>");
+                        message = message.Replace($"#{chan.Name}", chan.Mention);
 
                     bool usermention = e.Message.MentionedUsers.Count() > (e.Message.IsMentioningMe() ? 1 : 0) && message.StartsWith("<@");
                     if (usermention || (e.Message.MentionedChannels.Count() > 0 && message.StartsWith("<#")))
@@ -324,9 +324,9 @@ The current topic is: {e.Channel.Topic}";
                     foreach (User u in e.Message.MentionedUsers)
                     {
                         if (u.AvatarUrl == null)
-                            await e.Channel.SendMessage($"<@{u.Id}> has no avatar.");
+                            await e.Channel.SendMessage($"{u.Mention} has no avatar.");
                         else
-                            await e.Channel.SendMessage($"<@{u.Id}>'s avatar is: https://discordapp.com/api/{u.AvatarUrl}");
+                            await e.Channel.SendMessage($"{u.Mention}'s avatar is: https://discordapp.com/api/{u.AvatarUrl}");
                     }
                 });
 
@@ -605,7 +605,7 @@ The current topic is: {e.Channel.Topic}";
                             int oldPerm = GetPermissions(u, e.Channel);
                             if (oldPerm >= eUserPerm)
                             {
-                                reply += $"<@{u.Id}>'s permission level is no less than yours, you are not allowed to change it.";
+                                reply += $"{u.Mention}'s permission level is no less than yours, you are not allowed to change it.";
                                 continue;
                             }
                             bool change_needed = oldPerm != newPermLevel;
@@ -613,7 +613,7 @@ The current topic is: {e.Channel.Topic}";
                                 await SQL.AddOrUpdateUserAsync(u.Id, "perms", newPermLevel.ToString());
                             if (reply != "")
                                 reply += '\n';
-                            reply += $"<@{u.Id}>'s permission level is "+(change_needed ? "now" : "already at")+$" {newPermLevel}.";
+                            reply += $"{u.Mention}'s permission level is "+(change_needed ? "now" : "already at")+$" {newPermLevel}.";
                         }
                         await e.Channel.SendMessage(reply);
                     }
@@ -854,7 +854,7 @@ The current topic is: {e.Channel.Topic}";
         private static void UserJoined(object sender, UserEventArgs e)
         {
             if (!Flags.GetIgnored(e.User))
-                e.Server.DefaultChannel.SendMessage($"Welcome to {e.Server.Name}, <@{e.User.Id}>!");
+                e.Server.DefaultChannel.SendMessage($"Welcome to {e.Server.Name}, {e.User.Mention}!");
         }
 
         private static void Disconnected(object sender, DisconnectedEventArgs e)
@@ -928,14 +928,14 @@ The current topic is: {e.Channel.Topic}";
         private static async Task PerformAction(CommandEventArgs e, string action, string reaction, bool perform_when_empty)
         {
             bool mentions_neko = e.Message.IsMentioningMe();
-            string message = $"<@{e.User.Id}> {action}s ";
+            string message = $"{e.User.Mention} {action}s ";
             bool mentions_everyone = e.Message.MentionedRoles.Contains(e.Server.EveryoneRole);
             if (mentions_everyone)
                 await e.Channel.SendMessage(message+e.Server.EveryoneRole.Mention);
             else
             {
                 if (e.Message.MentionedUsers.Count() == (mentions_neko ? 1 : 0))
-                    message = perform_when_empty ? $"*{action}s <@{e.User.Id}>.*" :  message+e.Server.CurrentUser.Mention;
+                    message = perform_when_empty ? $"*{action}s {e.User.Mention}.*" :  message+e.Server.CurrentUser.Mention;
                 else
                     foreach (User u in e.Message.MentionedUsers)
                         message += u.Mention + ' ';

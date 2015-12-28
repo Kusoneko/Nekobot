@@ -64,14 +64,14 @@ namespace Nekobot
                         bool nsfw = GetNsfw(e.Channel);
                         string status = on ? "allow" : "disallow";
                         if (nsfw == on || nsfw != off)
-                            await e.Channel.SendMessage($"<@{e.User.Id}>, this channel is already {status}ing nsfw commands.");
+                            await e.Channel.SendMessage($"{e.User.Mention}, this channel is already {status}ing nsfw commands.");
                         else
                         {
                             await SQL.AddOrUpdateFlagAsync(e.Channel.Id, "nsfw", off ? "0" : "1");
                             await e.Channel.SendMessage($"I've set this channel to {status} nsfw commands.");
                         }
                     }
-                    else await e.Channel.SendMessage($"<@{e.User.Id}>, '{string.Join(" ", e.Args)}' isn't a valid argument. Please use on or off instead.");
+                    else await e.Channel.SendMessage($"{e.User.Mention}, '{string.Join(" ", e.Args)}' isn't a valid argument. Please use on or off instead.");
                 });
 
             // Administrator Commands
