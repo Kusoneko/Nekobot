@@ -655,6 +655,13 @@ The current topic is: {e.Channel.Topic}";
                         await e.Channel.SendMessage("The parameters are invalid.");
                 });
 
+            // Higher level admin commands
+            group.CreateCommand("setgame")
+                .Parameter("Game", Commands.ParameterType.Unparsed)
+                .Description("I'll set my current game to something else (empty for no game).")
+                .MinPermissions(4)
+                .Do(async e => await client.SetGame(e.Args[0])); // TODO: Store current game in database(varchar(128)) instead of config?
+
             Flags.AddCommands(group);
 
             Chatbot.AddCommands(group);
@@ -734,6 +741,7 @@ The current topic is: {e.Channel.Topic}";
                     try
                     {
                         await client.Connect(config["email"].ToString(), config["password"].ToString());
+                        await client.SetGame(config["game"].ToString());
                         break;
                     }
                     catch (Exception ex)
