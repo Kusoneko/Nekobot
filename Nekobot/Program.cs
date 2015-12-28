@@ -628,6 +628,7 @@ The current topic is: {e.Channel.Topic}";
                 .Do(async e =>
                 {
                     await client.SendMessage(e.Channel, "Bye bye!");
+                    await Music.StopStreams(e.Server);
                     await client.LeaveServer(e.Server);
                 });
 
