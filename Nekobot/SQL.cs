@@ -56,9 +56,11 @@ namespace Nekobot
         internal static bool ExecuteScalarPos(string sql) => System.Convert.ToInt32(Command(sql).ExecuteScalar()) > 0;
         internal static bool InTable(string row, string table, long id)
             => ExecuteScalarPos($"select count({row}) from {table} where {row}='{id}'");
+        internal static string UpdateCommand(string row, string table, long id, string field, string newval)
+            => $"update {table} set {field}={newval} where {row}='{id}'";
         internal static string AddOrUpdateCommand(string row, string table, long id, string field, string newval, bool in_table)
             => in_table
-                ? $"update {table} set {field}={newval} where {row}='{id}'"
+                ? UpdateCommand(row, table, id, field, newval)
                 : $"insert into {table} values ('{id}', {InsertData(table, field, newval)})";
         static string AddOrUpdateCommand(string row, string table, long id, string field, string newval)
             => AddOrUpdateCommand(row, table, id, field, newval, InTable(row, table, id));
@@ -66,6 +68,8 @@ namespace Nekobot
             => ExecuteNonQuery(AddOrUpdateCommand(row, table, id, field, newval));
         internal static void AddOrUpdateFlag(long id, string field, string newval)
             => AddOrUpdate("channel", "flags", id, field, newval);
+        internal static void UpdateFlag(long id, string field, string newval)
+            => UpdateCommand("channel", "flags", id, field, newval);
         static async Task AddOrUpdateAsync(string row, string table, long id, string field, string newval)
             => await ExecuteNonQueryAsync(AddOrUpdateCommand(row, table, id, field, newval));
         internal static async Task AddOrUpdateFlagAsync(long id, string field, string newval)

@@ -437,6 +437,15 @@ namespace Nekobot
                                 await Program.client.SendMessage(e.Channel, $"<@{e.User.Id}>, I'm {status}ing the stream!");
                                 if (on)
                                 {
+                                    var serverstreams = streams.Where(stream => Program.client.GetChannel(stream).Server == e.Server).ToArray();
+                                    foreach (var stream in serverstreams)
+                                    {
+                                        SQL.UpdateFlag(stream, "music", "0");
+                                        if (pause[stream]) pause[stream] = false;
+                                        streams.Remove(stream);
+                                    }
+                                    if (serverstreams.Length != 0)
+                                        await Task.Delay(5000);
                                     streams.Add(e.User.VoiceChannel.Id);
                                     await Stream(e.User.VoiceChannel.Id);
                                 }
