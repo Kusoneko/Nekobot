@@ -191,7 +191,7 @@ namespace Nekobot
 
         internal static void LoadStreams()
         {
-            var reader = SQL.ReadChannels("music = 1");
+            var reader = SQL.ReadChannels("music=1");
             while (reader.Read())
                 streams.Add(Convert.ToInt64(reader["channel"].ToString()));
         }

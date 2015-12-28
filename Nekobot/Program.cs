@@ -542,7 +542,7 @@ The current topic is: {e.Channel.Topic}";
                 .Description("I'll give you information on the Player.me of each usernames provided.")
                 .Do(async e =>
                 {
-                    rclient.BaseUrl = new System.Uri("https://player.me/api/v1/auth");
+                    rclient.BaseUrl = new Uri("https://player.me/api/v1/auth");
                     var request = new RestRequest("pre-login", Method.POST);
                     foreach (string s in e.Args)
                     {
@@ -697,7 +697,7 @@ The current topic is: {e.Channel.Topic}";
             {
                 AckMessages = true,
                 LogLevel = LogMessageSeverity.Verbose,
-                TrackActivity = true,
+                TrackActivity = false, // TODO: ?
                 UseMessageQueue = false,
                 UseLargeThreshold = true,
                 EnableVoiceMultiserver = true,
