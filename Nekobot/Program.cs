@@ -700,7 +700,6 @@ The current topic is: {e.Channel.Topic}";
                 AppUrl = "https://github.com/Kusoneko/Nekobot",
                 LogLevel = config["loglevel"].ToObject<LogSeverity>(),
                 UseMessageQueue = false,
-                UseLargeThreshold = true,
             });
             Console.Title = $"{Config.AppName} v{Config.AppVersion} (Discord.Net v{DiscordConfig.LibVersion})";
 
@@ -747,7 +746,7 @@ The current topic is: {e.Channel.Topic}";
                     catch (Exception ex)
                     {
                         client.Log.Error($"Login Failed", ex);
-                        await Task.Delay(5000);
+                        await Task.Delay(client.Config.FailedReconnectDelay);
                     }
                 }
                 // Connection, join server if there is one in config, and start music streams
