@@ -93,10 +93,6 @@
       <HintPath>..\packages\RestSharp.105.2.3\lib\net452\RestSharp.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="SoundCloud.NET, Version=1.0.5717.37484, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\SoundCloud.NET.1.0.5717.37484\lib\net45\SoundCloud.NET.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.DataAnnotations" />
     <Reference Include="System.Core" />
@@ -150,6 +146,10 @@
     <ProjectReference Include="..\Nekobot.Commands\Nekobot.Commands.csproj">
       <Project>{4c109e0e-5837-4a2e-8ab4-ab1f5ceaac2d}</Project>
       <Name>Nekobot.Commands</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\SoundCloud.NET\SoundCloud.NET\SoundCloud.NET.csproj">
+      <Project>{17333ae0-a1eb-4b40-8865-8261c690814c}</Project>
+      <Name>SoundCloud.NET</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

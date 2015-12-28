@@ -18,6 +18,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Discord.Net", "Discord.Net\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChatterBotAPI", "chatter-bot-api\dotnet\ChatterBotAPI\ChatterBotAPI.csproj", "{2E624962-F155-432C-A90A-E1CE75DEE9EA}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SoundCloud.NET", "SoundCloud.NET\SoundCloud.NET\SoundCloud.NET.csproj", "{17333AE0-A1EB-4B40-8865-8261C690814C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -49,6 +51,12 @@ Global
 		{2E624962-F155-432C-A90A-E1CE75DEE9EA}.FullDebug|Any CPU.Build.0 = Debug|Any CPU
 		{2E624962-F155-432C-A90A-E1CE75DEE9EA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2E624962-F155-432C-A90A-E1CE75DEE9EA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{17333AE0-A1EB-4B40-8865-8261C690814C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{17333AE0-A1EB-4B40-8865-8261C690814C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{17333AE0-A1EB-4B40-8865-8261C690814C}.FullDebug|Any CPU.ActiveCfg = Debug|Any CPU
+		{17333AE0-A1EB-4B40-8865-8261C690814C}.FullDebug|Any CPU.Build.0 = Debug|Any CPU
+		{17333AE0-A1EB-4B40-8865-8261C690814C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{17333AE0-A1EB-4B40-8865-8261C690814C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

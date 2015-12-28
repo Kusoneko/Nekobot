@@ -4,3 +4,6 @@
 [submodule "chatter-bot-api"]
 	path = chatter-bot-api
 	url = https://github.com/pierredavidbelanger/chatter-bot-api.git
+[submodule "SoundCloud.NET"]
+	path = SoundCloud.NET
+	url = https://github.com/Lirusaito/SoundCloud.NET.git
