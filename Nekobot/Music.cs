@@ -198,7 +198,7 @@ namespace Nekobot
             var serverstreams = streams.Where(stream => Program.client.GetChannel(stream).Server == server).ToArray();
             foreach (var stream in serverstreams)
             {
-                SQL.UpdateFlag(stream, "music", "0");
+                SQL.AddOrUpdateFlag(stream, "music", "0");
                 if (pause[stream]) pause[stream] = false;
                 streams.Remove(stream);
             }
