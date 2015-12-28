@@ -95,11 +95,10 @@ namespace Nekobot.Commands
                     bool hasCommandChar = chars.Contains(msg[0]);
                     if (!hasCommandChar && (e.Message.Channel.IsPrivate ? _config.RequireCommandCharInPrivate : _config.RequireCommandCharInPublic))
                     {
-                        if (_config.MentionCommandChar >= 1 && e.Message.IsMentioningMe)
+                        if (_config.MentionCommandChar >= 1 && e.Message.IsMentioningMe())
                         {
-                            User nekouser = e.Server.CurrentUser;
-                            string neko = '@'+nekouser.Name;
-                            if (neko.Length+2 > msg.Length || (e.Message.MentionedRoles.Contains(e.Server.EveryoneRole) && e.Message.MentionedUsers.Where(u => u == nekouser).Count() == 0))
+                            string neko = '@'+e.Server.CurrentUser.Name;
+                            if (neko.Length+2 > msg.Length)
                             {
                                 NonCommands(e);
                                 return;
@@ -119,7 +118,7 @@ namespace Nekobot.Commands
                             // Ideally, don't let the command know that we were mentioned, if this is the only mention
                             /*if (msg.IndexOf(neko) != -1)
                             {
-                                e.Message.MentionedUsers = e.Message.MentionedUsers.Where(u => u == nekouser);
+                                e.Message.MentionedUsers = e.Message.MentionedUsers.Where(u => u == e.Server.CurrentUser);
                                 e.Message.IsMentioningMe = false;
                             }*/
                         }

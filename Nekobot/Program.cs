@@ -247,7 +247,7 @@ namespace Nekobot
                     foreach (Channel chan in e.Message.MentionedChannels)
                         message = message.Replace($"#{chan.Name}", $"<#{chan.Id}>");
 
-                    bool usermention = e.Message.MentionedUsers.Count() > (e.Message.IsMentioningMe ? 1 : 0) && message.StartsWith("<@");
+                    bool usermention = e.Message.MentionedUsers.Count() > (e.Message.IsMentioningMe() ? 1 : 0) && message.StartsWith("<@");
                     if (usermention || (e.Message.MentionedChannels.Count() > 0 && message.StartsWith("<#")))
                     {
                         int index = message.IndexOf(">");
@@ -577,7 +577,7 @@ The current topic is: {e.Channel.Topic}";
                 .Parameter("invite code or link", Commands.ParameterType.Required)
                 .MinPermissions(1)
                 .Description("I'll join a new server using the provided invite code or link.")
-                .Do(async e => await client.GetInvite(e.Args[0]).Result.Accept());
+                .Do(async e => (await client.GetInvite(e.Args[0]))?.Accept());
 
             // Administrator commands
             group.CreateCommand("setpermissions")
@@ -690,6 +690,7 @@ The current topic is: {e.Channel.Topic}";
             {
                 AppName = "Nekobot",
                 AppVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString(3),
+                AppUrl = "https://github.com/Kusoneko/Nekobot",
                 LogLevel = config["loglevel"].ToObject<LogSeverity>(),
                 UseMessageQueue = false,
                 UseLargeThreshold = true,
@@ -743,7 +744,7 @@ The current topic is: {e.Channel.Topic}";
                 }
                 // Connection, join server if there is one in config, and start music streams
                 if (config["server"].ToString() != "")
-                    try { await client.GetInvite(config["server"].ToString()).Result.Accept(); } catch { }
+                    (await client.GetInvite(config["server"].ToString()))?.Accept();
                 await Music.StartStreams(client);
             });
         }
@@ -926,23 +927,21 @@ The current topic is: {e.Channel.Topic}";
 
         private static async Task PerformAction(CommandEventArgs e, string action, string reaction, bool perform_when_empty)
         {
-            User neko = GetNeko(e.Server);
-            bool mentions_neko = e.Message.IsMentioningMe && string.Join(" ", e.Args).IndexOf($"@{neko.Name}") != -1;
+            bool mentions_neko = e.Message.IsMentioningMe();
             string message = $"<@{e.User.Id}> {action}s ";
             bool mentions_everyone = e.Message.MentionedRoles.Contains(e.Server.EveryoneRole);
             if (mentions_everyone)
-                await e.Channel.SendMessage($"{message}{e.Server.EveryoneRole.Mention}");
+                await e.Channel.SendMessage(message+e.Server.EveryoneRole.Mention);
             else
             {
-                if (e.Message.MentionedUsers.Count() == (!mentions_neko && e.Message.IsMentioningMe ? 1 : 0))
-                    message = perform_when_empty ? $"*{action}s <@{e.User.Id}>.*" : message + $"<@{client.CurrentUser.Id}>";
+                if (e.Message.MentionedUsers.Count() == (mentions_neko ? 1 : 0))
+                    message = perform_when_empty ? $"*{action}s <@{e.User.Id}>.*" :  message+e.Server.CurrentUser.Mention;
                 else
                     foreach (User u in e.Message.MentionedUsers)
-                        if (u != neko || mentions_neko)
-                            message += $"<@{u.Id}> ";
+                        message += u.Mention + ' ';
                 await e.Channel.SendMessage(message);
             }
-            if (mentions_everyone || mentions_neko || (!perform_when_empty && e.Message.MentionedUsers.Count() == (e.Message.IsMentioningMe ? 1 : 0)))
+            if (mentions_everyone || mentions_neko || (!perform_when_empty && e.Message.MentionedUsers.Count() == 0))
                 await e.Channel.SendMessage(reaction);
         }
     }
