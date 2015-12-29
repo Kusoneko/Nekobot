@@ -103,6 +103,16 @@ namespace Nekobot
                 => new SoundCloud.NET.SearchParameters { SearchString = string.Join(" ", args), Streamable = true };
         }
 
+        static IWaveProvider Reader(string file)
+        {
+            for (byte i = 3; i != 0; --i) try
+            {
+                return System.IO.Path.GetExtension(file) == ".ogg"
+                        ? (IWaveProvider)new NAudio.Vorbis.VorbisWaveReader(file)
+                        : new MediaFoundationReader(file);
+            } catch { }
+            return null;
+        }
         static async Task Stream(long cid)
         {
             Channel c = Program.client.GetChannel(cid);
@@ -137,8 +147,12 @@ namespace Nekobot
                         var outFormat = new WaveFormat(48000, 16, 1);
                         int blockSize = outFormat.AverageBytesPerSecond; // 1 second
                         byte[] buffer = new byte[blockSize];
-                        string file = playlist[cid][0].Uri;
-                        var musicReader = System.IO.Path.GetExtension(file) == ".ogg" ? (IWaveProvider)new NAudio.Vorbis.VorbisWaveReader(file) : new MediaFoundationReader(file);
+                        var musicReader = Reader(playlist[cid][0].Uri);
+                        if (musicReader == null)
+                        {
+                            Console.WriteLine($"{playlist[cid][0].Uri} couldn't be read.");
+                            return;
+                        }
                         using (var resampler = new MediaFoundationResampler(musicReader, outFormat) { ResamplerQuality = 60 })
                         {
                             int byteCount;
