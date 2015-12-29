@@ -10,8 +10,6 @@ namespace Nekobot.Commands
     /// <summary> A Discord.Net client with extensions for handling common bot operations like text commands. </summary>
     public sealed partial class CommandService : IService
     {
-        private const string DefaultPermissionError = "You do not have permission to access this command.";
-
         private readonly CommandServiceConfig _config;
         private readonly CommandGroupBuilder _root;
         private DiscordClient _client;
@@ -168,7 +166,7 @@ namespace Nekobot.Commands
                         string errorText;
                         if (!command.CanRun(eventArgs.User, eventArgs.Channel, out errorText))
                         {
-                            RaiseCommandError(CommandErrorType.BadPermissions, eventArgs, new Exception(errorText ?? DefaultPermissionError));
+                            RaiseCommandError(CommandErrorType.BadPermissions, eventArgs, errorText != null ? new Exception(errorText) : null);
                             return;
                         }
                         // Check flags
@@ -326,7 +324,7 @@ namespace Nekobot.Commands
             StringBuilder output = new StringBuilder();
             string error;
             if (!command.CanRun(user, channel, out error))
-                output.AppendLine(error ?? DefaultPermissionError);
+                output.AppendLine(error ?? "You do not have permission to access this command.");
             else
                 ShowCommandHelpInternal(command, user, channel, output);
             return (replyChannel ?? channel).SendMessage(output.ToString());
