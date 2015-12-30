@@ -23,17 +23,11 @@ namespace Nekobot
             // User commands
             group.CreateCommand("ping")
                 .Description("I'll reply with 'Pong!'")
-                .Do(async e =>
-                {
-                    await e.Channel.SendMessage($"{e.User.Mention}, Pong!");
-                });
+                .Do(async e => await e.Channel.SendMessage($"{e.User.Mention}, Pong!"));
 
             group.CreateCommand("status")
                 .Description("I'll give statistics about the servers, channels and users.")
-                .Do(async e =>
-                {
-                    await e.Channel.SendMessage($"I'm connected to {client.Servers.Count()} servers, which have a total of {client.Servers.SelectMany(x => x.TextChannels).Count()} text and {client.Servers.SelectMany(x => x.VoiceChannels).Count()} voice channels, and see a total of {client.Servers.SelectMany(x => x.Users).Distinct().Count()} different users.");
-                });
+                .Do(async e => await e.Channel.SendMessage($"I'm connected to {client.Servers.Count()} servers, which have a total of {client.Servers.SelectMany(x => x.TextChannels).Count()} text and {client.Servers.SelectMany(x => x.VoiceChannels).Count()} voice channels, and see a total of {client.Servers.SelectMany(x => x.Users).Distinct().Count()} different users."));
 
             group.CreateCommand("whois")
                 .Alias("getinfo")
@@ -43,20 +37,13 @@ namespace Nekobot
                 {
                     if (e.Args[0] == "") return;
                     string reply = "";
+                    bool oniicheck = e.User.Id == 63299786798796800;
                     foreach (User u in e.Message.MentionedUsers)
                     {
-                        if (u.Id == 63296013791666176 && e.User.Id == 63299786798796800)
-                        {
-                            reply += $@"
-{u.Mention} is your onii-chan <3 and his id is {u.Id} and his permission level is {Helpers.GetPermissions(u, e.Channel)}.
+                        bool onii = oniicheck && u.Id == 63296013791666176;
+                        reply += $@"
+{u.Mention}{(onii ? " is your onii-chan <3 and his" : "'s")} id is {u.Id} and {(onii ? "his" : "their")} permission level is {Helpers.GetPermissions(u, e.Channel)}.
 ";
-                        }
-                        else
-                        {
-                            reply += $@"
-{u.Mention}'s id is {u.Id} and their permission level is {Helpers.GetPermissions(u, e.Channel)}.
-";
-                        }
                     }
                     await e.Channel.SendMessage(reply);
                 });
@@ -175,17 +162,11 @@ namespace Nekobot
                 .Alias("nyaa")
                 .Alias("nyan")
                 .Description("I'll say 'Nyaa~'")
-                .Do(async e =>
-                {
-                    await e.Channel.SendMessage("Nyaa~");
-                });
+                .Do(async e => await e.Channel.SendMessage("Nyaa~"));
 
             group.CreateCommand("poi")
                 .Description("I'll say 'Poi!'")
-                .Do(async e =>
-                {
-                    await e.Channel.SendMessage("Poi!");
-                });
+                .Do(async e => await e.Channel.SendMessage("Poi!"));
 
             group.CreateCommand("aicrai")
                 .Alias("aicraievritiem")
@@ -193,43 +174,28 @@ namespace Nekobot
                 .Alias("sadhorn")
                 .Alias("icri")
                 .Description("When sad things happen...")
-                .Do(async e =>
-                {
-                    await e.Channel.SendMessage("https://www.youtube.com/watch?v=0JAn8eShOo8");
-                });
+                .Do(async e => await e.Channel.SendMessage("https://www.youtube.com/watch?v=0JAn8eShOo8"));
 
             group.CreateCommand("notnow")
                 .Alias("rinpls")
                 .Description("How to Rekt: Rin 101")
-                .Do(async e =>
-                {
-                    await e.Channel.SendMessage("https://www.youtube.com/watch?v=2BZUzJfKFwM");
-                });
+                .Do(async e => await e.Channel.SendMessage("https://www.youtube.com/watch?v=2BZUzJfKFwM"));
 
             group.CreateCommand("uninstall")
                 .Description("A great advice in any situation.")
-                .Do(async e =>
-                {
-                    await e.Channel.SendMessage("https://www.youtube.com/watch?v=5sQzi0dn_dA");
-                });
+                .Do(async e => await e.Channel.SendMessage("https://www.youtube.com/watch?v=5sQzi0dn_dA"));
 
             group.CreateCommand("killyourself")
                 .Alias("kys")
                 .Description("Another great advice.")
-                .Do(async e =>
-                {
-                    await e.Channel.SendMessage("https://www.youtube.com/watch?v=2dbR2JZmlWo");
-                });
+                .Do(async e => await e.Channel.SendMessage("https://www.youtube.com/watch?v=2dbR2JZmlWo"));
 
             group.CreateCommand("congratulations")
                 .Alias("congrats")
                 .Alias("grats")
                 .Alias("gg")
                 .Description("Congratulate someone for whatever reason.")
-                .Do(async e =>
-                {
-                    await e.Channel.SendMessage("https://www.youtube.com/watch?v=oyFQVZ2h0V8");
-                });
+                .Do(async e => await e.Channel.SendMessage("https://www.youtube.com/watch?v=oyFQVZ2h0V8"));
 
             group.CreateCommand("say")
                 .Alias("forward")
@@ -322,12 +288,7 @@ The current topic is: {e.Channel.Topic}";
                 {
                     if (e.Args[0] == "") return;
                     foreach (User u in e.Message.MentionedUsers)
-                    {
-                        if (u.AvatarUrl == null)
-                            await e.Channel.SendMessage($"{u.Mention} has no avatar.");
-                        else
-                            await e.Channel.SendMessage($"{u.Mention}'s avatar is: https://discordapp.com/api/{u.AvatarUrl}");
-                    }
+                        await e.Channel.SendMessage(u.Mention + u.AvatarUrl == null ? " has no avatar." : $"'s avatar is: https://discordapp.com/api/{u.AvatarUrl}");
                 });
 
             group.CreateCommand("rand")
@@ -464,14 +425,15 @@ The current topic is: {e.Channel.Topic}";
                     foreach (string s in e.Args)
                     {
                         var request = new RestRequest($"{s}", Method.GET);
-                        if (rclient.Execute(request).Content[0] == '<')
+                        var content = rclient.Execute(request).Content;
+                        if (content[0] == '<')
                         {
                             message += $@"
 {s} doesn't exist.";
                         }
                         else
                         {
-                            JObject result = JObject.Parse(rclient.Execute(request).Content);
+                            JObject result = JObject.Parse(content);
                             string username = result["name"].ToString();
                             string avatar = result["avatar"].ToString();
                             message += $@"
@@ -493,13 +455,14 @@ The current topic is: {e.Channel.Topic}";
                     {
                         string message = "";
                         var request = new RestRequest($"{s}", Method.GET);
-                        if (rclient.Execute(request).Content[0] == '<')
+                        var content = rclient.Execute(request).Content;
+                        if (content[0] == '<')
                         {
                             message += $@"{s} doesn't exist.";
                         }
                         else
                         {
-                            JObject result = JObject.Parse(rclient.Execute(request).Content);
+                            JObject result = JObject.Parse(content);
                             var username = result["name"].ToString();
                             var avatar = result["avatar"].ToString();
                             var userurl = $"http://hummingbird.me/users/{username}";
@@ -518,10 +481,10 @@ The current topic is: {e.Channel.Topic}";
 **{waifu_prefix}**: {waifu}
 **Bio**: {bio}
 **Time wasted on Anime**: {lifeAnime}";
-                            if (!String.IsNullOrWhiteSpace(location))
+                            if (!string.IsNullOrWhiteSpace(location))
                                 message += $@"
 **Location**: {location}";
-                            if (!String.IsNullOrWhiteSpace(website))
+                            if (!string.IsNullOrWhiteSpace(website))
                                 message += $@"
 **Website**: {website}";
                             message += $@"
@@ -657,7 +620,6 @@ The current topic is: {e.Channel.Topic}";
                 .Do(e => client.SetGame(e.Args[0])); // TODO: Store current game in database(varchar(128)) instead of config?
 
             Flags.AddCommands(group);
-
             Chatbot.AddCommands(group);
         }
 
