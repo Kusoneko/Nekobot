@@ -134,6 +134,7 @@
     <Compile Include="Chatbot.cs" />
     <Compile Include="Extensions.cs" />
     <Compile Include="Flags.cs" />
+    <Compile Include="Helpers.cs" />
     <Compile Include="Image.cs" />
     <Compile Include="Log.cs" />
     <Compile Include="SQL.cs" />
