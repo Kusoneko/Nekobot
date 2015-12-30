@@ -58,11 +58,9 @@ namespace Nekobot
                     bool botstatus = chatbots.ContainsKey(e.Channel.Id);
                     if (e.Args.Count() != 0)
                     {
-                        bool on = e.Args[0] == "on";
-                        bool off = !on && e.Args[0] == "off";
-                        if (on || off)
+                        await Helpers.OnOffCmd(e, async on =>
                         {
-                            if (botstatus == on || botstatus != off)
+                            if (botstatus == on)
                                 await e.Channel.SendMessage("The bot is already " + (botstatus ? "on" : "off") + $" for {e.Channel}");
                             else
                             {
@@ -77,8 +75,7 @@ namespace Nekobot
                                 await e.Channel.SendMessage("The bot is now " + (!botstatus ? "on" : "off") + $" for {e.Channel}");
                                 SQL.AddOrUpdateFlag(e.Channel.Id, "chatbot", bottype.ToString());
                             }
-                        }
-                        else await e.Channel.SendMessage("First argument must be on or off.");
+                        }, "First argument must be on or off.");
                     }
                     else await e.Channel.SendMessage("The bot is currently " + (botstatus ? "on" : "off") + $" for {e.Channel}.");
                 });

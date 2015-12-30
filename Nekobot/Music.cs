@@ -463,39 +463,29 @@ namespace Nekobot
                 .Parameter("on/off", Commands.ParameterType.Required)
                 .Description("I'll start or end a stream in a particular voice channel, which you need to be in.")
                 .MinPermissions(2)
-                .Do(async e =>
-                {
-                    if (e.User.VoiceChannel?.Id <= 0)
-                        await e.Channel.SendMessage($"{e.User.Mention}, you need to be in a voice channel to use this.");
-                    else
+                .Do(async e => await (e.User.VoiceChannel?.Id <= 0 ? e.Channel.SendMessage($"{e.User.Mention}, you need to be in a voice channel to use this.")
+                    : Helpers.OnOffCmd(e, async on =>
                     {
-                        bool on = e.Args[0] == "on";
-                        bool off = !on && e.Args[0] == "off";
-                        if (on || off)
+                        bool has_stream = streams.Contains(e.User.VoiceChannel.Id);
+                        string status = on ? "start" : "halt";
+                        if (has_stream == on)
                         {
-                            bool has_stream = streams.Contains(e.User.VoiceChannel.Id);
-                            string status = on ? "start" : "halt";
-                            if (has_stream == on || has_stream != off)
-                            {
-                                string blah = on ? "streaming in! Did you mean to !reset or !forcereset the stream?" : "not streaming in!";
-                                await e.Channel.SendMessage($"{e.User.Mention}, I can't {status} streaming in a channel that I'm already {blah}");
-                            }
-                            else
-                            {
-                                SQL.AddOrUpdateFlag(e.User.VoiceChannel.Id, "music", off ? "0" : "1");
-                                await e.Channel.SendMessage($"{e.User.Mention}, I'm {status}ing the stream!");
-                                if (on)
-                                {
-                                    await StopStreams(e.Server);
-                                    streams.Add(e.User.VoiceChannel.Id);
-                                    await Stream(e.User.VoiceChannel);
-                                }
-                                else streams.Remove(e.User.VoiceChannel.Id);
-                            }
+                            string blah = on ? "streaming in! Did you mean to !reset or !forcereset the stream?" : "not streaming in!";
+                            await e.Channel.SendMessage($"{e.User.Mention}, I can't {status} streaming in a channel that I'm already {blah}");
                         }
-                        else await e.Channel.SendMessage($"{e.User.Mention}, the argument needs to be either on or off.");
-                    }
-                });
+                        else
+                        {
+                            SQL.AddOrUpdateFlag(e.User.VoiceChannel.Id, "music", on ? "1" : "0");
+                            await e.Channel.SendMessage($"{e.User.Mention}, I'm {status}ing the stream!");
+                            if (on)
+                            {
+                                await StopStreams(e.Server);
+                                streams.Add(e.User.VoiceChannel.Id);
+                                await Stream(e.User.VoiceChannel);
+                            }
+                            else streams.Remove(e.User.VoiceChannel.Id);
+                        }
+                    })));
         }
     }
 }

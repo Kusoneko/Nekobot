@@ -16,6 +16,14 @@ namespace Nekobot
             return 0;
         }
 
+        internal static async Task OnOffCmd(Commands.CommandEventArgs e, Action<bool> action, string failmsg = null)
+        {
+            var arg = e.Args[0].ToLower();
+            bool on = arg == "on";
+            if (on || arg == "off") action(on);
+            else await e.Channel.SendMessage(failmsg ?? $"{e.User.Mention}, '{string.Join(" ", e.Args)}' isn't a valid argument. Please use on or off instead.");
+        }
+
         internal static bool CanSay(Channel c, User u) => c.IsPrivate || c.Users.Where(m => m.Id == u.Id).SingleOrDefault().GetPermissions(c).SendMessages;
         internal static bool CanSay(ref Channel c, User u, Channel old)
         {

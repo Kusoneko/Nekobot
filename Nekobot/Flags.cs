@@ -57,21 +57,17 @@ namespace Nekobot
                 .Description("I'll set a channel's nsfw flag to on or off.")
                 .Do(async e =>
                 {
-                    bool on = e.Args[0] == "on";
-                    bool off = !on && e.Args[0] == "off";
-                    if (on || off)
+                    await Helpers.OnOffCmd(e, async on =>
                     {
-                        bool nsfw = GetNsfw(e.Channel);
                         string status = on ? "allow" : "disallow";
-                        if (nsfw == on || nsfw != off)
+                        if (GetNsfw(e.Channel) == on)
                             await e.Channel.SendMessage($"{e.User.Mention}, this channel is already {status}ing nsfw commands.");
                         else
                         {
-                            await SQL.AddOrUpdateFlagAsync(e.Channel.Id, "nsfw", off ? "0" : "1");
+                            await SQL.AddOrUpdateFlagAsync(e.Channel.Id, "nsfw", on ? "1" : "0");
                             await e.Channel.SendMessage($"I've set this channel to {status} nsfw commands.");
                         }
-                    }
-                    else await e.Channel.SendMessage($"{e.User.Mention}, '{string.Join(" ", e.Args)}' isn't a valid argument. Please use on or off instead.");
+                    });
                 });
 
             // Administrator Commands
