@@ -72,11 +72,10 @@ namespace Nekobot
             return cmd;
         }
 
-        class SC
+        class SC : SoundCloud.NET.SoundCloudManager
         {
-            public static SoundCloud.NET.SoundCloudManager mgr;
-            public static void MakeMgr(string client_id) => mgr = new SoundCloud.NET.SoundCloudManager(client_id, Program.rclient.UserAgent);
-            public static async Task<bool> Triad(Commands.CommandEventArgs e, SoundCloud.NET.Models.Track track, bool multiple, bool isplaylist = false)
+            public SC(string clientId, string userAgent = "") : base(clientId, userAgent) { }
+            async Task<bool> Triad(Commands.CommandEventArgs e, SoundCloud.NET.Models.Track track, bool multiple, bool isplaylist = false)
             {
                 var pl = playlist[e.User.VoiceChannel.Id];
                 var title = $"{track.Title} by {track.User.Username}";
@@ -89,7 +88,7 @@ namespace Nekobot
                 if (!InPlaylist(pl, ext, true))
                 {
                     var uri = track.StreamUrl;
-                    pl.Insert(NonrequestedIndex(e), new Song($"{uri}?client_id={mgr.ClientID}", Song.EType.SoundCloud, e.User, ext));
+                    pl.Insert(NonrequestedIndex(e), new Song($"{uri}?client_id={ClientID}", Song.EType.SoundCloud, e.User, ext));
                     if (!isplaylist) await e.Channel.SendMessage($"{title} added to the playlist.");
                     return true;
                 }
@@ -97,8 +96,7 @@ namespace Nekobot
                     await e.Channel.SendMessage($"{title} is already in the playlist.");
                 return false;
             }
-
-            public static async Task<bool> Triad(Commands.CommandEventArgs e, SoundCloud.NET.Models.Playlist playlist, bool multiple)
+            async Task<bool> Triad(Commands.CommandEventArgs e, SoundCloud.NET.Models.Playlist playlist, bool multiple)
             {
                 bool ret = false;
                 foreach (var track in playlist.Tracks)
@@ -110,10 +108,7 @@ namespace Nekobot
                 return ret;
             }
 
-            public static SoundCloud.NET.SearchParameters SearchArgs(string[] args)
-                => new SoundCloud.NET.SearchParameters { SearchString = string.Join(" ", args), Streamable = true };
-
-            public static void CreatePermalinkCmd(Commands.CommandGroupBuilder group, string name, string[] aliases, bool is_playlist)
+            public void CreatePermalinkCmd(Commands.CommandGroupBuilder group, string name, string[] aliases, bool is_playlist)
             {
                 CreatePLCmd(group, name, $"SoundCloud {(!is_playlist ? "Track" : "Playlist")} Permalink"/*(s)"*/, $"I'll add SoundCloud {(is_playlist ? "playlist" : "")} songs to the playlist!", aliases)
                     .Do(async e =>
@@ -122,16 +117,17 @@ namespace Nekobot
                         if (e.Args[0] == ""/*m.Count == 0*/)
                             await e.Channel.SendMessage($"{e.User.Mention} No SoundCloud permalink matches.");
                         else //foreach (Match match in m)
-                            await (is_playlist ? Triad(e, mgr.GetPlaylist(e.Args[0]), false) : Triad(e, mgr.GetTrack(e.Args[0])/*match.Groups[1]*/, true));
+                            await (is_playlist ? Triad(e, GetPlaylist(e.Args[0]), false) : Triad(e, GetTrack(e.Args[0])/*match.Groups[1]*/, true));
                     });
             }
-            public static void CreateSearchCmd(Commands.CommandGroupBuilder group, string name, string[] aliases, bool is_playlist)
+            public void CreateSearchCmd(Commands.CommandGroupBuilder group, string name, string[] aliases, bool is_playlist)
             {
                 CreatePLCmd(group, name, is_playlist ? "SoundCloud Playlist Keywords" : "song to find",
                     $"I'll search for your {(is_playlist ? "playlist " : "")}request on SoundCloud!\nResults will be considered in order until one not in the playlist is found.", aliases)
                     .Do(async e =>
                     {
-                        var container = is_playlist ? (SoundCloud.NET.Models.BaseModel[])mgr.SearchPlaylist(SearchArgs(e.Args)) : mgr.SearchTrack(SearchArgs(e.Args));
+                        var search = new SoundCloud.NET.SearchParameters { SearchString = string.Join(" ", e.Args), Streamable = true };
+                        var container = is_playlist ? (SoundCloud.NET.Models.BaseModel[])SearchPlaylist(search) : SearchTrack(search);
                         if (container.Count() == 0)
                         {
                             await e.Channel.SendMessage($"{e.User.Mention} Your request was not found.");
@@ -365,13 +361,11 @@ namespace Nekobot
 
             if (Program.config["SoundCloud"].HasValues)
             {
-                SC.MakeMgr(Program.config["SoundCloud"]["client_id"].ToString());
-                var mgr = SC.mgr;
-
-                SC.CreateSearchCmd(group, "scsearch", new string[] { "scs" }, false);
-                SC.CreatePermalinkCmd(group, "screquest", new string[] { "sctrack", "sctr" }, false);
-                SC.CreatePermalinkCmd(group, "scplaylist", new string[] { "scpl" }, false);
-                //SC.CreateSearchCmd(group, "scplsearch", new string[]{"scpls"}, true); // Until this stops giving Gateway timeouts, RIP.
+                SC sc = new SC(Program.config["SoundCloud"]["client_id"].ToString(), Program.rclient.UserAgent);
+                sc.CreateSearchCmd(group, "scsearch", new string[]{"scs"}, false);
+                sc.CreatePermalinkCmd(group, "screquest", new string[]{"sctrack", "sctr"}, false);
+                sc.CreatePermalinkCmd(group, "scplaylist", new string[]{"scpl"}, false);
+                //sc.CreateSearchCmd(group, "scplsearch", new string[]{"scpls"}, true); // Until this stops giving Gateway timeouts, RIP.
             }
 
             group.CreateCommand("request")
