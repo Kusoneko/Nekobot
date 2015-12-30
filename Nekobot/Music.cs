@@ -171,7 +171,7 @@ namespace Nekobot
                     }
                     catch (OperationCanceledException err) { Program.log.Error("Stream", err.Message); }
                 });
-                await _client.Wait(); // Prevent endless queueing which would eventually eat up all the ram
+                _client.Wait(); // Prevent endless queueing which would eventually eat up all the ram
                 skip[cid] = false;
                 if (reset[cid])
                 {

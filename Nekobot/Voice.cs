@@ -15,7 +15,7 @@ namespace Nekobot
             new AudioService(new AudioServiceConfig
             {
                 Mode = AudioMode.Outgoing,
-                EnableMultiserver = true,
+                EnableMultiserver = false,//true,
                 EnableEncryption = true,
                 Bitrate = 512,
             });

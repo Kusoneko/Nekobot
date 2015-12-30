@@ -660,7 +660,7 @@ The current topic is: {e.Channel.Topic}";
                 .Parameter("Game", Commands.ParameterType.Unparsed)
                 .Description("I'll set my current game to something else (empty for no game).")
                 .MinPermissions(4)
-                .Do(async e => await client.SetGame(e.Args[0])); // TODO: Store current game in database(varchar(128)) instead of config?
+                .Do(e => client.SetGame(e.Args[0])); // TODO: Store current game in database(varchar(128)) instead of config?
 
             Flags.AddCommands(group);
 
@@ -740,7 +740,7 @@ The current topic is: {e.Channel.Topic}";
                     try
                     {
                         await client.Connect(config["email"].ToString(), config["password"].ToString());
-                        await client.SetGame(config["game"].ToString());
+                        client.SetGame(config["game"].ToString());
                         break;
                     }
                     catch (Exception ex)
