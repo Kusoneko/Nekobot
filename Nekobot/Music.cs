@@ -324,11 +324,7 @@ namespace Nekobot
                 .FlagMusic(true)
                 .Do(async e => await e.Channel.SendMessage($"Currently playing: {playlist[e.User.VoiceChannel.Id][0].Title()}."));
 
-            // TODO: Clean up the request commands, they share too much code.
-            group.CreateCommand("ytrequest")
-                .Parameter("youtube video link(s)", Commands.ParameterType.Unparsed)
-                .Description("I'll add youtube videos to the playlist")
-                .FlagMusic(true)
+            CreatePLCmd(group, "ytrequest", "youtube video link(s)", "I'll add youtube videos to the playlist")
                 .Do(async e =>
                 {
                     Program.rclient.BaseUrl = new Uri("http://www.youtubeinmp3.com/fetch/");
@@ -368,16 +364,19 @@ namespace Nekobot
                 //sc.CreateSearchCmd(group, "scplsearch", new string[]{"scpls"}, true); // Until this stops giving Gateway timeouts, RIP.
             }
 
-            group.CreateCommand("request")
-                .Parameter("song to find", Commands.ParameterType.Required)
-                .Parameter("...", Commands.ParameterType.Multiple)
-                .Description("I'll try to add your request to the playlist!")
-                .FlagMusic(true)
+            CreatePLCmd(group, "request", "song to find", "I'll try to add your request to the playlist!")
                 .Do(async e =>
                 {
+                    var args = string.Join(" ", e.Args);
+                    if (args.Length == 0)
+                    {
+                        await e.Channel.SendMessage("You need to provide at least a character to search for.");
+                        return;
+                    }
+                    args.ToLower();
                     foreach (var file in Files())
                     {
-                        if (System.IO.Path.GetFileNameWithoutExtension(file).ToLower().Contains(string.Join(" ", e.Args).ToLower()))
+                        if (System.IO.Path.GetFileNameWithoutExtension(file).ToLower().Contains(args))
                         {
                             var pl = playlist[e.User.VoiceChannel.Id];
                             var i = NonrequestedIndex(e);
