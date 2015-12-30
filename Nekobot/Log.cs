@@ -15,6 +15,9 @@ namespace Nekobot
         public static void Write(LogSeverity s, string msg, Exception e = null) => Write(Args(s, msg, e));
         public static void Write(LogMessageEventArgs e)
         {
+#if !DEBUG
+            if (e.Severity > LogSeverity.Info) return;
+#endif
             //Color
             ConsoleColor color;
             switch (e.Severity)
@@ -22,8 +25,11 @@ namespace Nekobot
                 case LogSeverity.Error: color = ConsoleColor.Red; break;
                 case LogSeverity.Warning: color = ConsoleColor.Yellow; break;
                 case LogSeverity.Info: color = ConsoleColor.White; break;
+#if DEBUG
                 case LogSeverity.Verbose: color = ConsoleColor.Gray; break;
-                case LogSeverity.Debug: default: color = ConsoleColor.DarkGray; break;
+                case LogSeverity.Debug:
+#endif
+                default: color = ConsoleColor.DarkGray; break;
             }
 
             // Exception
