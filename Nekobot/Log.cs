@@ -18,6 +18,11 @@ namespace Nekobot
 #if !DEBUG
             if (e.Severity > LogSeverity.Info) return;
 #endif
+            bool to_console = e.Severity <= Program.Config.LogLevel;
+#if !DEBUG
+            if (!to_console) return;
+#endif
+
             //Color
             ConsoleColor color;
             switch (e.Severity)
@@ -79,7 +84,7 @@ namespace Nekobot
             }
 
             text = builder.ToString();
-            if (e.Severity <= Program.Config.LogLevel)
+            if (to_console)
             {
                 Output(text, color);
             }
