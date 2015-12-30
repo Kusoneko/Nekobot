@@ -48,13 +48,13 @@ namespace Nekobot
                         if (u.Id == 63296013791666176 && e.User.Id == 63299786798796800)
                         {
                             reply += $@"
-{u.Mention} is your onii-chan <3 and his id is {u.Id} and his permission level is {GetPermissions(u, e.Channel)}.
+{u.Mention} is your onii-chan <3 and his id is {u.Id} and his permission level is {Helpers.GetPermissions(u, e.Channel)}.
 ";
                         }
                         else
                         {
                             reply += $@"
-{u.Mention}'s id is {u.Id} and their permission level is {GetPermissions(u, e.Channel)}.
+{u.Mention}'s id is {u.Id} and their permission level is {Helpers.GetPermissions(u, e.Channel)}.
 ";
                         }
                     }
@@ -258,7 +258,7 @@ namespace Nekobot
                             {
                                 channel = usermention ? await e.Message.MentionedUsers.Where(u => u.Id == mentionid).Single().CreateChannel()
                                     : e.Message.MentionedChannels.Where(c => c.Id == mentionid).Single();
-                                if (CanSay(ref channel, e.User, e.Channel))
+                                if (Helpers.CanSay(ref channel, e.User, e.Channel))
                                     message = message.Substring(index + 2);
                             }
                         }
@@ -272,7 +272,7 @@ namespace Nekobot
                             {
                                 ulong id = Convert.ToUInt64(chanstr);
                                 channel = client.GetChannel(id) ?? await client.Servers.Select(x => x.GetUser(id)).FirstOrDefault().CreateChannel();
-                                if (CanSay(ref channel, e.User, e.Channel))
+                                if (Helpers.CanSay(ref channel, e.User, e.Channel))
                                     message = message.Substring(message.IndexOf(" ")+1);
                             }
                         } catch { }
@@ -290,7 +290,7 @@ namespace Nekobot
                 {
                     var text = e.Args[0];
                     if (text.Length != 0)
-                        await e.Channel.SendMessage(string.Join("", GraphemeClusters(text).Reverse().ToArray()));
+                        await e.Channel.SendMessage(string.Join("", Helpers.GraphemeClusters(text).Reverse().ToArray()));
                 });
 
             group.CreateCommand("whereami")
@@ -429,19 +429,13 @@ The current topic is: {e.Channel.Topic}";
                 .Alias("pets")
                 .Parameter("@User1] [@User2] [...", Commands.ParameterType.Unparsed)
                 .Description("Everyone loves being pet, right!?! Pets each *@user*. Leave empty (or mention me too) to pet me!")
-                .Do(async e =>
-                {
-                    await PerformAction(e, "pet", "*purrs*", false);
-                });
+                .Do(async e => await Helpers.PerformAction(e, "pet", "*purrs*", false));
 
             group.CreateCommand("hug")
                 .Alias("hugs")
                 .Parameter("@User1] [@User2] [...", Commands.ParameterType.Unparsed)
                 .Description("Hug someone! Hugs each *@user*. Leave empty to get a hug!")
-                .Do(async e =>
-                {
-                    await PerformAction(e, "hug", "<3", true);
-                });
+                .Do(async e => await Helpers.PerformAction(e, "hug", "<3", true));
 
             group.CreateCommand("8ball")
                 .Parameter("question", Commands.ParameterType.Optional)
@@ -590,7 +584,7 @@ The current topic is: {e.Channel.Topic}";
                 .Do(async e =>
                 {
                     int newPermLevel = 0;
-                    int eUserPerm = GetPermissions(e.User, e.Channel);
+                    int eUserPerm = Helpers.GetPermissions(e.User, e.Channel);
                     if (e.Args[1] == "" || e.Message.MentionedUsers.Count() < 1)
                         await e.Channel.SendMessage("You need to at least specify a permission level and mention one user.");
                     else if (!int.TryParse(e.Args[0], out newPermLevel))
@@ -602,7 +596,7 @@ The current topic is: {e.Channel.Topic}";
                         string reply = "";
                         foreach (User u in e.Message.MentionedUsers)
                         {
-                            int oldPerm = GetPermissions(u, e.Channel);
+                            int oldPerm = Helpers.GetPermissions(u, e.Channel);
                             if (oldPerm >= eUserPerm)
                             {
                                 reply += $"{u.Mention}'s permission level is no less than yours, you are not allowed to change it.";
@@ -713,7 +707,7 @@ The current topic is: {e.Channel.Topic}";
             client.Disconnected += Disconnected;
             client.UserJoined += UserJoined;
             client.Log.Message += (s, e) => Log.Write(e);
-            client.Services.Add(new PermissionLevelService(GetPermissions));
+            client.Services.Add(new PermissionLevelService(Helpers.GetPermissions));
             client.Services.Add(commands);
             //Display errors that occur when a user tries to run a command
             commands.CommandError += CommandError;
@@ -906,50 +900,6 @@ The current topic is: {e.Channel.Topic}";
                 client.ReplyError(e, "Command Error: " + msg);
                 client.Log.Error("Command", msg);
             }
-        }
-
-        internal static int GetPermissions(User user, Channel channel)
-        {
-            if (user.Id == masterId)
-                return 10;
-            if (SQL.ExecuteScalarPos($"select count(perms) from users where user = '{user.Id}'"))
-                return SQL.ReadInt(SQL.ReadUser(user.Id, "perms"));
-            return 0;
-        }
-
-        internal static bool CanSay(Channel c, User u) => c.IsPrivate || c.Users.Where(m => m.Id == u.Id).SingleOrDefault().GetPermissions(c).SendMessages;
-        internal static bool CanSay(ref Channel c, User u, Channel old)
-        {
-            if (CanSay(c, u))
-                return true;
-            c = old;
-            return false;
-        }
-
-        private static IEnumerable<string> GraphemeClusters(string s)
-        {
-            var enumerator = System.Globalization.StringInfo.GetTextElementEnumerator(s);
-            while (enumerator.MoveNext()) yield return (string)enumerator.Current;
-        }
-
-        private static async Task PerformAction(CommandEventArgs e, string action, string reaction, bool perform_when_empty)
-        {
-            bool mentions_neko = e.Message.IsMentioningMe();
-            string message = $"{e.User.Mention} {action}s ";
-            bool mentions_everyone = e.Message.MentionedRoles.Contains(e.Server.EveryoneRole);
-            if (mentions_everyone)
-                await e.Channel.SendMessage(message+e.Server.EveryoneRole.Mention);
-            else
-            {
-                if (e.Message.MentionedUsers.Count() == (mentions_neko ? 1 : 0))
-                    message = perform_when_empty ? $"*{action}s {e.User.Mention}.*" :  message+e.Server.CurrentUser.Mention;
-                else
-                    foreach (User u in e.Message.MentionedUsers)
-                        message += u.Mention + ' ';
-                await e.Channel.SendMessage(message);
-            }
-            if (mentions_everyone || mentions_neko || (!perform_when_empty && e.Message.MentionedUsers.Count() == 0))
-                await e.Channel.SendMessage(reaction);
         }
     }
 }

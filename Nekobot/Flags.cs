@@ -85,12 +85,12 @@ namespace Nekobot
                 {
                     if (e.Message.MentionedChannels.Count() > 0 || e.Message.MentionedUsers.Count() > 0)
                     {
-                        int perms = Program.GetPermissions(e.User, e.Channel);
+                        int perms = Helpers.GetPermissions(e.User, e.Channel);
                         string reply = "";
                         foreach (Channel c in e.Message.MentionedChannels)
                             reply += (reply != "" ? "\n" : "") + await SetIgnored("channel", "flags", c.Id, '#', perms);
                         foreach (User u in e.Message.MentionedUsers)
-                            reply += (reply != "" ? "\n" : "") + await SetIgnored("user", "users", u.Id, '@', perms, Program.GetPermissions(u, e.Channel));
+                            reply += (reply != "" ? "\n" : "") + await SetIgnored("user", "users", u.Id, '@', perms, Helpers.GetPermissions(u, e.Channel));
                         await e.Channel.SendMessage(reply);
                     }
                     else await e.Channel.SendMessage("You need to mention at least one user or channel!");
