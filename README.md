@@ -10,6 +10,7 @@ You'll need to make a config.json file in the same place as the executable using
     "email" : "myemail@example.com",
     "password" : "MySuperSecretPassword123",
     "SoundCloud" : {},
+    "LastFM" : {},
     "prefix" : "!",
     "master" : 63296013791666176,
     "server" : "https://discord.gg/0Lv5NLFEoz3P07Aq",
@@ -56,7 +57,6 @@ Requires the following NuGet Packages (Latest official version will do):
 - [NAudio.Vorbis](https://www.nuget.org/packages/NAudio.Vorbis)
 - [NVorbis](https://www.nuget.org/packages/NVorbis)
 - [Newtonsoft.Json](https://www.nuget.org/packages/Newtonsoft.Json)
-- [SoundCloud.NET](https://www.nuget.org/packages/SoundCloud.NET)
 - [TagLib#](https://www.nuget.org/packages/taglib)
 - [VideoLibrary](https://www.nuget.org/packages/VideoLibrary)
 
