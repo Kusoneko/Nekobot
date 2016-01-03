@@ -137,7 +137,7 @@ namespace Nekobot
                             return;
                         }
                         foreach (var thing in container)
-                            if (await (is_playlist ? Triad(e, (SoundCloud.NET.Models.Track)thing, true) : Triad(e, (SoundCloud.NET.Models.Playlist)thing, false))) return;
+                            if (await (is_playlist ? Triad(e, (SoundCloud.NET.Models.Playlist)thing, true) : Triad(e, (SoundCloud.NET.Models.Track)thing, false))) return;
                         await e.Channel.SendMessage($"{e.User.Mention} No results for your requested search aren't already in the playlist.");
                     });
             }
