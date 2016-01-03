@@ -282,7 +282,7 @@ namespace Nekobot
         }
 
         static int CountVoiceChannelMembers(Channel chan)
-            => chan.Type != ChannelType.Voice ? -1 : chan.Users.Where(u => u.VoiceChannel == chan).Count()-1;
+            => chan.Type != ChannelType.Voice ? -1 : chan.Users.Count()-1;
 
         static async Task<bool> AddVote(Dictionary<ulong, List<ulong>> votes, Commands.CommandEventArgs e, string action, string success, string actionshort)
         {
