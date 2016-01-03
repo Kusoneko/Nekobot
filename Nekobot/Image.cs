@@ -103,6 +103,7 @@ on {booru}. Please try something else." :
                     .Description($"I'll give you a random {type} image from {owner}'s collection")
                     .Do(async e => await e.Channel.SendFile(Folders(folder)));
         }
+        static void CreateBooruCommand(Commands.CommandGroupBuilder group, string booru, string alias) => CreateBooruCommand(group, booru, new string[]{alias});
         static void CreateBooruCommand(Commands.CommandGroupBuilder group, string booru, string[] aliases = null)
         {
             var cmd = group.CreateCommand(booru);
@@ -168,10 +169,10 @@ on {booru}. Please try something else." :
             CreateBooruCommand(group, "safebooru");
             //CreateBooruCommand(group, "gelbooru"); // Disabled because of them disabling their API
             CreateBooruCommand(group, "rule34");
-            CreateBooruCommand(group, "konachan", new string[]{"kona"});
+            CreateBooruCommand(group, "konachan", "kona");
             CreateBooruCommand(group, "yandere");
-            CreateBooruCommand(group, "lolibooru", new string[]{"loli"});
-            CreateBooruCommand(group, "e621", new string[]{"furry"});
+            CreateBooruCommand(group, "lolibooru", "loli");
+            CreateBooruCommand(group, "e621", "furry");
         }
     }
 }

@@ -62,6 +62,7 @@ namespace Nekobot
         static bool InPlaylist(List<Song> playlist, string common, bool online = false) => playlist.Exists(song => (song.IsOnline == online) && (online ? song.Ext : song.Uri) == common);
         static int NonrequestedIndex(Commands.CommandEventArgs e) => 1 + playlist[e.User.VoiceChannel.Id].Skip(1).Where(song => song.Nonrequested).Count();
 
+        static Commands.CommandBuilder CreatePLCmd(Commands.CommandGroupBuilder group, string name, string parameter, string description, string alias) => CreatePLCmd(group, name, parameter, description, new string[]{alias});
         static Commands.CommandBuilder CreatePLCmd(Commands.CommandGroupBuilder group, string name, string parameter, string description, string[] aliases = null)
         {
             var cmd = group.CreateCommand(name)
@@ -108,6 +109,7 @@ namespace Nekobot
                 return ret;
             }
 
+            public void CreatePermalinkCmd(Commands.CommandGroupBuilder group, string name, string alias, bool is_playlist) => CreatePermalinkCmd(group, name, new string[]{alias}, is_playlist);
             public void CreatePermalinkCmd(Commands.CommandGroupBuilder group, string name, string[] aliases, bool is_playlist)
             {
                 CreatePLCmd(group, name, $"SoundCloud {(!is_playlist ? "Track" : "Playlist")} Permalink"/*(s)"*/, $"I'll add SoundCloud {(is_playlist ? "playlist" : "")} songs to the playlist!", aliases)
@@ -120,6 +122,7 @@ namespace Nekobot
                             await (is_playlist ? Triad(e, GetPlaylist(e.Args[0]), false) : Triad(e, GetTrack(e.Args[0])/*match.Groups[1]*/, true));
                     });
             }
+            public void CreateSearchCmd(Commands.CommandGroupBuilder group, string name, string alias, bool is_playlist) => CreateSearchCmd(group, name, new string[]{alias}, is_playlist);
             public void CreateSearchCmd(Commands.CommandGroupBuilder group, string name, string[] aliases, bool is_playlist)
             {
                 CreatePLCmd(group, name, is_playlist ? "SoundCloud Playlist Keywords" : "song to find",
@@ -358,10 +361,10 @@ namespace Nekobot
             if (Program.config["SoundCloud"].HasValues)
             {
                 SC sc = new SC(Program.config["SoundCloud"]["client_id"].ToString(), Program.rclient.UserAgent);
-                sc.CreateSearchCmd(group, "scsearch", new string[]{"scs"}, false);
+                sc.CreateSearchCmd(group, "scsearch", "scs", false);
                 sc.CreatePermalinkCmd(group, "screquest", new string[]{"sctrack", "sctr"}, false);
-                sc.CreatePermalinkCmd(group, "scplaylist", new string[]{"scpl"}, false);
-                //sc.CreateSearchCmd(group, "scplsearch", new string[]{"scpls"}, true); // Until this stops giving Gateway timeouts, RIP.
+                sc.CreatePermalinkCmd(group, "scplaylist", "scpl", false);
+                //sc.CreateSearchCmd(group, "scplsearch", "scpls", true); // Until this stops giving Gateway timeouts, RIP.
             }
 
             CreatePLCmd(group, "request", "song to find", "I'll try to add your request to the playlist!")
