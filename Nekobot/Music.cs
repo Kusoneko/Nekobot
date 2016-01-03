@@ -281,16 +281,13 @@ namespace Nekobot
             }
         }
 
-        static int CountVoiceChannelMembers(Channel chan)
-            => chan.Type != ChannelType.Voice ? -1 : chan.Users.Count()-1;
-
         static async Task<bool> AddVote(Dictionary<ulong, List<ulong>> votes, Commands.CommandEventArgs e, string action, string success, string actionshort)
         {
             var vote = votes[e.User.VoiceChannel.Id];
             if (!vote.Contains(e.User.Id))
             {
                 vote.Add(e.User.Id);
-                var listeners = CountVoiceChannelMembers(e.User.VoiceChannel);
+                var listeners = e.User.VoiceChannel.Users.Count()-1;
                 if (vote.Count >= Math.Ceiling((decimal)listeners / 2))
                 {
                     await e.Channel.SendMessage($"{vote.Count}/{listeners} votes to {action}. 50%+ achieved, {success}...");
