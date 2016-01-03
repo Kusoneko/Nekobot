@@ -58,5 +58,7 @@ namespace Nekobot
             if (mentions_everyone || mentions_neko || (!perform_when_empty && e.Message.MentionedUsers.Count() == 0))
                 await e.Channel.SendMessage(reaction);
         }
+
+        internal static string Pick(string[] quotes) => quotes[new Random().Next(0, quotes.Count())];
     }
 }

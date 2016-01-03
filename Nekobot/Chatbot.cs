@@ -56,7 +56,7 @@ namespace Nekobot
                 .Do(async e =>
                 {
                     bool botstatus = chatbots.ContainsKey(e.Channel.Id);
-                    if (e.Args.Count() != 0)
+                    if (e.Args.Any())
                     {
                         await Helpers.OnOffCmd(e, async on =>
                         {

@@ -79,7 +79,7 @@ namespace Nekobot
                 .Description("I'll ignore commands coming from a particular channel or user")
                 .Do(async e =>
                 {
-                    if (e.Message.MentionedChannels.Count() > 0 || e.Message.MentionedUsers.Count() > 0)
+                    if (e.Message.MentionedChannels.Any() || e.Message.MentionedUsers.Any())
                     {
                         int perms = Helpers.GetPermissions(e.User, e.Channel);
                         string reply = "";
