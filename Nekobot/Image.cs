@@ -191,6 +191,22 @@ on {booru}. Please try something else." :
                     await e.Channel.SendMessage(images[rnd.Next(images.Count())].ToString());
                 });
 
+            group.CreateCommand("imgur")
+                .Parameter("Reddit Board", Commands.ParameterType.Required)
+                .Description("I'll pick out a random image from the day's best on an imgur reddit!")
+                .Do(async e =>
+                {
+                    try
+                    {
+                        Program.rclient.BaseUrl = new Uri("http://imgur.com/r/");
+                        var result = JObject.Parse(Program.rclient.Execute(new RestRequest($"{e.Args[0]}/top/day.json", Method.GET)).Content)["data"].First;
+                        for (var i = new Random().Next(result.Parent.Count - 1); i != 0; --i, result = result.Next);
+                        var part = $"imgur.com/{result["hash"]}";
+                        await e.Channel.SendMessage($"**http://{part}** http://i.{part}{result["ext"]}");
+                    }
+                    catch { await e.Channel.SendMessage("Imgur says nope~"); }
+                });
+
             CreateBooruCommand(group, "safebooru");
             //CreateBooruCommand(group, "gelbooru"); // Disabled because of them disabling their API
             CreateBooruCommand(group, "rule34");
