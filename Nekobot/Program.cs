@@ -120,6 +120,28 @@ namespace Nekobot
                     };
                     await e.Channel.SendMessage(Helpers.Pick(fortunes));
                 });
+
+            group.CreateCommand("littany")
+                .Description("His power divine, utterances of the finest of the imperium to motivate you on your way~")
+                .Do(async e =>
+                {
+                    string[] littanies =
+                    {
+                        "Bless the Simpleton, for his mind has no room for doubt.",
+                        "When purging the guilty do not spare the innocent, for in death you free them from their invertible corruption",
+                        "Faith in the Emperor destroys all errors.",
+                        "I am rather a Martyr forever than a coward for a second.",
+                        "War is an act of violence to force the will of the Emperor.",
+                        "In the hour of greatest need, our Emperor shall walk among us once more, and the stars themselves will hide.",
+                        "To err is human. To correct is divine.",
+                        "Better one hundred innocents burn than one heretic go free.",
+                        "Strength does not come from physical capacity. It comes from an indomitable will.",
+                        "The strong can never forgive. Forgiveness is the attribute of the weak.",
+                        "The innocent man, the devout man, does not fear meeting his Emperor.",
+                        "Redeem with Bolter. Cleanse with Flamer. Purify from Orbit.",
+                        "The only thing to fear is corruption itself."
+                    };
+                    await e.Channel.SendMessage(Helpers.Pick(littanies));
                 });
 
             group.CreateCommand("playeravatar")
