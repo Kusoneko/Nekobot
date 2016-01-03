@@ -240,6 +240,10 @@ namespace Nekobot
                 .Description("Congratulate someone for whatever reason.")
                 .Do(async e => await e.Channel.SendMessage("https://www.youtube.com/watch?v=oyFQVZ2h0V8"));
 
+            group.CreateCommand("gitgud")
+                .Description("A great advice in any situation.")
+                .Do(async e => await e.Channel.SendMessage("https://youtu.be/xzpndHtdl9A"));
+
             group.CreateCommand("say")
                 .Alias("forward")
                 .Alias("echo")
