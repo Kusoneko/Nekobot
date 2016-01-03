@@ -81,6 +81,10 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
+    <Content Include="project.json" />
+    <Content Include="project.lock.json">
+      <DependentUpon>project.json</DependentUpon>
+    </Content>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\chatter-bot-api\dotnet\ChatterBotAPI\ChatterBotAPI.csproj">
