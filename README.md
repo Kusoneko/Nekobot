@@ -11,6 +11,7 @@ You'll need to make a config.json file in the same place as the executable using
     "password" : "MySuperSecretPassword123",
     "SoundCloud" : {},
     "LastFM" : {},
+    "Booru" : {},
     "prefix" : "!",
     "master" : 63296013791666176,
     "server" : "https://discord.gg/0Lv5NLFEoz3P07Aq",
@@ -31,6 +32,7 @@ You'll need to make a config.json file in the same place as the executable using
 The email and password lines are self explanatory.
 The SoundCloud line holds credentials for SoundCloud, enabling the soundcloud commands. [You'll need to register the app](https://soundcloud.com/you/apps/). At the moment all that's needed is the Client ID `"client_id" : "Put Client ID here"`
 The LastFM line holds credentials for LastFM. [Create an API account](http://www.last.fm/api/account/create). You'll need to add in `"apikey" : "Your API key", "apisecret" : "Your Shared secret"`.
+The Booru array holds subarrays of credentials for the boorus we connect to, this allows you to increase operability depending on the booru. Some credentials are needed for the api to work at all. The names of the subarrays can be found in Image.cs inside the Image.Board.Get function, the properties needed in these arrays are "login" and either "api_key" or "password_hash", the booru's site should tell you what should go here.
 The prefix is a list of characters that can be the character used in front of literally every command.
 As for the master, it's value should be the 17-digits id of the Discord account that should be recognized as the master. (The master id gets a level 10 permission level, although no official commands are above level 3.)
 The server line allows you to make the bot join a server on startup using that. The value can either be the full invite link as shown above, or only the characters at the end (ex.: the "0Lv5NLFEoz3P07Aq" part of "https://discord.gg/0Lv5NLFEoz3P07Aq".)

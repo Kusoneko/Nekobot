@@ -14,19 +14,45 @@ namespace Nekobot
     {
         class Board
         {
-            public Board(string link, string resource, string post, bool json = false)
+            Board(string link, string resource, string post, bool json = false)
             {
                 Link = link;
                 Resource = resource;
                 Post = post;
                 Json = json;
             }
-            public static Board A(string link, string tags) =>
+            static Board A(string link, string tags) =>
                 new Board(link, $"index.php?page=dapi&s=post&q=index&limit=1&tags={tags}&pid=", "/index.php?page=post&s=view&id=");
-            public static Board B(string link, string tags) =>
+            static Board B(string link, string tags) =>
                 new Board(link, $"/index.xml?limit=1&tags={tags}&page=", "/show/");
-            public static Board Sankaku(string board, string tags) =>
-                new Board($"https://{board}.sankakucomplex.com/post/index.json?limit=1&login=NekobotSearchAccount&password_hash=e43fb40bde1fbee79187504c47745ba03009738b&tags={tags}&page=", "/show/", tags, true);
+            static Board Sankaku(string board, string tags) =>
+                new Board($"https://{board}.sankakucomplex.com/post", $"index.json?limit=1&tags={tags}&page=", "/show/", true);
+
+            public static Board Get(string booru, string tags)
+            {
+                Board board =
+                booru == "safebooru" ? A("http://safebooru.org", tags) :
+                //booru == "gelbooru" ? A("http://gelbooru.com", tags) :
+                booru == "rule34" ? A("http://rule34.xxx", tags) : null;
+                if (board == null) // Type A has no auth in the api.
+                {
+                    var creds = Program.config["Booru"].SelectToken(booru);
+                    if (creds != null)
+                    {
+                        var prop = ((JObject)creds).Property("api_key");
+                        tags += $"&login={creds["login"]}&{(prop != null ? $"api_key={prop.Value}" : $"password_hash={creds["password_hash"]}")}";
+                    }
+                    board =
+                    booru == "konachan" ? B("http://konachan.com/post", tags) :
+                    booru == "yandere" ? B("https://yande.re/post", tags) :
+                    booru == "lolibooru" ? B("http://lolibooru.moe/post", tags) :
+                    booru == "sankaku" ? Sankaku("chan", tags) :
+                    //booru == "sankakuidol" ? Sankaku("idol", tags) :
+                    booru == "e621" ? B("https://e621.net/post", tags)
+                    : null;
+                }
+                return board;
+            }
 
             public Func<Board, int, JObject> Common => Json ? (Func<Board, int, JObject>)GetBooruCommonJson : GetBooruCommon;
 
@@ -38,17 +64,7 @@ namespace Nekobot
         static async Task Booru(string booru, Commands.CommandEventArgs e)
         {
             var tags = System.Net.WebUtility.UrlEncode(string.Join(" ", e.Args));
-            Board board =
-                booru == "safebooru" ? Board.A("http://safebooru.org", tags) :
-                //booru == "gelbooru" ? Board.A("http://gelbooru.com", tags) :
-                booru == "rule34" ? Board.A("http://rule34.xxx", tags) :
-                booru == "konachan" ? Board.B("http://konachan.com/post", tags) :
-                booru == "yandere" ? Board.B("https://yande.re/post", tags) :
-                booru == "lolibooru" ? Board.B("http://lolibooru.moe/post", tags) :
-                booru == "sankakuchan" ? Board.Sankaku("chan", tags) :
-                //booru == "sankakuidol" ? Board.Sankaku("idol", tags) :
-                booru == "e621" ? Board.B("https://e621.net/post", tags)
-                : null;
+            Board board = Board.Get(booru, tags);
             for (int i = 10; i != 0; --i)
             {
                 try
@@ -84,7 +100,7 @@ on {booru}. Please try something else." :
         {
             var res = board.Common(board, rnd);
             if (!board.Json) res = (JObject)res["post"];
-            return "**" + (board.Json ? board.Link.Substring(0, board.Link.LastIndexOf("/")+1) : board.Link) + board.Post + res[$"{(board.Json ? "" : "@")}id"].ToString() + "** " + (board.Json ? $"http:{res["file_url"]}" : res["@file_url"].ToString()).Replace(" ", "%20");
+            return "**" + board.Link + board.Post + res[$"{(board.Json ? "" : "@")}id"].ToString() + "** " + (board.Json ? $"http:{res["file_url"]}" : res["@file_url"].ToString()).Replace(" ", "%20");
         }
 
         static int GetBooruPostCount(Board board)
@@ -208,12 +224,13 @@ on {booru}. Please try something else." :
                 });
 
             CreateBooruCommand(group, "safebooru");
-            //CreateBooruCommand(group, "gelbooru"); // Disabled because of them disabling their API
+            //CreateBooruCommand(group, "gelbooru"); // Disabled without auth, which can't be done through api.
             CreateBooruCommand(group, "rule34");
             CreateBooruCommand(group, "konachan", "kona");
             CreateBooruCommand(group, "yandere");
             CreateBooruCommand(group, "lolibooru", "loli");
-            CreateBooruCommand(group, "sankakuchan", "schan");
+            if (Program.config["Booru"].ToObject<JObject>().Property("sankaku") != null)
+                CreateBooruCommand(group, "sankaku", new string[]{"sankakuchan", "schan"});
             //CreateBooruCommand(group, "sankakuidol", "sidol"); // Idol disables their API for some reason.
             CreateBooruCommand(group, "e621", "furry");
         }
