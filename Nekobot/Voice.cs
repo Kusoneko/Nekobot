@@ -20,7 +20,7 @@ namespace Nekobot
                 Bitrate = 512,
             });
 
-        internal static async Task<DiscordAudioClient> JoinServer(Channel c)
+        internal static async Task<IAudioClient> JoinServer(Channel c)
         {
             try { return await Program.Audio.Join(c); }
             catch (Exception e)

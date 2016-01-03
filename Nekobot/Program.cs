@@ -222,8 +222,8 @@ namespace Nekobot
                             ulong mentionid = Convert.ToUInt64(message.Substring(2, index-2));
                             if (mentionid != client.CurrentUser.Id)
                             {
-                                channel = usermention ? await e.Message.MentionedUsers.Where(u => u.Id == mentionid).Single().CreateChannel()
-                                    : e.Message.MentionedChannels.Where(c => c.Id == mentionid).Single();
+                                channel = usermention ? await e.Message.MentionedUsers.First(u => u.Id == mentionid).CreatePMChannel()
+                                    : e.Message.MentionedChannels.First(c => c.Id == mentionid);
                                 if (Helpers.CanSay(ref channel, e.User, e.Channel))
                                     message = message.Substring(index + 2);
                             }
@@ -237,7 +237,7 @@ namespace Nekobot
                             if (chanstr.Length+1 < message.Length)
                             {
                                 ulong id = Convert.ToUInt64(chanstr);
-                                channel = client.GetChannel(id) ?? await client.Servers.Select(x => x.GetUser(id)).FirstOrDefault().CreateChannel();
+                                channel = client.GetChannel(id) ?? await client.CreatePrivateChannel(id);
                                 if (Helpers.CanSay(ref channel, e.User, e.Channel))
                                     message = message.Substring(message.IndexOf(" ")+1);
                             }
@@ -675,7 +675,7 @@ The current topic is: {e.Channel.Topic}";
             commands.CommandError += CommandError;
 
             //Log to the console whenever someone uses a command
-            commands.RanCommand += (s, e) => client.Log.Verbose("Command", $"{e.User.Name}: {e.Command.Text}");
+            commands.Command += (s, e) => client.Log.Info("Command", $"{e.User.Name}: {e.Command.Text}");
 
             client.Services.Add(Voice.NewService);
 

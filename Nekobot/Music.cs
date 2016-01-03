@@ -153,7 +153,7 @@ namespace Nekobot
         static async Task Stream(Channel c)
         {
             ulong cid = c.Id;
-            Discord.Audio.DiscordAudioClient _client = await Voice.JoinServer(c);
+            var _client = await Voice.JoinServer(c);
             if (_client == null) return; // TODO: Remove when voice works.
             Random rnd = new Random();
             if (!playlist.ContainsKey(cid))

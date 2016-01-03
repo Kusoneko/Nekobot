@@ -119,13 +119,13 @@ namespace Nekobot.Commands
                         else if ((!isEscaped && isWhitespace) || endPosition >= inputLength)
                         {
                             int length = (isWhitespace ? endPosition - 1 : endPosition) - startPosition;
-                            string temp = input.Substring(startPosition, length);
-                            if (temp == "")
+                            if (length == 0)
                                 startPosition = endPosition;
                             else
                             {
-                                currentPart = ParserPart.None;
+                                string temp = input.Substring(startPosition, length);
                                 argList.Add(temp);
+                                currentPart = ParserPart.None;
                                 startPosition = endPosition;
                             }
                         }
@@ -134,8 +134,8 @@ namespace Nekobot.Commands
                         if ((!isEscaped && currentChar == '\''))
                         {
                             string temp = input.Substring(startPosition, endPosition - startPosition - 1);
-                            currentPart = ParserPart.None;
                             argList.Add(temp);
+                            currentPart = ParserPart.None;
                             startPosition = endPosition;
                         }
                         else if (endPosition >= inputLength)
@@ -145,8 +145,8 @@ namespace Nekobot.Commands
                         if ((!isEscaped && currentChar == '\"'))
                         {
                             string temp = input.Substring(startPosition, endPosition - startPosition - 1);
-                            currentPart = ParserPart.None;
                             argList.Add(temp);
+                            currentPart = ParserPart.None;
                             startPosition = endPosition;
                         }
                         else if (endPosition >= inputLength)
@@ -154,6 +154,11 @@ namespace Nekobot.Commands
                         break;
                 }
             }
+
+            //Unclosed quotes
+            if (currentPart == ParserPart.QuotedParameter ||
+                currentPart == ParserPart.DoubleQuotedParameter)
+                return CommandErrorType.InvalidInput;
 
             //Too few args
             for (int i = argList.Count; i < expectedArgs.Length; i++)

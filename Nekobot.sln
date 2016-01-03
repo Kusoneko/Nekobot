@@ -19,7 +19,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Discord.Net", "Discord.Net\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChatterBotAPI", "chatter-bot-api\dotnet\ChatterBotAPI\ChatterBotAPI.csproj", "{2E624962-F155-432C-A90A-E1CE75DEE9EA}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Discord.Net.Audio", "Discord.Net\src\Discord.Net.Audio.Net5\Discord.Net.Audio.csproj", "{7BFEF748-B934-4621-9B11-6302E3A9F6B3}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Discord.Net.Audio", "Discord.Net\src\Discord.Net.Audio.Net45\Discord.Net.Audio.csproj", "{7BFEF748-B934-4621-9B11-6302E3A9F6B3}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SoundCloud.NET", "SoundCloud.NET\SoundCloud.NET\SoundCloud.NET.csproj", "{17333AE0-A1EB-4B40-8865-8261C690814C}"
 EndProject
