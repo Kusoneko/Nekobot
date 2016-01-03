@@ -12,27 +12,41 @@ namespace Nekobot
 {
     class Image
     {
-        class Board : Tuple<string, string, string>
+        class Board
         {
-            public Board(string link, string resource, string post) : base(link, resource, post) { }
+            public Board(string link, string resource, string post, bool json = false)
+            {
+                Link = link;
+                Resource = resource;
+                Post = post;
+                Json = json;
+            }
             public static Board A(string link, string tags) =>
                 new Board(link, $"index.php?page=dapi&s=post&q=index&limit=1&tags={tags}&pid=", "/index.php?page=post&s=view&id=");
             public static Board B(string link, string tags) =>
                 new Board(link, $"/index.xml?limit=1&tags={tags}&page=", "/show/");
-            public string link { get { return Item1; } }
-            public string resource { get { return Item2; } }
-            public string post { get { return Item3; } }
+            public static Board Sankaku(string board, string tags) =>
+                new Board($"https://{board}.sankakucomplex.com/post/index.json?limit=1&login=NekobotSearchAccount&password_hash=e43fb40bde1fbee79187504c47745ba03009738b&tags={tags}&page=", "/show/", tags, true);
+
+            public Func<Board, int, JObject> Common => Json ? (Func<Board, int, JObject>)GetBooruCommonJson : GetBooruCommon;
+
+            public string Link;
+            public string Resource;
+            public string Post;
+            public bool Json;
         }
         static async Task Booru(string booru, Commands.CommandEventArgs e)
         {
             var tags = System.Net.WebUtility.UrlEncode(string.Join(" ", e.Args));
             Board board =
                 booru == "safebooru" ? Board.A("http://safebooru.org", tags) :
-                booru == "gelbooru" ? Board.A("http://gelbooru.com", tags) :
+                //booru == "gelbooru" ? Board.A("http://gelbooru.com", tags) :
                 booru == "rule34" ? Board.A("http://rule34.xxx", tags) :
                 booru == "konachan" ? Board.B("http://konachan.com/post", tags) :
                 booru == "yandere" ? Board.B("https://yande.re/post", tags) :
                 booru == "lolibooru" ? Board.B("http://lolibooru.moe/post", tags) :
+                booru == "sankakuchan" ? Board.Sankaku("chan", tags) :
+                //booru == "sankakuidol" ? Board.Sankaku("idol", tags) :
                 booru == "e621" ? Board.B("https://e621.net/post", tags)
                 : null;
             for (int i = 10; i != 0; --i)
@@ -54,19 +68,30 @@ on {booru}. Please try something else." :
 
         static JObject GetBooruCommon(Board board, int rnd)
         {
-            Program.rclient.BaseUrl = new Uri(board.link);
+            Program.rclient.BaseUrl = new Uri(board.Link);
             XmlDocument xml = new XmlDocument();
-            xml.LoadXml(Program.rclient.Execute(new RestRequest(board.resource + rnd.ToString(), Method.GET)).Content);
-            return JObject.Parse(JsonConvert.SerializeXmlNode(xml));
+            xml.LoadXml(Program.rclient.Execute(new RestRequest(board.Resource + rnd.ToString(), Method.GET)).Content);
+            return (JObject)JObject.Parse(JsonConvert.SerializeXmlNode(xml))["posts"];
+        }
+
+        static JObject GetBooruCommonJson(Board board, int rnd)
+        {
+            Program.rclient.BaseUrl = new Uri(board.Link);
+            return JObject.Parse(Program.rclient.Execute(new RestRequest(board.Resource + rnd.ToString(), Method.GET)).Content.Substring(1).Trim(']'));
         }
 
         static string GetBooruImageLink(Board board, int rnd)
         {
-            JObject res = GetBooruCommon(board, rnd);
-            return "**" + board.link + board.post + res["posts"]["post"]["@id"].ToString() + "** " + res["posts"]["post"]["@file_url"].ToString().Replace(" ", "%20");
+            var res = board.Common(board, rnd);
+            if (!board.Json) res = (JObject)res["post"];
+            return "**" + (board.Json ? board.Link.Substring(0, board.Link.LastIndexOf("/")+1) : board.Link) + board.Post + res[$"{(board.Json ? "" : "@")}id"].ToString() + "** " + (board.Json ? $"http:{res["file_url"]}" : res["@file_url"].ToString()).Replace(" ", "%20");
         }
 
-        static int GetBooruPostCount(Board board) => int.Parse(GetBooruCommon(board, 0)["posts"]["@count"].ToString());
+        static int GetBooruPostCount(Board board)
+        {
+            var res = board.Common(board, 0);
+            return board.Json ? res.ToString() == "" ? 0 : 1000 : int.Parse(res["@count"].ToString());
+        }
 
         static string Folders(string folder)
         {
@@ -172,6 +197,8 @@ on {booru}. Please try something else." :
             CreateBooruCommand(group, "konachan", "kona");
             CreateBooruCommand(group, "yandere");
             CreateBooruCommand(group, "lolibooru", "loli");
+            CreateBooruCommand(group, "sankakuchan", "schan");
+            //CreateBooruCommand(group, "sankakuidol", "sidol"); // Idol disables their API for some reason.
             CreateBooruCommand(group, "e621", "furry");
         }
     }
