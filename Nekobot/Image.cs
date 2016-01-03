@@ -14,19 +14,17 @@ namespace Nekobot
     {
         class Board
         {
-            Board(string link, string resource, string post, bool json = false)
+            Board(string link, string resource, string post)
             {
                 Link = link;
                 Resource = resource;
                 Post = post;
-                Json = json;
             }
             static Board A(string link, string tags) =>
                 new Board(link, $"index.php?page=dapi&s=post&q=index&limit=1&tags={tags}&pid=", "/index.php?page=post&s=view&id=");
             static Board B(string link, string tags) =>
-                new Board(link, $"/index.xml?limit=1&tags={tags}&page=", "/show/");
-            static Board Sankaku(string board, string tags) =>
-                new Board($"https://{board}.sankakucomplex.com/post", $"index.json?limit=1&tags={tags}&page=", "/show/", true);
+                new Board(link, $"index.json?limit=1&tags={tags}&page=", "/show/");
+            static Board Sankaku(string board, string tags) => B($"https://{board}.sankakucomplex.com/post", tags);
 
             public static Board Get(string booru, string tags)
             {
@@ -54,12 +52,41 @@ namespace Nekobot
                 return board;
             }
 
-            public Func<Board, int, JObject> Common => Json ? (Func<Board, int, JObject>)GetBooruCommonJson : GetBooruCommon;
+            bool IsSankaku => Link.Contains("sankaku");
+            static bool Json(string resource) => resource.StartsWith("index.json");
+
+            public JToken Common(string resource)
+            {
+                Program.rclient.BaseUrl = new Uri(Link);
+                var content = Program.rclient.Execute(new RestRequest(resource, Method.GET)).Content;
+                if (Json(resource)) return JObject.Parse(content.Substring(1).Trim(']'));
+                XmlDocument xml = new XmlDocument();
+                xml.LoadXml(content);
+                return JObject.Parse(JsonConvert.SerializeXmlNode(xml))["posts"];
+            }
+
+            public string GetImageLink(int rnd)
+            {
+                var res = Common(Resource + rnd.ToString());
+                string prefix = "";
+                if (!Json(Resource))
+                {
+                    res = (JObject)res["post"];
+                    prefix = "@";
+                }
+                return $"**{Link}{Post}{res[$"{prefix}id"].ToString()}** {(IsSankaku ? "http:" : "")}{res[$"{prefix}file_url"].ToString().Replace(" ", "%20")}";
+            }
+
+            public int GetPostCount()
+            {
+                var sankaku = IsSankaku;
+                var res = Common(!sankaku ? Resource.Replace("index.json", "index.xml") : Resource);
+                return sankaku ? res.ToString() == "" ? 0 : 1000 : int.Parse(res["@count"].ToString());
+            }
 
             public string Link;
             public string Resource;
             public string Post;
-            public bool Json;
         }
         static async Task Booru(string booru, Commands.CommandEventArgs e)
         {
@@ -69,44 +96,17 @@ namespace Nekobot
             {
                 try
                 {
-                    int posts = GetBooruPostCount(board);
+                    int posts = board.GetPostCount();
                     await e.Channel.SendMessage((posts == 0) ?
                         $@"There is nothing under the tag(s):
 {System.Net.WebUtility.UrlDecode(tags)}
 on {booru}. Please try something else." :
-                    GetBooruImageLink(board, posts == 1 ? 0 : (new Random()).Next(1, posts - 1)));
+                    board.GetImageLink(posts == 1 ? 0 : (new Random()).Next(1, posts - 1)));
                     return;
                 }
                 catch { }
             }
             await e.Channel.SendMessage($"Failed ten times, something must be broken with {booru}'s API.");
-        }
-
-        static JObject GetBooruCommon(Board board, int rnd)
-        {
-            Program.rclient.BaseUrl = new Uri(board.Link);
-            XmlDocument xml = new XmlDocument();
-            xml.LoadXml(Program.rclient.Execute(new RestRequest(board.Resource + rnd.ToString(), Method.GET)).Content);
-            return (JObject)JObject.Parse(JsonConvert.SerializeXmlNode(xml))["posts"];
-        }
-
-        static JObject GetBooruCommonJson(Board board, int rnd)
-        {
-            Program.rclient.BaseUrl = new Uri(board.Link);
-            return JObject.Parse(Program.rclient.Execute(new RestRequest(board.Resource + rnd.ToString(), Method.GET)).Content.Substring(1).Trim(']'));
-        }
-
-        static string GetBooruImageLink(Board board, int rnd)
-        {
-            var res = board.Common(board, rnd);
-            if (!board.Json) res = (JObject)res["post"];
-            return "**" + board.Link + board.Post + res[$"{(board.Json ? "" : "@")}id"].ToString() + "** " + (board.Json ? $"http:{res["file_url"]}" : res["@file_url"].ToString()).Replace(" ", "%20");
-        }
-
-        static int GetBooruPostCount(Board board)
-        {
-            var res = board.Common(board, 0);
-            return board.Json ? res.ToString() == "" ? 0 : 1000 : int.Parse(res["@count"].ToString());
         }
 
         static string Folders(string folder)
