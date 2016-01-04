@@ -247,6 +247,7 @@ namespace Nekobot
 
         internal static void LoadStreams()
         {
+            if (Folder.Length == 0) return;
             var reader = SQL.ReadChannels("music=1");
             while (reader.Read())
                 streams.Add(Convert.ToUInt64(reader["channel"].ToString()));
@@ -300,6 +301,8 @@ namespace Nekobot
 
         internal static void AddCommands(Commands.CommandGroupBuilder group)
         {
+            if (Folder.Length == 0) return;
+
             group.CreateCommand("playlist")
                 .Description("I'll give you the list of songs in the playlist.")
                 .FlagMusic(true)
