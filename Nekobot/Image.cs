@@ -28,17 +28,28 @@ namespace Nekobot
 
             public static Board Get(string booru, string tags)
             {
+                var boardconf = (JObject)Program.config["Booru"].SelectToken(booru);
+                if (boardconf != null)
+                {
+                    var default_tags = boardconf.Property("default_tags");
+                    if (default_tags != null)
+                        tags += string.Join(" ", default_tags.Values());
+                }
+                tags = System.Net.WebUtility.UrlEncode(tags);
                 Board board =
                 booru == "safebooru" ? A("http://safebooru.org", tags) :
                 //booru == "gelbooru" ? A("http://gelbooru.com", tags) :
                 booru == "rule34" ? A("http://rule34.xxx", tags) : null;
                 if (board == null) // Type A has no auth in the api.
                 {
-                    var creds = Program.config["Booru"].SelectToken(booru);
-                    if (creds != null)
+                    if (boardconf != null)
                     {
-                        var prop = ((JObject)creds).Property("api_key");
-                        tags += $"&login={creds["login"]}&{(prop != null ? $"api_key={prop.Value}" : $"password_hash={creds["password_hash"]}")}";
+                        var login = boardconf.Property("login");
+                        if (login != null)
+                        {
+                            var prop = boardconf.Property("api_key");
+                            tags += $"&login={login.Value}&{(prop != null ? $"api_key={prop.Value}" : $"password_hash={boardconf["password_hash"]}")}";
+                        }
                     }
                     board =
                     booru == "konachan" ? B("http://konachan.com/post", tags) :
@@ -90,7 +101,7 @@ namespace Nekobot
         }
         static async Task Booru(string booru, Commands.CommandEventArgs e)
         {
-            var tags = System.Net.WebUtility.UrlEncode(string.Join(" ", e.Args));
+            var tags = string.Join(" ", e.Args);
             Board board = Board.Get(booru, tags);
             for (int i = 10; i != 0; --i)
             {
@@ -98,10 +109,8 @@ namespace Nekobot
                 {
                     int posts = board.GetPostCount();
                     await e.Channel.SendMessage((posts == 0) ?
-                        $@"There is nothing under the tag(s):
-{System.Net.WebUtility.UrlDecode(tags)}
-on {booru}. Please try something else." :
-                    board.GetImageLink(posts == 1 ? 0 : (new Random()).Next(1, posts - 1)));
+                        $"There is nothing under the tag(s):\n{tags}\non {booru}. Please try something else." :
+                        board.GetImageLink(posts == 1 ? 0 : (new Random()).Next(1, posts - 1)));
                     return;
                 }
                 catch { }
