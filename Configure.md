@@ -25,6 +25,9 @@ You'll need to make a config.json file in the same place as the executable using
     "cosplay" : ""
 }
 ```
+Quick links to descriptions: [Credentials](#credentials)|[master](#master)|[server](#server)|[prefix, prefixprivate, prefix and mentioncommand](#prefix)|[helpmode](#helpmode)|[loglevel](#log-level)|[game](#game)|[musicFolder, and musicUseSubfolders](#music-folder)|[pitur, gold, cosplay](#image-folders)
+
+[Further Setup Instructions](#other-setup)
 
 ### Credentials
 The email and password lines are self explanatory.
@@ -57,7 +60,7 @@ The mentioncommand setting allows @mentioning the bot instead of using prefix in
 ### HelpMode
 There are three settings, "public", "private", and disabled, if it's disabled, there'll be no help. If it's public, the help command will be responded to in the channel it's issued. If it's private, responses will be in PM.
 
-### Loglevel
+### Log Level
 How verbose your console output should be, between 1 and 5; 5 being the noisiest, you probably don't want that.
 Nothing above 3 will show in Release builds.
 
