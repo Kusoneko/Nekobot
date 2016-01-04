@@ -1,3 +1,5 @@
+When updating, be sure to check this file to be sure you'll be set up appropriately.
+
 You'll need to make a config.json file in the same place as the executable using this template:
 
 ```javascript
@@ -59,3 +61,6 @@ The musicFolder setting should be set to the full path to a folder containing a 
 The musicUseSubfolders setting is whether or not to include files buried in folders within your musicFolder.
 
 The pitur, gold and cosplay settings should be set to full paths to image folders containing whatever images you please. If they're not set, the commands will be disabled.
+
+
+For `ytrequest` to work with webm videos, please install the [Required codecs](https://tools.google.com/dlpage/webmmf/).
