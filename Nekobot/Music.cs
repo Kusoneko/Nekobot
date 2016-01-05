@@ -199,13 +199,13 @@ namespace Nekobot
                             int byteCount;
                             while ((byteCount = resampler.Read(buffer, 0, blockSize)) > 0)
                             {
+                                while(pause[cid]) await Task.Delay(500); // Play Voice.cs commands in here?
                                 if (!streams.Contains(cid) || skip[cid] || reset[cid])
                                 {
                                     _client.Clear();
                                     await Task.Delay(1000);
                                     break;
                                 }
-                                while(pause[cid]) await Task.Delay(500); // Play Voice.cs commands in here?
                                 _client.Send(buffer, blockSize);
                             }
                         }
