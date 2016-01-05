@@ -1,7 +1,16 @@
-﻿namespace Nekobot.Commands.Permissions.Levels
+﻿using System;
+using Discord;
+
+namespace Nekobot.Commands.Permissions.Levels
 {
     public static class PermissionLevelExtensions
     {
+        public static DiscordClient UsingPermissionLevels(this DiscordClient client, Func<User, Channel, int> permissionResolver)
+        {
+            client.Services.Add(new PermissionLevelService(permissionResolver));
+            return client;
+        }
+
         public static CommandBuilder MinPermissions(this CommandBuilder builder, int minPermissions)
         {
             builder.AddCheck(new PermissionLevelChecker(builder.Service.Client, minPermissions));

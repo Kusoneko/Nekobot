@@ -30,13 +30,13 @@ namespace Nekobot.Commands
         //Allow stuff to happen when we don't handle a command.
         public Action<MessageEventArgs> NonCommands;
 
-        public event EventHandler<CommandEventArgs> Command = delegate { };
-        public event EventHandler<CommandErrorEventArgs> CommandError = delegate { };
+        public event EventHandler<CommandEventArgs> CommandExecuted = delegate { };
+        public event EventHandler<CommandErrorEventArgs> CommandErrored = delegate { };
 
         private void OnCommand(CommandEventArgs args)
-            => Command(this, args);
+            => CommandExecuted(this, args);
         private void OnCommandError(CommandErrorType errorType, CommandEventArgs args, Exception ex = null)
-            => CommandError(this, new CommandErrorEventArgs(errorType, args, ex));
+            => CommandErrored(this, new CommandErrorEventArgs(errorType, args, ex));
 
         public CommandService(CommandServiceConfig config, Func<Channel, bool> getNsfwFlag = null, Func<User, bool> getMusicFlag = null, Func<Channel, User, bool> getIgnoredChannelFlag = null)
         {

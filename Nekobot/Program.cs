@@ -679,7 +679,6 @@ The current topic is: {e.Channel.Topic}";
 
         // Variables
         static DiscordClient client;
-        static CommandService commands;
         internal static RestClient rclient = new RestClient();
         static LastFM.LastfmClient lfclient;
         internal static JObject config;
@@ -713,8 +712,6 @@ The current topic is: {e.Channel.Topic}";
             });
             Console.Title = $"{Config.AppName} v{Config.AppVersion} (Discord.Net v{DiscordConfig.LibVersion})";
 
-            // Load the stream channels
-            Music.LoadStreams();
             // Initialize rest client
             RCInit();
 
@@ -723,15 +720,15 @@ The current topic is: {e.Channel.Topic}";
             client.Disconnected += Disconnected;
             client.UserJoined += UserJoined;
             client.Log.Message += (s, e) => Log.Write(e);
-            client.Services.Add(new PermissionLevelService(Helpers.GetPermissions));
-            client.Services.Add(commands);
+            client.UsingPermissionLevels(Helpers.GetPermissions);
             //Display errors that occur when a user tries to run a command
-            commands.CommandError += CommandError;
+            var commands = client.Commands();
+            commands.CommandErrored += CommandErrored;
 
             //Log to the console whenever someone uses a command
-            commands.Command += (s, e) => client.Log.Info("Command", $"{e.User.Name}: {e.Command.Text}");
+            commands.CommandExecuted += (s, e) => client.Log.Info("Command", $"{e.User.Name}: {e.Command.Text}");
 
-            client.Services.Add(Voice.NewService);
+            Voice.Startup(client);
 
             commands.CreateGroup("", group => GenerateCommands(group));
             commands.NonCommands += Chatbot.Do;
@@ -858,7 +855,7 @@ The current topic is: {e.Channel.Topic}";
             Music.UseSubdirs = config["musicUseSubfolders"].ToObject<bool>();
 
             string helpmode = config["helpmode"].ToString();
-            commands = new CommandService(new CommandServiceConfig
+            client.UsingCommands(new CommandServiceConfig
             {
                 CommandChars = config["prefix"].ToString().ToCharArray(),
                 RequireCommandCharInPrivate = config["prefixprivate"].ToObject<bool>(),
@@ -884,7 +881,7 @@ The current topic is: {e.Channel.Topic}";
             Log.Write(LogSeverity.Warning, "Connected.");
         }
 
-        private static void CommandError(object sender, CommandErrorEventArgs e)
+        private static void CommandErrored(object sender, CommandErrorEventArgs e)
         {
             string msg = e.Exception?.GetBaseException().Message;
             if (msg == null) //No exception - show a generic message

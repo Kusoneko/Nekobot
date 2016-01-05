@@ -14,12 +14,11 @@ namespace Nekobot.Commands.Permissions.Userlist
         public DiscordClient Client => _client;
         public IEnumerable<ulong> UserIds => _userList.Select(x => x.Key);
 
-        public UserlistService(IEnumerable<ulong> initialList = null)
+        public UserlistService(params ulong[] initialUserIds)
         {
-            if (initialList != null)
-                _userList = new ConcurrentDictionary<ulong, bool>(initialList.Select(x => new KeyValuePair<ulong, bool>(x, true)));
-            else
-                _userList = new ConcurrentDictionary<ulong, bool>();
+            _userList = new ConcurrentDictionary<ulong, bool>();
+            for (int i = 0; i < initialUserIds.Length; i++)
+                _userList.TryAdd(initialUserIds[i], true);
         }
 
         public void Add(User user)
@@ -32,6 +31,7 @@ namespace Nekobot.Commands.Permissions.Userlist
         {
             _userList[userId] = true;
         }
+
         public bool Remove(User user)
         {
             if (user == null) throw new ArgumentNullException(nameof(user));
@@ -45,7 +45,7 @@ namespace Nekobot.Commands.Permissions.Userlist
             return _userList.TryRemove(userId, out ignored);
         }
 
-        public void Install(DiscordClient client)
+        void IService.Install(DiscordClient client)
         {
             _client = client;
         }

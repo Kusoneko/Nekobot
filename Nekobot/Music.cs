@@ -58,7 +58,8 @@ namespace Nekobot
         static Dictionary<ulong, List<ulong>> voteencore = new Dictionary<ulong, List<ulong>>();
         static string[] exts = { ".wma", ".aac", ".mp3", ".m4a", ".wav", ".flac", ".ogg" };
 
-        internal static IEnumerable<string> Files() => System.IO.Directory.EnumerateFiles(Folder, "*.*", UseSubdirs ? System.IO.SearchOption.AllDirectories : System.IO.SearchOption.TopDirectoryOnly).Where(s => exts.Contains(System.IO.Path.GetExtension(s)));
+        internal static bool HasFolder() => Folder.Length != 0;
+        static IEnumerable<string> Files() => System.IO.Directory.EnumerateFiles(Folder, "*.*", UseSubdirs ? System.IO.SearchOption.AllDirectories : System.IO.SearchOption.TopDirectoryOnly).Where(s => exts.Contains(System.IO.Path.GetExtension(s)));
         static bool InPlaylist(List<Song> playlist, string common, bool online = false) => playlist.Exists(song => (song.IsOnline == online) && (online ? song.Ext : song.Uri) == common);
         static int NonrequestedIndex(Commands.CommandEventArgs e) => 1 + playlist[e.User.VoiceChannel.Id].Skip(1).Where(song => song.Nonrequested).Count();
 
@@ -206,7 +207,7 @@ namespace Nekobot
                                     await Task.Delay(1000);
                                     break;
                                 }
-                                _client.Send(buffer, blockSize);
+                                _client.Send(buffer, 0, blockSize);
                             }
                         }
                     }
@@ -247,7 +248,6 @@ namespace Nekobot
 
         internal static void LoadStreams()
         {
-            if (Folder.Length == 0) return;
             var reader = SQL.ReadChannels("music=1");
             while (reader.Read())
                 streams.Add(Convert.ToUInt64(reader["channel"].ToString()));
@@ -305,7 +305,7 @@ namespace Nekobot
 
         internal static void AddCommands(Commands.CommandGroupBuilder group)
         {
-            if (Folder.Length == 0) return;
+            if (HasFolder()) return;
 
             group.CreateCommand("playlist")
                 .Description("I'll give you the list of songs in the playlist.")

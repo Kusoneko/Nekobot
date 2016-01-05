@@ -11,14 +11,21 @@ namespace Nekobot
     }
     class Voice
     {
-        internal static AudioService NewService =>
-            new AudioService(new AudioServiceConfig
+        internal static void Startup(DiscordClient c)
+        {
+            if (!Music.HasFolder()) return;
+
+            c.UsingAudio(new AudioServiceConfig
             {
                 Mode = AudioMode.Outgoing,
                 EnableMultiserver = false,//true,
                 EnableEncryption = true,
                 Bitrate = 512,
             });
+
+            // Load the stream channels
+            Music.LoadStreams();
+        }
 
         internal static async Task<IAudioClient> JoinServer(Channel c)
         {
