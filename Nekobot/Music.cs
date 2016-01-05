@@ -255,20 +255,24 @@ namespace Nekobot
 
         static async Task ResetStream(Channel c)
         {
+            pause[c.Id] = false;
             reset[c.Id] = true;
             await Task.Delay(5000);
             await Stream(c);
+        }
+
+        internal static void StopStream(ulong stream)
+        {
+            SQL.AddOrUpdateFlag(stream, "music", "0");
+            if (pause[stream]) pause[stream] = false;
+            streams.Remove(stream);
         }
 
         internal static async Task StopStreams(Server server)
         {
             var serverstreams = streams.Where(stream => server.GetChannel(stream) != null).ToArray();
             foreach (var stream in serverstreams)
-            {
-                SQL.AddOrUpdateFlag(stream, "music", "0");
-                if (pause[stream]) pause[stream] = false;
-                streams.Remove(stream);
-            }
+                StopStream(stream);
             if (serverstreams.Length != 0)
                 await Task.Delay(5000);
         }
@@ -478,15 +482,15 @@ namespace Nekobot
                         }
                         else
                         {
-                            SQL.AddOrUpdateFlag(e.User.VoiceChannel.Id, "music", on ? "1" : "0");
                             await e.Channel.SendMessage($"{e.User.Mention}, I'm {status}ing the stream!");
                             if (on)
                             {
+                                SQL.AddOrUpdateFlag(e.User.VoiceChannel.Id, "music", "1");
                                 await StopStreams(e.Server);
                                 streams.Add(e.User.VoiceChannel.Id);
                                 await Stream(e.User.VoiceChannel);
                             }
-                            else streams.Remove(e.User.VoiceChannel.Id);
+                            else StopStream(e.User.VoiceChannel.Id);
                         }
                     })));
         }
