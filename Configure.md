@@ -25,7 +25,7 @@ You'll need to make a config.json file in the same place as the executable using
     "cosplay" : ""
 }
 ```
-Quick links to descriptions: [Credentials](#credentials)|[master](#master)|[server](#server)|[prefix, prefixprivate, prefix and mentioncommand](#prefix)|[helpmode](#helpmode)|[loglevel](#log-level)|[game](#game)|[musicFolder, and musicUseSubfolders](#music-folder)|[pitur, gold, cosplay](#image-folders)
+Quick links to descriptions: [Credentials](#credentials) | [master](#master) | [server](#server) | [prefix, prefixprivate, prefix and mentioncommand](#prefix) | [helpmode](#helpmode) | [loglevel](#log-level) | [game](#game) | [musicFolder, and musicUseSubfolders](#music-folder) | [pitur, gold, cosplay](#image-folders)
 
 [Further Setup Instructions](#other-setup)
 
