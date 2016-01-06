@@ -702,16 +702,6 @@ The current topic is: {e.Channel.Topic}";
             // Load up the config file
             LoadConfig();
 
-            client = new DiscordClient(new DiscordConfig
-            {
-                AppName = "Nekobot",
-                AppVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString(3),
-                AppUrl = "https://github.com/Kusoneko/Nekobot",
-                LogLevel = config["loglevel"].ToObject<LogSeverity>(),
-                UseMessageQueue = false,
-            });
-            Console.Title = $"{Config.AppName} v{Config.AppVersion} (Discord.Net v{DiscordConfig.LibVersion})";
-
             // Initialize rest client
             RCInit();
 
@@ -854,6 +844,15 @@ The current topic is: {e.Channel.Topic}";
             Music.Folder = config["musicFolder"].ToString();
             Music.UseSubdirs = config["musicUseSubfolders"].ToObject<bool>();
 
+            client = new DiscordClient(new DiscordConfig
+            {
+                AppName = "Nekobot",
+                AppVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString(3),
+                AppUrl = "https://github.com/Kusoneko/Nekobot",
+                LogLevel = config["loglevel"].ToObject<LogSeverity>(),
+                UseMessageQueue = false,
+            });
+
             string helpmode = config["helpmode"].ToString();
             client.UsingCommands(new CommandServiceConfig
             {
@@ -863,6 +862,8 @@ The current topic is: {e.Channel.Topic}";
                 MentionCommandChar = config["mentioncommand"].ToObject<short>(),
                 HelpMode = helpmode.Equals("public") ? HelpMode.Public : helpmode.Equals("private") ? HelpMode.Private : HelpMode.Disable
             }, Flags.GetNsfw, Flags.GetMusic, Flags.GetIgnored);
+
+            Console.Title = $"{Config.AppName} v{Config.AppVersion} (Discord.Net v{DiscordConfig.LibVersion})";
         }
 
         private static void UserJoined(object sender, UserEventArgs e)
