@@ -717,13 +717,12 @@ The current topic is: {e.Channel.Topic}";
             Voice.Startup(client);
 
             commands.CreateGroup("", group => GenerateCommands(group));
-            commands.NonCommands += Chatbot.Do;
+            commands.NonCommands = e => Task.Run(()=>Chatbot.Do(e));
             // Load the chatbots
             Chatbot.Load();
 
             // Keep the window open in case of crashes elsewhere... (hopefully)
-            Thread input = new Thread(InputThread);
-            input.Start();
+            new Thread(InputThread).Start();
 
             //DiscordClient will automatically reconnect once we've established a connection, until then we loop on our end
             client.Run(async() =>
