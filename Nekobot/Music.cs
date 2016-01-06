@@ -379,7 +379,7 @@ namespace Nekobot
                         await e.Channel.SendMessage("You need to provide at least a character to search for.");
                         return;
                     }
-                    args.ToLower();
+                    args = args.ToLower();
                     foreach (var file in Files())
                     {
                         if (System.IO.Path.GetFileNameWithoutExtension(file).ToLower().Contains(args))
