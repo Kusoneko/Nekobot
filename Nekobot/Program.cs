@@ -54,12 +54,12 @@ namespace Nekobot
                 .Description("I'll give you a random quote from https://inspiration.julxzs.website/quotes")
                 .Do(async e =>
                 {
-                    rclient.BaseUrl = new Uri("https://inspiration.julxzs.website");
+                    var rclient = Helpers.GetRestClient("https://inspiration.julxzs.website");
                     var request = new RestRequest("api/quote", Method.GET);
-                    JObject result = JObject.Parse(rclient.Execute<JObject>(request).Content);
-                    string quote = result["quote"]["quote"].ToString();
-                    string author = result["quote"]["author"].ToString();
-                    string date = result["quote"]["date"].ToString();
+                    var result = JObject.Parse(rclient.Execute<JObject>(request).Content)["quote"];
+                    string quote = result["quote"].ToString();
+                    string author = result["author"].ToString();
+                    string date = result["date"].ToString();
                     await e.Channel.SendMessage($"\"{quote}\" - {author} {date}");
                 });
 
@@ -69,7 +69,7 @@ namespace Nekobot
                 {
                     var version = Config.AppVersion;
                     string[] versions = version.Split('.');
-                    rclient.BaseUrl = new Uri("https://raw.githubusercontent.com");
+                    var rclient = Helpers.GetRestClient("https://raw.githubusercontent.com");
                     var request = new RestRequest("Kusoneko/Nekobot/master/version.json", Method.GET);
                     JObject result = JObject.Parse(rclient.Execute<JObject>(request).Content);
                     string remoteversion = result["version"].ToString();
@@ -151,7 +151,7 @@ namespace Nekobot
                 .Description("I'll get you the avatar of each Player.me username provided.")
                 .Do(async e =>
                 {
-                    rclient.BaseUrl = new Uri("https://player.me/api/v1/auth");
+                    var rclient = Helpers.GetRestClient("https://player.me/api/v1/auth");
                     var request = new RestRequest("pre-login", Method.POST);
                     foreach (string s in e.Args)
                     {
@@ -474,7 +474,7 @@ The current topic is: {e.Channel.Topic}";
                 .Description("I'll give you the hummingbird avatar of the usernames provided.")
                 .Do(async e =>
                 {
-                    rclient.BaseUrl = new Uri("http://hummingbird.me/api/v1/users");
+                    var rclient = Helpers.GetRestClient("http://hummingbird.me/api/v1/users");
                     string message = "";
                     foreach (string s in e.Args)
                     {
@@ -504,7 +504,7 @@ The current topic is: {e.Channel.Topic}";
                 .Description("I'll give you information on the hummingbird accounts of the usernames provided.")
                 .Do(async e =>
                 {
-                    rclient.BaseUrl = new Uri("http://hummingbird.me/api/v1/users");
+                    var rclient = Helpers.GetRestClient("http://hummingbird.me/api/v1/users");
                     foreach (string s in e.Args)
                     {
                         string message = "";
@@ -555,7 +555,7 @@ The current topic is: {e.Channel.Topic}";
                 .Description("I'll give you information on the Player.me of each usernames provided.")
                 .Do(async e =>
                 {
-                    rclient.BaseUrl = new Uri("https://player.me/api/v1/auth");
+                    var rclient = Helpers.GetRestClient("https://player.me/api/v1/auth");
                     var request = new RestRequest("pre-login", Method.POST);
                     foreach (string s in e.Args)
                     {
@@ -679,7 +679,6 @@ The current topic is: {e.Channel.Topic}";
 
         // Variables
         static DiscordClient client;
-        internal static RestClient rclient = new RestClient();
         static LastFM.LastfmClient lfclient;
         internal static JObject config;
         internal static ulong masterId;
@@ -701,9 +700,6 @@ The current topic is: {e.Channel.Topic}";
             SQL.LoadDB();
             // Load up the config file
             LoadConfig();
-
-            // Initialize rest client
-            RCInit();
 
             // Set up the events and enforce use of the command prefix
             client.Connected += Connected;
@@ -826,8 +822,6 @@ The current topic is: {e.Channel.Topic}";
 
             return animeWatched;
         }
-
-        private static void RCInit() => rclient.UserAgent = Console.Title;
 
         private static void LoadConfig()
         {

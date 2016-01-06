@@ -2,11 +2,15 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using RestSharp;
 
 namespace Nekobot
 {
     internal class Helpers
     {
+        internal static RestClient GetRestClient(string baseUri)
+            => new RestClient(baseUri) { UserAgent = Console.Title };
+
         internal static int GetPermissions(User user, Channel channel)
         {
             if (user.Id == Program.masterId)

@@ -334,7 +334,7 @@ namespace Nekobot
             CreatePLCmd(group, "ytrequest", "youtube video link(s)", "I'll add youtube videos to the playlist")
                 .Do(async e =>
                 {
-                    Program.rclient.BaseUrl = new Uri("http://www.youtubeinmp3.com/fetch/");
+                    var rclient = Helpers.GetRestClient("http://www.youtubeinmp3.com/fetch/");
                     MatchCollection m = Regex.Matches(e.Args[0], @"youtu(?:be\.com\/(?:v\/|e(?:mbed)?\/|watch\?v=)|\.be\/)([\w-_]{11}\b)", RegexOptions.IgnoreCase);
                     foreach (Match match in m)
                     {
@@ -343,9 +343,8 @@ namespace Nekobot
                         try { var video = await YouTube.Default.GetVideoAsync(link); uri_title = Tuple.Create(video.Uri, video.Title); }
                         catch
                         {
-                            Program.rclient.BaseUrl = new Uri("http://www.youtubeinmp3.com/fetch/");
                             // Content is sometimes an html page instead of JSON, we should ask why.
-                            var json = Newtonsoft.Json.Linq.JObject.Parse(Program.rclient.Execute(new RestSharp.RestRequest($"?format=JSON&video={System.Net.WebUtility.UrlEncode(link)}", RestSharp.Method.GET)).Content);
+                            var json = Newtonsoft.Json.Linq.JObject.Parse(rclient.Execute(new RestSharp.RestRequest($"?format=JSON&video={System.Net.WebUtility.UrlEncode(link)}", RestSharp.Method.GET)).Content);
                             uri_title = Tuple.Create(json["link"].ToString(), json["title"].ToString());
                         }
                         var pl = playlist[e.User.VoiceChannel.Id];
@@ -364,7 +363,7 @@ namespace Nekobot
 
             if (Program.config["SoundCloud"].HasValues)
             {
-                SC sc = new SC(Program.config["SoundCloud"]["client_id"].ToString(), Program.rclient.UserAgent);
+                SC sc = new SC(Program.config["SoundCloud"]["client_id"].ToString(), Console.Title);
                 sc.CreateSearchCmd(group, "scsearch", "scs", false);
                 sc.CreatePermalinkCmd(group, "screquest", new string[]{"sctrack", "sctr"}, false);
                 sc.CreatePermalinkCmd(group, "scplaylist", "scpl", false);

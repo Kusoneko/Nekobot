@@ -68,8 +68,7 @@ namespace Nekobot
 
             public JToken Common(string resource)
             {
-                Program.rclient.BaseUrl = new Uri(Link);
-                var content = Program.rclient.Execute(new RestRequest(resource, Method.GET)).Content;
+                var content = Helpers.GetRestClient(Link).Execute(new RestRequest(resource, Method.GET)).Content;
                 if (Json(resource)) return JObject.Parse(content.Substring(1).Trim(']'));
                 XmlDocument xml = new XmlDocument();
                 xml.LoadXml(content);
@@ -127,9 +126,7 @@ namespace Nekobot
 
         static async Task LewdSX(string chan, Discord.Channel c)
         {
-            Program.rclient.BaseUrl = new Uri("https://lewdchan.com");
-            var request = new RestRequest($"{chan}/src/list.php", Method.GET);
-            string result = Program.rclient.Execute(request).Content;
+            string result = Helpers.GetRestClient("https://lewdchan.com").Execute(new RestRequest($"{chan}/src/list.php", Method.GET)).Content;
             List<string> list = result.Split(new string[] { Environment.NewLine }, StringSplitOptions.None).ToList();
             Regex re = new Regex(@"([^\s]+(\.(jpg|jpeg|png|gif|bmp)))");
             foreach (Match m in re.Matches(result))
@@ -207,9 +204,8 @@ namespace Nekobot
                 .Do(async e =>
                 {
                     Random rnd = new Random();
-                    Program.rclient.BaseUrl = new Uri("https://ajax.googleapis.com/ajax/services/search");
                     var request = new RestRequest($"images?v=1.0&q={string.Join(" ", e.Args)}&rsz=8&start={rnd.Next(1, 12)}&safe=active", Method.GET);
-                    JObject result = JObject.Parse(Program.rclient.Execute(request).Content);
+                    JObject result = JObject.Parse(Helpers.GetRestClient("https://ajax.googleapis.com/ajax/services/search").Execute(request).Content);
                     List<string> images = new List<string>();
                     foreach (var element in result["responseData"]["results"])
                         images.Add(element["unescapedUrl"].ToString());
@@ -223,9 +219,8 @@ namespace Nekobot
                 {
                     try
                     {
-                        Program.rclient.BaseUrl = new Uri("http://imgur.com/r/");
-                        var result = JObject.Parse(Program.rclient.Execute(new RestRequest($"{e.Args[0]}/top/day.json", Method.GET)).Content)["data"].First;
-                        for (var i = new Random().Next(result.Parent.Count - 1); i != 0; --i, result = result.Next);
+                        var arr = ((JObject)JObject.Parse(Helpers.GetRestClient("http://imgur.com/r/").Execute(new RestRequest($"{e.Args[0]}/top/day.json", Method.GET)).Content)["data"]).Values();
+                        var result = arr[new Random().Next(arr.Count() - 1)];
                         var part = $"imgur.com/{result["hash"]}";
                         await e.Channel.SendMessage($"**http://{part}** http://i.{part}{result["ext"]}");
                     }
