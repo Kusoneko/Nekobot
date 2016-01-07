@@ -305,7 +305,7 @@ namespace Nekobot
 
         internal static void AddCommands(Commands.CommandGroupBuilder group)
         {
-            if (HasFolder()) return;
+            if (!HasFolder()) return;
 
             group.CreateCommand("playlist")
                 .Description("I'll give you the list of songs in the playlist.")
