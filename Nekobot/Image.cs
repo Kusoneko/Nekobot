@@ -219,8 +219,8 @@ namespace Nekobot
                 {
                     try
                     {
-                        var arr = ((JObject)JObject.Parse(Helpers.GetRestClient("http://imgur.com/r/").Execute(new RestRequest($"{e.Args[0]}/top/day.json", Method.GET)).Content)["data"]).Values();
-                        var result = arr[new Random().Next(arr.Count() - 1)];
+                        var result = JObject.Parse(Helpers.GetRestClient("http://imgur.com/r/").Execute(new RestRequest($"{e.Args[0]}/top/day.json", Method.GET)).Content)["data"].First;
+                        for (var i = new Random().Next(result.Parent.Count - 1); i != 0; --i, result = result.Next);
                         var part = $"imgur.com/{result["hash"]}";
                         await e.Channel.SendMessage($"**http://{part}** http://i.{part}{result["ext"]}");
                     }
