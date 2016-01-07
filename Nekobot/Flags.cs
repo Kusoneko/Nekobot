@@ -55,17 +55,17 @@ namespace Nekobot
                 .Parameter("on/off", Commands.ParameterType.Required)
                 .MinPermissions(1)
                 .Description("I'll set a channel's nsfw flag to on or off.")
-                .Do(async e =>
+                .Do(e =>
                 {
-                    await Helpers.OnOffCmd(e, async on =>
+                    Helpers.OnOffCmd(e, on =>
                     {
                         string status = on ? "allow" : "disallow";
                         if (GetNsfw(e.Channel) == on)
-                            await e.Channel.SendMessage($"{e.User.Mention}, this channel is already {status}ing nsfw commands.");
+                            e.Channel.SendMessage($"{e.User.Mention}, this channel is already {status}ing nsfw commands.");
                         else
                         {
-                            await SQL.AddOrUpdateFlagAsync(e.Channel.Id, "nsfw", on ? "1" : "0");
-                            await e.Channel.SendMessage($"I've set this channel to {status} nsfw commands.");
+                            SQL.AddOrUpdateFlag(e.Channel.Id, "nsfw", on ? "1" : "0");
+                            e.Channel.SendMessage($"I've set this channel to {status} nsfw commands.");
                         }
                     });
                 });

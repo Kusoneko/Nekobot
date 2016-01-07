@@ -45,23 +45,138 @@ namespace Nekobot
             internal string Uri, Requester, Ext;
             internal EType Type;
         }
+        class Playlist : List<Song>
+        {
+            internal void Initialize()
+            {
+                lock (voteskip) voteskip.Clear();
+                lock (votereset) votereset.Clear();
+                lock (voteencore) voteencore.Clear();
+                lock (this)
+                {
+                    var files = Files();
+                    var filecount = files.Count();
+                    Random rnd = new Random();
+                    while (Count < (filecount < 11 ? filecount : 11))
+                    {
+                        var mp3 = files.ElementAt(rnd.Next(0, filecount));
+                        if (InPlaylist(mp3))
+                            continue;
+                        Add(new Song(mp3));
+                    }
+                }
+            }
+
+            #region Information
+            bool InPlaylist(string common, bool online = false) => Exists(song => (song.IsOnline == online) && (online ? song.Ext : song.Uri) == common);
+
+            int NonrequestedIndex() => 1 + this.Skip(1).Where(song => song.Nonrequested).Count();
+
+            internal string CurrentSong()
+            {
+                lock (this)
+                    return this[0].Title();
+            }
+            #endregion
+
+            #region Insert Wrappers
+            internal void InsertFile(string file, Commands.CommandEventArgs e)
+            {
+                var i = NonrequestedIndex();
+                var cur_i = FindIndex(song => song.Uri == file);
+                if (cur_i != -1)
+                {
+                    if (i > cur_i)
+                    {
+                        if (cur_i == 0)
+                            Encore(e);
+                        else
+                            e.Channel.SendMessage($"{e.User.Mention} Your request is already in the playlist at {cur_i}.");
+                        return;
+                    }
+                    lock (this) RemoveAt(cur_i);
+                }
+                lock (this) Insert(i, new Song(file, Song.EType.Request, e.User));
+            }
+
+            internal bool TryInsert(Song song)
+            {
+                lock (this)
+                if (!InPlaylist(song.Ext, true))
+                {
+                    Insert(NonrequestedIndex(), song);
+                    return true;
+                }
+                return false;
+            }
+            #endregion
+
+            #region Votes and actions
+            internal bool AddVote(List<ulong> vote, Commands.CommandEventArgs e, string action, string success, string actionshort)
+            {
+                lock (this)
+                if (!vote.Contains(e.User.Id))
+                {
+                    vote.Add(e.User.Id);
+                    var listeners = e.User.VoiceChannel.Users.Count() - 1;
+                    if (vote.Count >= Math.Ceiling((decimal)listeners / 2))
+                    {
+                        e.Channel.SendMessage($"{vote.Count}/{listeners} votes to {action}. 50%+ achieved, {success}...");
+                        return true;
+                    }
+                    e.Channel.SendMessage($"{vote.Count}/{listeners} votes to {action}. (Needs 50% or more to {actionshort})");
+                }
+                return false;
+            }
+
+            internal void Encore(Commands.CommandEventArgs e)
+            {
+                lock (voteencore)
+                if (AddVote(voteencore, e, "replay current song", "song will be replayed", "replay"))
+                    lock (this) Insert(1, this[0].Encore());
+            }
+
+            internal void Skip(Commands.CommandEventArgs e)
+            {
+                lock (voteskip)
+                if (AddVote(voteskip, e, "skip current song", "skipping song", "skip"))
+                    skip = true;
+            }
+            internal async Task Reset(Commands.CommandEventArgs e)
+            {
+                lock (votereset)
+                if (AddVote(votereset, e, "reset the stream", "resetting stream", "reset"))
+                    await ResetStream(e.User.VoiceChannel);
+            }
+            internal void Pause(Commands.CommandEventArgs e)
+            {
+                e.Channel.SendMessage($"{(pause ? "Resum" : "Paus")}ing stream...");
+                pause = !pause;
+            }
+            internal async Task ResetStream(Channel c)
+            {
+                lock (this)
+                {
+                    pause = false;
+                    reset = true;
+                }
+                await Task.Delay(5000);
+                await Stream(c);
+            }
+            #endregion
+
+            List<ulong> voteskip = new List<ulong>(), votereset = new List<ulong>(), voteencore = new List<ulong>();
+            internal bool skip = false, reset = false, pause = false;
+        }
         // Music-related variables
         internal static string Folder;
         internal static bool UseSubdirs;
         static List<ulong> streams = new List<ulong>();
-        static Dictionary<ulong, List<Song>> playlist = new Dictionary<ulong, List<Song>>();
-        static Dictionary<ulong, bool> skip = new Dictionary<ulong, bool>();
-        static Dictionary<ulong, bool> reset = new Dictionary<ulong, bool>();
-        internal static Dictionary<ulong, bool> pause = new Dictionary<ulong, bool>();
-        static Dictionary<ulong, List<ulong>> voteskip = new Dictionary<ulong, List<ulong>>();
-        static Dictionary<ulong, List<ulong>> votereset = new Dictionary<ulong, List<ulong>>();
-        static Dictionary<ulong, List<ulong>> voteencore = new Dictionary<ulong, List<ulong>>();
+        static Dictionary<ulong, Playlist> playlist = new Dictionary<ulong, Playlist>();
         static string[] exts = { ".wma", ".aac", ".mp3", ".m4a", ".wav", ".flac", ".ogg" };
 
         internal static bool HasFolder() => Folder.Length != 0;
         static IEnumerable<string> Files() => System.IO.Directory.EnumerateFiles(Folder, "*.*", UseSubdirs ? System.IO.SearchOption.AllDirectories : System.IO.SearchOption.TopDirectoryOnly).Where(s => exts.Contains(System.IO.Path.GetExtension(s)));
-        static bool InPlaylist(List<Song> playlist, string common, bool online = false) => playlist.Exists(song => (song.IsOnline == online) && (online ? song.Ext : song.Uri) == common);
-        static int NonrequestedIndex(Commands.CommandEventArgs e) => 1 + playlist[e.User.VoiceChannel.Id].Skip(1).Where(song => song.Nonrequested).Count();
 
         static Commands.CommandBuilder CreatePLCmd(Commands.CommandGroupBuilder group, string name, string parameter, string description, string alias) => CreatePLCmd(group, name, parameter, description, new string[]{alias});
         static Commands.CommandBuilder CreatePLCmd(Commands.CommandGroupBuilder group, string name, string parameter, string description, string[] aliases = null)
@@ -77,36 +192,34 @@ namespace Nekobot
         class SC : SoundCloud.NET.SoundCloudManager
         {
             public SC(string clientId, string userAgent = "") : base(clientId, userAgent) { }
-            async Task<bool> Triad(Commands.CommandEventArgs e, SoundCloud.NET.Models.Track track, bool multiple, bool isplaylist = false)
+            bool Triad(Commands.CommandEventArgs e, SoundCloud.NET.Models.Track track, bool multiple, bool isplaylist = false)
             {
                 var pl = playlist[e.User.VoiceChannel.Id];
                 var title = $"{track.Title} by {track.User.Username}";
                 if (!track.Streamable)
                 {
-                    if (multiple) await e.Channel.SendMessage($"{title} is not streamable.");
+                    if (multiple) e.Channel.SendMessage($"{title} is not streamable.");
                     return false;
                 }
                 var ext = $"{title} (**{track.PermalinkUrl}**)";
-                if (!InPlaylist(pl, ext, true))
+                if (pl.TryInsert(new Song($"{track.StreamUrl}?client_id={ClientID}", Song.EType.SoundCloud, e.User, ext)))
                 {
-                    var uri = track.StreamUrl;
-                    pl.Insert(NonrequestedIndex(e), new Song($"{uri}?client_id={ClientID}", Song.EType.SoundCloud, e.User, ext));
-                    if (!isplaylist) await e.Channel.SendMessage($"{title} added to the playlist.");
+                    if (!isplaylist) e.Channel.SendMessage($"{title} added to the playlist.");
                     return true;
                 }
                 if (multiple)
-                    await e.Channel.SendMessage($"{title} is already in the playlist.");
+                    e.Channel.SendMessage($"{title} is already in the playlist.");
                 return false;
             }
-            async Task<bool> Triad(Commands.CommandEventArgs e, SoundCloud.NET.Models.Playlist playlist, bool multiple)
+            bool Triad(Commands.CommandEventArgs e, SoundCloud.NET.Models.Playlist playlist, bool multiple)
             {
                 bool ret = false;
                 foreach (var track in playlist.Tracks)
-                    ret |= await Triad(e, track, false, true);
+                    ret |= Triad(e, track, false, true);
                 if (ret)
-                    await e.Channel.SendMessage($"The contents of {playlist.Title} by {playlist.User.Username} have been added to the playlist.");
+                    e.Channel.SendMessage($"The contents of {playlist.Title} by {playlist.User.Username} have been added to the playlist.");
                 else if (!multiple)
-                    await e.Channel.SendMessage($"There is nothing in {playlist.Title} that isn't already in the playlist.");
+                    e.Channel.SendMessage($"There is nothing in {playlist.Title} that isn't already in the playlist.");
                 return ret;
             }
 
@@ -114,13 +227,16 @@ namespace Nekobot
             public void CreatePermalinkCmd(Commands.CommandGroupBuilder group, string name, string[] aliases, bool is_playlist)
             {
                 CreatePLCmd(group, name, $"SoundCloud {(!is_playlist ? "Track" : "Playlist")} Permalink"/*(s)"*/, $"I'll add SoundCloud {(is_playlist ? "playlist" : "")} songs to the playlist!", aliases)
-                    .Do(async e =>
+                    .Do(e =>
                     {
                         //MatchCollection m = Regex.Matches(e.Args[0], @"", RegexOptions.IgnoreCase);
                         if (e.Args[0] == ""/*m.Count == 0*/)
-                            await e.Channel.SendMessage($"{e.User.Mention} No SoundCloud permalink matches.");
+                            e.Channel.SendMessage($"{e.User.Mention} No SoundCloud permalink matches.");
                         else //foreach (Match match in m)
-                            await (is_playlist ? Triad(e, GetPlaylist(e.Args[0]), false) : Triad(e, GetTrack(e.Args[0])/*match.Groups[1]*/, true));
+                        {
+                            if (is_playlist) Triad(e, GetPlaylist(e.Args[0]/*match.Groups[1]*/), false);
+                            else Triad(e, GetTrack(e.Args[0]/*match.Groups[1]*/), true);
+                        }
                     });
             }
             public void CreateSearchCmd(Commands.CommandGroupBuilder group, string name, string alias, bool is_playlist) => CreateSearchCmd(group, name, new string[]{alias}, is_playlist);
@@ -159,29 +275,12 @@ namespace Nekobot
             ulong cid = c.Id;
             var _client = await Voice.JoinServer(c);
             if (_client == null) return; // TODO: Remove when voice works.
-            Random rnd = new Random();
             if (!playlist.ContainsKey(cid))
-                playlist.Add(cid, new List<Song>());
-            if (!skip.ContainsKey(cid))
-                skip.Add(cid, false);
-            if (!reset.ContainsKey(cid))
-                reset.Add(cid, false);
-            if (!pause.ContainsKey(cid))
-                pause.Add(cid, false);
+                playlist.Add(cid, new Playlist());
             while (streams.Contains(cid))
             {
-                voteskip[cid] = new List<ulong>();
-                votereset[cid] = new List<ulong>();
-                voteencore[cid] = new List<ulong>();
-                var files = Files();
-                var filecount = files.Count();
-                while (playlist[cid].Count() < (filecount < 11 ? filecount : 11))
-                {
-                    var mp3 = files.ElementAt(rnd.Next(0, filecount));
-                    if (InPlaylist(playlist[cid], mp3))
-                        continue;
-                    playlist[cid].Add(new Song(mp3));
-                }
+                var pl = playlist[cid];
+                pl.Initialize();
                 await Task.Run(async () =>
                 {
                     try
@@ -189,10 +288,12 @@ namespace Nekobot
                         var outFormat = new WaveFormat(48000, 16, 1);
                         int blockSize = outFormat.AverageBytesPerSecond; // 1 second
                         byte[] buffer = new byte[blockSize];
-                        var musicReader = Reader(playlist[cid][0].Uri);
+                        string uri;
+                        lock (pl) uri = pl[0].Uri;
+                        var musicReader = Reader(uri);
                         if (musicReader == null)
                         {
-                            Program.log.Warning("Stream", $"{playlist[cid][0].Uri} couldn't be read.");
+                            Program.log.Warning("Stream", $"{uri} couldn't be read.");
                             return;
                         }
                         using (var resampler = new MediaFoundationResampler(musicReader, outFormat) { ResamplerQuality = 60 })
@@ -200,8 +301,8 @@ namespace Nekobot
                             int byteCount;
                             while ((byteCount = resampler.Read(buffer, 0, blockSize)) > 0)
                             {
-                                while(pause[cid]) await Task.Delay(500); // Play Voice.cs commands in here?
-                                if (!streams.Contains(cid) || skip[cid] || reset[cid])
+                                while(pl.pause) await Task.Delay(500); // Play Voice.cs commands in here?
+                                if (!streams.Contains(cid) || pl.skip || pl.reset)
                                 {
                                     _client.Clear();
                                     await Task.Delay(1000);
@@ -214,20 +315,14 @@ namespace Nekobot
                     catch (OperationCanceledException err) { Program.log.Error("Stream", err.Message); }
                 });
                 _client.Wait(); // Prevent endless queueing which would eventually eat up all the ram
-                skip[cid] = false;
-                if (reset[cid])
+                pl.skip = false;
+                if (pl.reset)
                 {
-                    reset[cid] = false;
+                    pl.reset = false;
                     break;
                 }
-                playlist[cid].RemoveAt(0);
+                pl.RemoveAt(0);
             }
-            voteskip.Remove(cid);
-            votereset.Remove(cid);
-            voteencore.Remove(cid);
-            skip.Remove(cid);
-            reset.Remove(cid);
-            pause.Remove(cid);
             await Program.Audio.Leave(c.Server);
         }
 
@@ -253,18 +348,10 @@ namespace Nekobot
                 streams.Add(Convert.ToUInt64(reader["channel"].ToString()));
         }
 
-        static async Task ResetStream(Channel c)
-        {
-            pause[c.Id] = false;
-            reset[c.Id] = true;
-            await Task.Delay(5000);
-            await Stream(c);
-        }
-
         internal static void StopStream(ulong stream)
         {
             SQL.AddOrUpdateFlag(stream, "music", "0");
-            if (pause[stream]) pause[stream] = false;
+            playlist[stream].pause = false;
             streams.Remove(stream);
         }
 
@@ -277,32 +364,6 @@ namespace Nekobot
                 await Task.Delay(5000);
         }
 
-        static async Task Encore(Commands.CommandEventArgs e)
-        {
-            if (await AddVote(voteencore, e, "replay current song", "song will be replayed", "replay"))
-            {
-                var pl = playlist[e.User.VoiceChannel.Id];
-                pl.Insert(1, pl[0].Encore());
-            }
-        }
-
-        static async Task<bool> AddVote(Dictionary<ulong, List<ulong>> votes, Commands.CommandEventArgs e, string action, string success, string actionshort)
-        {
-            var vote = votes[e.User.VoiceChannel.Id];
-            if (!vote.Contains(e.User.Id))
-            {
-                vote.Add(e.User.Id);
-                var listeners = e.User.VoiceChannel.Users.Count()-1;
-                if (vote.Count >= Math.Ceiling((decimal)listeners / 2))
-                {
-                    await e.Channel.SendMessage($"{vote.Count}/{listeners} votes to {action}. 50%+ achieved, {success}...");
-                    return true;
-                }
-                await e.Channel.SendMessage($"{vote.Count}/{listeners} votes to {action}. (Needs 50% or more to {actionshort})");
-            }
-            return false;
-        }
-
         internal static void AddCommands(Commands.CommandGroupBuilder group)
         {
             if (!HasFolder()) return;
@@ -310,11 +371,13 @@ namespace Nekobot
             group.CreateCommand("playlist")
                 .Description("I'll give you the list of songs in the playlist.")
                 .FlagMusic(true)
-                .Do(async e =>
+                .Do(e =>
                 {
                     string reply = "";
                     int i = -1;
-                    foreach(var t in playlist[e.User.VoiceChannel.Id])
+                    var pl = playlist[e.User.VoiceChannel.Id];
+                    lock (pl)
+                    foreach(var t in pl)
                     {
                         reply += (++i == 0) ? $"Currently playing: {t.Title()}.\nNext songs:" : $"\n{i} - {t.ExtTitle}";
                         if (reply.Length > 2000)
@@ -323,16 +386,16 @@ namespace Nekobot
                             break;
                         }
                     }
-                    await e.Channel.SendMessage(reply);
+                    e.Channel.SendMessage(reply);
                 });
 
             group.CreateCommand("song")
                 .Description("I'll tell you the song I'm currently playing.")
                 .FlagMusic(true)
-                .Do(async e => await e.Channel.SendMessage($"Currently playing: {playlist[e.User.VoiceChannel.Id][0].Title()}."));
+                .Do(e => e.Channel.SendMessage($"Currently playing: {playlist[e.User.VoiceChannel.Id].CurrentSong()}."));
 
             CreatePLCmd(group, "ytrequest", "youtube video link(s)", "I'll add youtube videos to the playlist")
-                .Do(async e =>
+                .Do(e =>
                 {
                     var rclient = Helpers.GetRestClient("http://www.youtubeinmp3.com/fetch/");
                     MatchCollection m = Regex.Matches(e.Args[0], @"youtu(?:be\.com\/(?:v\/|e(?:mbed)?\/|watch\?v=)|\.be\/)([\w-_]{11}\b)", RegexOptions.IgnoreCase);
@@ -340,25 +403,20 @@ namespace Nekobot
                     {
                         var link = $"youtube.com/watch?v={match.Groups[1]}";
                         Tuple<string,string> uri_title;
-                        try { var video = await YouTube.Default.GetVideoAsync(link); uri_title = Tuple.Create(video.Uri, video.Title); }
+                        try { var video = YouTube.Default.GetVideo(link); uri_title = Tuple.Create(video.Uri, video.Title); }
                         catch
                         {
                             // Content is sometimes an html page instead of JSON, we should ask why.
                             var json = Newtonsoft.Json.Linq.JObject.Parse(rclient.Execute(new RestSharp.RestRequest($"?format=JSON&video={System.Net.WebUtility.UrlEncode(link)}", RestSharp.Method.GET)).Content);
                             uri_title = Tuple.Create(json["link"].ToString(), json["title"].ToString());
                         }
-                        var pl = playlist[e.User.VoiceChannel.Id];
-                        var ext = $"{uri_title.Item2} ({link})";
-                        if (InPlaylist(pl, ext, true))
-                            await e.Channel.SendMessage($"{e.User.Mention} Your request ({uri_title.Item2}) is already in the playlist.");
+                        if (playlist[e.User.VoiceChannel.Id].TryInsert(new Song(uri_title.Item1, Song.EType.Youtube, e.User, $"{uri_title.Item2} ({link})")))
+                            e.Channel.SendMessage($"{uri_title.Item2} added to the playlist.");
                         else
-                        {
-                            pl.Insert(NonrequestedIndex(e), new Song(uri_title.Item1, Song.EType.Youtube, e.User, ext));
-                            await e.Channel.SendMessage($"{uri_title.Item2} added to the playlist.");
-                        }
+                            e.Channel.SendMessage($"{e.User.Mention} Your request ({uri_title.Item2}) is already in the playlist.");
                     }
                     if (m.Count == 0)
-                        await e.Channel.SendMessage($"None of {e.Args[0]} could be added to playlist because no valid youtube links were found within.");
+                        e.Channel.SendMessage($"None of {e.Args[0]} could be added to playlist because no valid youtube links were found within.");
                 });
 
             if (Program.config["SoundCloud"].HasValues)
@@ -371,12 +429,12 @@ namespace Nekobot
             }
 
             CreatePLCmd(group, "request", "song to find", "I'll try to add your request to the playlist!")
-                .Do(async e =>
+                .Do(e =>
                 {
                     var args = string.Join(" ", e.Args);
                     if (args.Length == 0)
                     {
-                        await e.Channel.SendMessage("You need to provide at least a character to search for.");
+                        e.Channel.SendMessage("You need to provide at least a character to search for.");
                         return;
                     }
                     args = args.ToLower();
@@ -384,63 +442,40 @@ namespace Nekobot
                     {
                         if (System.IO.Path.GetFileNameWithoutExtension(file).ToLower().Contains(args))
                         {
-                            var pl = playlist[e.User.VoiceChannel.Id];
-                            var i = NonrequestedIndex(e);
-                            var cur_i = pl.FindIndex(song => song.Uri == file);
-                            if (cur_i != -1)
-                            {
-                                if (i > cur_i)
-                                {
-                                    if (cur_i == 0)
-                                        await Encore(e);
-                                    else
-                                        await e.Channel.SendMessage($"{e.User.Mention} Your request is already in the playlist at {cur_i}.");
-                                    return;
-                                }
-                                pl.RemoveAt(cur_i);
-                            }
-                            pl.Insert(i, new Song(file, Song.EType.Request, e.User));
-                            await e.Channel.SendMessage($"{e.User.Mention} Your request has been added to the list.");
+                            playlist[e.User.VoiceChannel.Id].InsertFile(file, e);
+                            e.Channel.SendMessage($"{e.User.Mention} Your request has been added to the list.");
                             return;
                         }
                     }
-                    await e.Channel.SendMessage($"{e.User.Mention} Your request was not found.");
+                    e.Channel.SendMessage($"{e.User.Mention} Your request was not found.");
                 });
 
             group.CreateCommand("skip")
                 .Description("Vote to skip the current song. (Will skip at 50% or more)")
                 .FlagMusic(true)
-                .Do(async e =>
-                {
-                    if (await AddVote(voteskip, e, "skip current song", "skipping song", "skip"))
-                       skip[e.User.VoiceChannel.Id] = true;
-                });
+                .Do(e => playlist[e.User.VoiceChannel.Id].Skip(e));
 
             group.CreateCommand("reset")
                 .Description("Vote to reset the stream. (Will reset at 50% or more)")
                 .FlagMusic(true)
-                .Do(async e =>
-                {
-                    if (await AddVote(votereset, e, "reset the stream", "resetting stream", "reset"))
-                        await ResetStream(e.User.VoiceChannel);
-                });
+                .Do(e => playlist[e.User.VoiceChannel.Id].Reset(e));
 
             group.CreateCommand("encore")
                 .Alias("replay")
                 .Alias("ankoru")
                 .Description("Vote to replay the current song. (Will replay at 50% or more)")
                 .FlagMusic(true)
-                .Do(async e => await Encore(e));
+                .Do(e => playlist[e.User.VoiceChannel.Id].Encore(e));
 
             // Moderator commands
             group.CreateCommand("forceskip")
                 .MinPermissions(1)
                 .FlagMusic(true)
-                .Description("I'll skip the currently playing song.")
-                .Do(async e =>
+                .Description("I'll skip the currently playing song(s).")
+                .Do(e =>
                 {
-                    skip[e.User.VoiceChannel.Id] = true;
-                    await e.Channel.SendMessage("Forcefully skipping song...");
+                    playlist[e.User.VoiceChannel.Id].skip = true;
+                    e.Channel.SendMessage("Forcefully skipping...");
                 });
 
             group.CreateCommand("forcereset")
@@ -450,7 +485,7 @@ namespace Nekobot
                 .Do(async e =>
                 {
                     await e.Channel.SendMessage("Reseting stream...");
-                    await ResetStream(e.User.VoiceChannel);
+                    await playlist[e.User.VoiceChannel.Id].ResetStream(e.User.VoiceChannel);
                 });
 
             group.CreateCommand("pause")
@@ -458,19 +493,17 @@ namespace Nekobot
                 .MinPermissions(1)
                 .FlagMusic(true)
                 .Description("I'll toggle pause on the stream")
-                .Do(async e =>
-                {
-                    await e.Channel.SendMessage($"{(pause[e.User.VoiceChannel.Id] ? "Resum" : "Paus")}ing stream...");
-                    pause[e.User.VoiceChannel.Id] = !pause[e.User.VoiceChannel.Id];
-                });
+                .Do(e => playlist[e.User.VoiceChannel.Id].Pause(e));
 
             // Administrator commands
             group.CreateCommand("music")
                 .Parameter("on/off", Commands.ParameterType.Required)
                 .Description("I'll start or end a stream in a particular voice channel, which you need to be in.")
                 .MinPermissions(2)
-                .Do(async e => await (e.User.VoiceChannel?.Id <= 0 ? e.Channel.SendMessage($"{e.User.Mention}, you need to be in a voice channel to use this.")
-                    : Helpers.OnOffCmd(e, async on =>
+                .Do(e =>
+                {
+                    if (e.User.VoiceChannel?.Id <= 0) e.Channel.SendMessage($"{e.User.Mention}, you need to be in a voice channel to use this.");
+                    else Helpers.OnOffCmd(e, async on =>
                     {
                         bool has_stream = streams.Contains(e.User.VoiceChannel.Id);
                         string status = on ? "start" : "halt";
@@ -491,7 +524,8 @@ namespace Nekobot
                             }
                             else StopStream(e.User.VoiceChannel.Id);
                         }
-                    })));
+                    });
+                });
         }
     }
 }
