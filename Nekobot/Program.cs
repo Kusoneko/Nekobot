@@ -436,13 +436,13 @@ The current topic is: {e.Channel.Topic}";
                 .Alias("pets")
                 .Parameter("@User1] [@User2] [...", Commands.ParameterType.Unparsed)
                 .Description("Everyone loves being pet, right!?! Pets each *@user*. Leave empty (or mention me too) to pet me!")
-                .Do(async e => await Helpers.PerformAction(e, "pet", "*purrs*", false));
+                .Do(e => Helpers.PerformAction(e, "pet", "*purrs*", false));
 
             group.CreateCommand("hug")
                 .Alias("hugs")
                 .Parameter("@User1] [@User2] [...", Commands.ParameterType.Unparsed)
                 .Description("Hug someone! Hugs each *@user*. Leave empty to get a hug!")
-                .Do(async e => await Helpers.PerformAction(e, "hug", "<3", true));
+                .Do(e => Helpers.PerformAction(e, "hug", "<3", true));
 
             group.CreateCommand("8ball")
                 .Parameter("question", Commands.ParameterType.Optional)
@@ -472,7 +472,7 @@ The current topic is: {e.Channel.Topic}";
                 .Parameter("username2", Commands.ParameterType.Optional)
                 .Parameter("username3", Commands.ParameterType.Multiple)
                 .Description("I'll give you the hummingbird avatar of the usernames provided.")
-                .Do(async e =>
+                .Do(e =>
                 {
                     var rclient = Helpers.GetRestClient("http://hummingbird.me/api/v1/users");
                     string message = "";
@@ -494,7 +494,7 @@ The current topic is: {e.Channel.Topic}";
 {username}'s avatar: {avatar}";
                         }
                     }
-                    await e.Channel.SendMessage(message);
+                    e.Channel.SendMessage(message);
                 });
 
             group.CreateCommand("hb")
@@ -502,7 +502,7 @@ The current topic is: {e.Channel.Topic}";
                 .Parameter("username2", Commands.ParameterType.Optional)
                 .Parameter("username3", Commands.ParameterType.Multiple)
                 .Description("I'll give you information on the hummingbird accounts of the usernames provided.")
-                .Do(async e =>
+                .Do(e =>
                 {
                     var rclient = Helpers.GetRestClient("http://hummingbird.me/api/v1/users");
                     foreach (string s in e.Args)
@@ -544,7 +544,7 @@ The current topic is: {e.Channel.Topic}";
                             message += $@"
 **Hummingbird page**: {userurl}";
                         }
-                        await e.Channel.SendMessage(message);
+                        e.Channel.SendMessage(message);
                     }
                 });
 
@@ -553,7 +553,7 @@ The current topic is: {e.Channel.Topic}";
                 .Parameter("username2", Commands.ParameterType.Optional)
                 .Parameter("username3", Commands.ParameterType.Multiple)
                 .Description("I'll give you information on the Player.me of each usernames provided.")
-                .Do(async e =>
+                .Do(e =>
                 {
                     var rclient = Helpers.GetRestClient("https://player.me/api/v1/auth");
                     var request = new RestRequest("pre-login", Method.POST);
@@ -562,7 +562,7 @@ The current topic is: {e.Channel.Topic}";
                         request.AddQueryParameter("login", s);
                         JObject result = JObject.Parse(rclient.Execute(request).Content);
                         if (Convert.ToBoolean(result["success"]) == false)
-                            await e.Channel.SendMessage($"{s} was not found.");
+                            e.Channel.SendMessage($"{s} was not found.");
                         else
                         {
                             string username = result["results"]["username"].ToString();
@@ -572,7 +572,7 @@ The current topic is: {e.Channel.Topic}";
                             string joined = date.ToString("yyyy-MM-dd");
                             int followers = Convert.ToInt32(result["results"]["followers_count"]);
                             int following = Convert.ToInt32(result["results"]["following_count"]);
-                            await e.Channel.SendMessage($@"
+                            e.Channel.SendMessage($@"
 **User**: {username}
 **Avatar**: {avatar}
 **Bio**: {bio}
@@ -588,7 +588,7 @@ The current topic is: {e.Channel.Topic}";
                 .Parameter("invite code or link", Commands.ParameterType.Required)
                 .MinPermissions(1)
                 .Description("I'll join a new server using the provided invite code or link.")
-                .Do(async e => (await client.GetInvite(e.Args[0]))?.Accept());
+                .Do(e => client.GetInvite(e.Args[0])?.Result.Accept());
 
             // Administrator commands
             group.CreateCommand("setpermissions")

@@ -139,7 +139,7 @@ namespace Nekobot
             group.CreateCommand(chan)
                 .FlagNsfw(true)
                 .Description($"I'll give you a random image from https://lewdchan.com/{chan}/")
-                .Do(async e => await LewdSX(chan, e.Channel));
+                .Do(e => LewdSX(chan, e.Channel));
         }
         static void CreateFolderCommand(Commands.CommandGroupBuilder group, string name, string type, string owner)
         {
@@ -148,7 +148,7 @@ namespace Nekobot
                 group.CreateCommand(name)
                     .FlagNsfw(true)
                     .Description($"I'll give you a random {type} image from {owner}'s collection")
-                    .Do(async e => await e.Channel.SendFile(Folders(folder)));
+                    .Do(e => e.Channel.SendFile(Folders(folder)));
         }
         static void CreateBooruCommand(Commands.CommandGroupBuilder group, string booru, string alias) => CreateBooruCommand(group, booru, new string[]{alias});
         static void CreateBooruCommand(Commands.CommandGroupBuilder group, string booru, string[] aliases = null)
@@ -160,7 +160,7 @@ namespace Nekobot
                 .FlagNsfw(true)
                 .Description($"I'll give you a random image from {booru} (optionally with tags)");
             if (aliases != null) foreach (var alias in aliases) cmd.Alias(alias);
-            cmd.Do(async e => await Booru(booru, e));
+            cmd.Do(e => Booru(booru, e));
         }
 
         internal static void AddCommands(Commands.CommandGroupBuilder group)
@@ -180,20 +180,20 @@ namespace Nekobot
                     .Alias("worstgirl")
                     .Alias("onodera")
                     .Description("I'll upload an image of 'worst girl'. (WARNING: May cause nausea!)")
-                    .Do(async e => await e.Channel.SendFile("images/trash.png"));
+                    .Do(e => e.Channel.SendFile("images/trash.png"));
 
                 group.CreateCommand("doit")
                     .Alias("justdoit")
                     .Alias("shia")
                     .Description("DON'T LET YOUR DREAMS JUST BE DREAMS!")
-                    .Do(async e => await e.Channel.SendFile("images/shia.jpg"));
+                    .Do(e => e.Channel.SendFile("images/shia.jpg"));
 
                 group.CreateCommand("bulli")
                     .Alias("bully")
                     .Alias("dunbulli")
                     .Alias("dontbully")
                     .Description("DON'T BULLY!")
-                    .Do(async e => await e.Channel.SendFile("images/bulli.jpg"));
+                    .Do(e => e.Channel.SendFile("images/bulli.jpg"));
             }
 
             group.CreateCommand("img")
@@ -201,7 +201,7 @@ namespace Nekobot
                 .Parameter("extended query", Commands.ParameterType.Multiple)
                 .Description("I'll get a random image from Google!")
                 .AddCheck((h, i, d) => false).Hide() // Until we can  update this to work
-                .Do(async e =>
+                .Do(e =>
                 {
                     Random rnd = new Random();
                     var request = new RestRequest($"images?v=1.0&q={string.Join(" ", e.Args)}&rsz=8&start={rnd.Next(1, 12)}&safe=active", Method.GET);
@@ -209,22 +209,22 @@ namespace Nekobot
                     List<string> images = new List<string>();
                     foreach (var element in result["responseData"]["results"])
                         images.Add(element["unescapedUrl"].ToString());
-                    await e.Channel.SendMessage(images[rnd.Next(images.Count())].ToString());
+                    e.Channel.SendMessage(images[rnd.Next(images.Count())].ToString());
                 });
 
             group.CreateCommand("imgur")
                 .Parameter("Reddit Board", Commands.ParameterType.Required)
                 .Description("I'll pick out a random image from the day's best on an imgur reddit!")
-                .Do(async e =>
+                .Do(e =>
                 {
                     try
                     {
                         var result = JObject.Parse(Helpers.GetRestClient("http://imgur.com/r/").Execute(new RestRequest($"{e.Args[0]}/top/day.json", Method.GET)).Content)["data"].First;
                         for (var i = new Random().Next(result.Parent.Count - 1); i != 0; --i, result = result.Next);
                         var part = $"imgur.com/{result["hash"]}";
-                        await e.Channel.SendMessage($"**http://{part}** http://i.{part}{result["ext"]}");
+                        e.Channel.SendMessage($"**http://{part}** http://i.{part}{result["ext"]}");
                     }
-                    catch { await e.Channel.SendMessage("Imgur says nope~"); }
+                    catch { e.Channel.SendMessage("Imgur says nope~"); }
                 });
 
             CreateBooruCommand(group, "safebooru");

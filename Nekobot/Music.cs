@@ -128,18 +128,18 @@ namespace Nekobot
             {
                 CreatePLCmd(group, name, is_playlist ? "SoundCloud Playlist Keywords" : "song to find",
                     $"I'll search for your {(is_playlist ? "playlist " : "")}request on SoundCloud!\nResults will be considered in order until one not in the playlist is found.", aliases)
-                    .Do(async e =>
+                    .Do(e =>
                     {
                         var search = new SoundCloud.NET.SearchParameters { SearchString = string.Join(" ", e.Args), Streamable = true };
                         var container = is_playlist ? (SoundCloud.NET.Models.BaseModel[])SearchPlaylist(search) : SearchTrack(search);
                         if (container.Count() == 0)
                         {
-                            await e.Channel.SendMessage($"{e.User.Mention} Your request was not found.");
+                            e.Channel.SendMessage($"{e.User.Mention} Your request was not found.");
                             return;
                         }
                         foreach (var thing in container)
-                            if (await (is_playlist ? Triad(e, (SoundCloud.NET.Models.Playlist)thing, true) : Triad(e, (SoundCloud.NET.Models.Track)thing, false))) return;
-                        await e.Channel.SendMessage($"{e.User.Mention} No results for your requested search aren't already in the playlist.");
+                            if (is_playlist ? Triad(e, (SoundCloud.NET.Models.Playlist)thing, true) : Triad(e, (SoundCloud.NET.Models.Track)thing, false)) return;
+                        e.Channel.SendMessage($"{e.User.Mention} No results for your requested search aren't already in the playlist.");
                     });
             }
         }
