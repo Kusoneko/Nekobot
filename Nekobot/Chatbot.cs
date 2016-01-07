@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections.Concurrent;
 using System.Linq;
 using Discord;
 using ChatterBotAPI;
@@ -8,7 +8,7 @@ namespace Nekobot
 {
     class Chatbot
     {
-        static Dictionary<ulong, ChatterBotSession> chatbots = new Dictionary<ulong, ChatterBotSession>();
+        static ConcurrentDictionary<ulong, ChatterBotSession> chatbots = new ConcurrentDictionary<ulong, ChatterBotSession>();
 
         static bool HasNeko(string msg, string neko)
         {
@@ -55,31 +55,31 @@ namespace Nekobot
                 .Parameter("type (clever or jabberwacky)", Commands.ParameterType.Optional)
                 .MinPermissions(3)
                 .Description("I'll turn on/off the chatbot for this channel.\nIf no args, I'll tell you if there's a bot on for this channel.")
-                .Do(async e =>
+                .Do(e =>
                 {
                     bool botstatus = chatbots.ContainsKey(e.Channel.Id);
                     if (e.Args.Any())
                     {
-                        await Helpers.OnOffCmd(e, async on =>
+                        Helpers.OnOffCmd(e, on =>
                         {
                             if (botstatus == on)
-                                await e.Channel.SendMessage("The bot is already " + (botstatus ? "on" : "off") + $" for {e.Channel}");
+                                e.Channel.SendMessage("The bot is already " + (botstatus ? "on" : "off") + $" for {e.Channel}");
                             else
                             {
                                 int bottype = -1;
                                 if (botstatus)
-                                    chatbots.Remove(e.Channel.Id);
+                                    Helpers.Remove(chatbots, e.Channel.Id);
                                 else
                                 {
                                     bottype = GetBotType(e.Args.Count() == 1 ? "" : e.Args[0]);
                                     chatbots[e.Channel.Id] = CreateBotSession((ChatterBotType)bottype);
                                 }
-                                await e.Channel.SendMessage("The bot is now " + (!botstatus ? "on" : "off") + $" for {e.Channel}");
+                                e.Channel.SendMessage("The bot is now " + (!botstatus ? "on" : "off") + $" for {e.Channel}");
                                 SQL.AddOrUpdateFlag(e.Channel.Id, "chatbot", bottype.ToString());
                             }
                         }, "First argument must be on or off.");
                     }
-                    else await e.Channel.SendMessage("The bot is currently " + (botstatus ? "on" : "off") + $" for {e.Channel}.");
+                    else e.Channel.SendMessage("The bot is currently " + (botstatus ? "on" : "off") + $" for {e.Channel}.");
                 });
         }
     }

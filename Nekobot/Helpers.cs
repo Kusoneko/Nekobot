@@ -63,6 +63,12 @@ namespace Nekobot
                 await e.Channel.SendMessage(reaction);
         }
 
+        internal static void Remove<T, V>(System.Collections.Concurrent.ConcurrentDictionary<T, V> tv, T t)
+        {
+            V v;
+            tv.TryRemove(t, out v);
+        }
+
         internal static string Pick(string[] quotes) => quotes[new Random().Next(0, quotes.Count())];
     }
 }
