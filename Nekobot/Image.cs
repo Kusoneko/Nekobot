@@ -14,62 +14,68 @@ namespace Nekobot
     {
         class Board
         {
-            Board(string link, string resource, string post)
+            enum Type
+            {
+                A, // Sends XML responses, doesn't offer JSON
+                B, // Anything >= this uses json, api is more clearly defined. We'll use xml to get count for this type.
+                Sankaku, // Nasty, doesn't support xml response (needed for count), we'll just consider there to be 1000 pages to choose from if there are any at all.
+            }
+            Board(string link, string resource, string post, Type type)
             {
                 Link = link;
                 Resource = resource;
                 Post = post;
+                _type = type;
+                _rclient = Helpers.GetRestClient(Link);
             }
-            static Board A(string link, string tags) =>
-                new Board(link, $"index.php?page=dapi&s=post&q=index&limit=1&tags={tags}&pid=", "/index.php?page=post&s=view&id=");
-            static Board B(string link, string tags) =>
-                new Board(link, $"index.json?limit=1&tags={tags}&page=", "/show/");
-            static Board Sankaku(string board, string tags) => B($"https://{board}.sankakucomplex.com/post", tags);
+            static Board A(string link) =>
+                new Board(link, $"index.php?page=dapi&s=post&q=index&limit=1&pid=", "/index.php?page=post&s=view&id=", Type.A);
+            static Board B(string link, Type type = Type.B) =>
+                new Board(link, $"post/index.json?limit=1&page=", "/post/show/", type);
+            static Board Sankaku(string board) => B($"https://{board}.sankakucomplex.com", Type.Sankaku);
 
             public static Board Get(string booru, string tags)
             {
+                Board board =
+                booru == "safebooru" ? A("http://safebooru.org") :
+                //booru == "gelbooru" ? A("http://gelbooru.com") :
+                booru == "rule34" ? A("http://rule34.xxx") :
+                booru == "konachan" ? B("http://konachan.com") :
+                booru == "yandere" ? B("https://yande.re") :
+                booru == "lolibooru" ? B("http://lolibooru.moe") :
+                booru == "sankaku" ? Sankaku("chan") :
+                //booru == "sankakuidol" ? Sankaku("idol") :
+                booru == "e621" ? B("https://e621.net")
+                : null;
+
                 var boardconf = (JObject)Program.config["Booru"].SelectToken(booru);
                 if (boardconf != null)
                 {
                     var default_tags = boardconf.Property("default_tags");
                     if (default_tags != null)
                         tags += string.Join(" ", default_tags.Values());
-                }
-                tags = System.Net.WebUtility.UrlEncode(tags);
-                Board board =
-                booru == "safebooru" ? A("http://safebooru.org", tags) :
-                //booru == "gelbooru" ? A("http://gelbooru.com", tags) :
-                booru == "rule34" ? A("http://rule34.xxx", tags) : null;
-                if (board == null) // Type A has no auth in the api.
-                {
-                    if (boardconf != null)
+                    if (board?._type >= Type.B) // Type A has no auth in the api.
                     {
                         var login = boardconf.Property("login");
                         if (login != null)
                         {
+                            board._rclient.AddDefaultParameter("login", login.Value);
                             var prop = boardconf.Property("api_key");
-                            tags += $"&login={login.Value}&{(prop != null ? $"api_key={prop.Value}" : $"password_hash={boardconf["password_hash"]}")}";
+                            if (prop != null)
+                                board._rclient.AddDefaultParameter("api_key", prop.Value);
+                            else
+                                board._rclient.AddDefaultParameter("password_hash", boardconf["password_hash"]);
                         }
                     }
-                    board =
-                    booru == "konachan" ? B("http://konachan.com/post", tags) :
-                    booru == "yandere" ? B("https://yande.re/post", tags) :
-                    booru == "lolibooru" ? B("http://lolibooru.moe/post", tags) :
-                    booru == "sankaku" ? Sankaku("chan", tags) :
-                    //booru == "sankakuidol" ? Sankaku("idol", tags) :
-                    booru == "e621" ? B("https://e621.net/post", tags)
-                    : null;
                 }
+                board._rclient.AddDefaultParameter("tags", System.Net.WebUtility.UrlEncode(tags));
                 return board;
             }
 
-            bool IsSankaku => Link.Contains("sankaku");
-            static bool Json(string resource) => resource.StartsWith("index.json");
-
-            public JToken Common(string resource)
+            public JToken Common(string resource, bool json)
             {
-                var content = Helpers.GetRestClient(Link).Execute(new RestRequest(resource, Method.GET)).Content;
-                if (Json(resource)) return JObject.Parse(content.Substring(1).Trim(']'));
+                var content = _rclient.Execute(new RestRequest(resource, Method.GET)).Content;
+                if (json) return JObject.Parse(content.TrimStart('[').TrimEnd(']'));
                 XmlDocument xml = new XmlDocument();
                 xml.LoadXml(content);
                 return JObject.Parse(JsonConvert.SerializeXmlNode(xml))["posts"];
@@ -77,26 +83,26 @@ namespace Nekobot
 
             public string GetImageLink(int rnd)
             {
-                var res = Common(Resource + rnd.ToString());
-                string prefix = "";
-                if (!Json(Resource))
-                {
-                    res = (JObject)res["post"];
-                    prefix = "@";
-                }
-                return $"**{Link}{Post}{res[$"{prefix}id"].ToString()}** {(IsSankaku ? "http:" : "")}{res[$"{prefix}file_url"].ToString().Replace(" ", "%20")}";
+                var json = _type >= Type.B;
+                var res = Common(Resource + rnd.ToString(), json);
+                string prefix = !json ? "@" : "";
+                if (!json) res = (JObject)res["post"];
+                return $"**{Link}{Post}{res[$"{prefix}id"].ToString()}** {(_type == Type.Sankaku ? "http:" : "")}{res[$"{prefix}file_url"].ToString().Replace(" ", "%20")}";
             }
 
             public int GetPostCount()
             {
-                var sankaku = IsSankaku;
-                var res = Common(!sankaku ? Resource.Replace("index.json", "index.xml") : Resource);
-                return sankaku ? res.ToString() == "" ? 0 : 1000 : int.Parse(res["@count"].ToString());
+                var sankaku = _type == Type.Sankaku;
+                var res = Common(!sankaku ? "post/index.xml?limit=1" : Resource, sankaku);
+                return sankaku ? res.ToString() == "" ? 0 : 1000
+                    : res["@count"].ToObject<int>();
             }
 
             public string Link;
             public string Resource;
             public string Post;
+            private Type _type;
+            private RestClient _rclient;
         }
         static async Task Booru(string booru, Commands.CommandEventArgs e)
         {
@@ -107,9 +113,9 @@ namespace Nekobot
                 try
                 {
                     int posts = board.GetPostCount();
-                    await e.Channel.SendMessage((posts == 0) ?
+                    await e.Channel.SendMessage(posts == 0 ?
                         $"There is nothing under the tag(s):\n{tags}\non {booru}. Please try something else." :
-                        board.GetImageLink(posts == 1 ? 0 : (new Random()).Next(1, posts - 1)));
+                        board.GetImageLink(posts == 1 ? 0 : new Random().Next(1, posts - 1)));
                     return;
                 }
                 catch { }
@@ -139,7 +145,7 @@ namespace Nekobot
             group.CreateCommand(chan)
                 .FlagNsfw(true)
                 .Description($"I'll give you a random image from https://lewdchan.com/{chan}/")
-                .Do(e => LewdSX(chan, e.Channel));
+                .Do(async e => await LewdSX(chan, e.Channel));
         }
         static void CreateFolderCommand(Commands.CommandGroupBuilder group, string name, string type, string owner)
         {
@@ -160,7 +166,7 @@ namespace Nekobot
                 .FlagNsfw(true)
                 .Description($"I'll give you a random image from {booru} (optionally with tags)");
             if (aliases != null) foreach (var alias in aliases) cmd.Alias(alias);
-            cmd.Do(e => Booru(booru, e));
+            cmd.Do(async e => await Booru(booru, e));
         }
 
         internal static void AddCommands(Commands.CommandGroupBuilder group)
