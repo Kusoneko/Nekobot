@@ -54,13 +54,8 @@ namespace Nekobot
                 .Description("I'll give you a random quote from https://inspiration.julxzs.website/quotes")
                 .Do(async e =>
                 {
-                    var rclient = Helpers.GetRestClient("https://inspiration.julxzs.website");
-                    var request = new RestRequest("api/quote", Method.GET);
-                    var result = JObject.Parse(rclient.Execute<JObject>(request).Content)["quote"];
-                    string quote = result["quote"].ToString();
-                    string author = result["author"].ToString();
-                    string date = result["date"].ToString();
-                    await e.Channel.SendMessage($"\"{quote}\" - {author} {date}");
+                    var result = JObject.Parse(Helpers.GetRestClient("https://inspiration.julxzs.website").Execute<JObject>(new RestRequest("api/quote", Method.GET)).Content)["quote"];
+                    await e.Channel.SendMessage($"\"{result["quote"]}\" - {result["author"]} {result["date"]}");
                 });
 
             group.CreateCommand("version")
@@ -157,13 +152,8 @@ namespace Nekobot
                     {
                         request.AddQueryParameter("login", s);
                         JObject result = JObject.Parse(rclient.Execute(request).Content);
-                        if (Convert.ToBoolean(result["success"]) == false)
-                            await e.Channel.SendMessage($"{s} was not found.");
-                        else
-                        {
-                            string avatar = result["results"]["avatar"]["original"].ToString();
-                            await e.Channel.SendMessage($"{s}'s avatar: https:{avatar}");
-                        }
+                        await e.Channel.SendMessage(s + (result["success"].ToObject<bool>() == false
+                            ? " was not found." : $"'s avatar: https:{result["results"]["avatar"]["original"]}"));
                     }
                 });
 
@@ -175,12 +165,11 @@ namespace Nekobot
                     .Description("I'll tell you the last thing a lastfm user listened to.")
                     .Do(async e =>
                     {
-                        var api = new LastFM.UserApi(lfclient.Auth, lfclient.HttpClient);
                         var user = e.Args[0];
                         if (user == "") user = SQL.ReadUser(e.User.Id, "lastfm");
                         if (user != null)
                         {
-                            var d = (await api.GetRecentScrobbles(user, count: 1)).First();
+                            var d = (await new LastFM.UserApi(lfclient.Auth, lfclient.HttpClient).GetRecentScrobbles(user, count: 1)).First();
                             await e.Channel.SendMessage($"{(e.Args[0] == "" ? e.User.Name : user)} last listened to **{d.Name}** by **{d.ArtistName}**");
                         }
                         else await e.Channel.SendMessage($"I don't know your lastfm yet, please use the `setlastfm <username>` command.");
@@ -191,13 +180,14 @@ namespace Nekobot
                     .Description("I'll remember your lastfm username.")
                     .Do(async e =>
                     {
-                        var lastfm = $"'{e.Args[0]}'";
-                        if (lastfm.Length > 2 && lastfm.Length < 18)
+                        var lastfm = e.Args[0];
+                        if (lastfm.Any() && lastfm.Length < 16)
                         {
+                            lastfm = $"'{lastfm}'";
                             await SQL.AddOrUpdateUserAsync(e.User.Id, "lastfm", lastfm);
                             await e.Channel.SendMessage($"I'll remember your lastfm is {lastfm} now, {e.User.Name}.");
                         }
-                        else await e.Channel.SendMessage($"{lastfm} is not a valid lastfm username.");
+                        else await e.Channel.SendMessage($"'{lastfm}' is not a valid lastfm username.");
                     });
             }
 
@@ -334,7 +324,7 @@ The current topic is: {e.Channel.Topic}";
                 {
                     if (e.Args[0] == "") return;
                     foreach (User u in e.Message.MentionedUsers)
-                        await e.Channel.SendMessage(u.Mention + u.AvatarUrl == null ? " has no avatar." : $"'s avatar is: https://discordapp.com/api/{u.AvatarUrl}");
+                        await e.Channel.SendMessage(u.Mention + (u.AvatarUrl == null ? " has no avatar." : $"'s avatar is: {u.AvatarUrl}"));
                 });
 
             group.CreateCommand("rand")
@@ -365,8 +355,7 @@ The current topic is: {e.Channel.Topic}";
                         min = max;
                         max = z;
                     }
-                    ++max;
-                    await e.Channel.SendMessage($"Your number is **{new Random().Next(min,max)}**.");
+                    await e.Channel.SendMessage($"Your number is **{new Random().Next(min,max+1)}**.");
                 });
 
             group.CreateCommand("roll")
@@ -380,7 +369,7 @@ The current topic is: {e.Channel.Topic}";
                     bool valid = true;
                     foreach (string s in e.Args)
                     {
-                        int dummy = 0;
+                        int dummy;
                         if (!int.TryParse(s, out dummy))
                             valid = false;
                         if (s == "rick")
@@ -404,10 +393,10 @@ The current topic is: {e.Channel.Topic}";
                             await e.Channel.SendMessage($"You rolled {dice} different {sides}-sided dice {times} times... Result: **{roll}**");
                         }
                         else
-                            await e.Channel.SendMessage($"Arguments are not all numbers!");
+                            await e.Channel.SendMessage("Arguments are not all numbers!");
                     }
                     else
-                        await e.Channel.SendMessage($"https://www.youtube.com/watch?v=dQw4w9WgXcQ");
+                        await e.Channel.SendMessage("https://www.youtube.com/watch?v=dQw4w9WgXcQ");
                 });
 
             group.CreateCommand("lotto")
@@ -416,18 +405,11 @@ The current topic is: {e.Channel.Topic}";
                 {
                     List<int> lotto = new List<int>();
                     Random rnd = new Random();
-                    while (lotto.Count() < 6)
+                    for (var i = 0; i != 6; ++i)
                     {
-                        int number = rnd.Next(1, 60);
-                        for (int i = 0; i < lotto.Count(); i++)
-                        {
-                            if (lotto[i] == number)
-                            {
-                                lotto.Remove(number);
-                                break;
-                            }
-                        }
-                        lotto.Add(number);
+                        var number = rnd.Next(1, 60);
+                        if (!lotto.Exists(n => n == number))
+                            lotto.Add(number);
                     }
                     await e.Channel.SendMessage($"Your lucky numbers are **{lotto[0]}, {lotto[1]}, {lotto[2]}, {lotto[3]}, {lotto[4]}, {lotto[5]}**.");
                 });
@@ -600,9 +582,9 @@ The current topic is: {e.Channel.Topic}";
                 .Description("I'll set the permission level of the mentioned people to the level mentioned (cannot be higher than or equal to yours).")
                 .Do(async e =>
                 {
-                    int newPermLevel = 0;
+                    int newPermLevel;
                     int eUserPerm = Helpers.GetPermissions(e.User, e.Channel);
-                    if (e.Args[1] == "" || e.Message.MentionedUsers.Count() < 1)
+                    if (e.Args[1] == "" || e.Message.MentionedUsers.Any())
                         await e.Channel.SendMessage("You need to at least specify a permission level and mention one user.");
                     else if (!int.TryParse(e.Args[0], out newPermLevel))
                         await e.Channel.SendMessage("The first argument needs to be the new permission level.");
@@ -683,14 +665,13 @@ The current topic is: {e.Channel.Topic}";
         internal static JObject config;
         internal static ulong masterId;
 
-        internal static User GetNeko(Server s) => s.CurrentUser;
         internal static DiscordConfig Config => client.Config;
 
         static void InputThread()
         {
             for (;;)
             {
-                string input = Console.ReadLine();
+                /*string input = */Console.ReadLine();
             }
         }
 
@@ -834,7 +815,8 @@ The current topic is: {e.Channel.Topic}";
                 Environment.Exit(0);
             }
             masterId = config["master"].ToObject<ulong>();
-            Music.Folder = config["musicFolder"].ToString();
+            string musicFolder = config["musicFolder"].ToString();
+            Music.Folder = musicFolder;
             Music.UseSubdirs = config["musicUseSubfolders"].ToObject<bool>();
 
             client = new DiscordClient(new DiscordConfig
@@ -862,7 +844,7 @@ The current topic is: {e.Channel.Topic}";
         private static void UserJoined(object sender, UserEventArgs e)
         {
             if (!Flags.GetIgnored(e.User))
-                e.Server.DefaultChannel.SendMessage($"Welcome to {e.Server.Name}, {e.User.Mention}!");
+                e.Server.DefaultChannel.SendMessage($"Welcome to {e.Server.Name}, {e.User.Mention}! :hearts:");
         }
 
         private static void Disconnected(object sender, DisconnectedEventArgs e)

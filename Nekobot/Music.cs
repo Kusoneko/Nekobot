@@ -178,7 +178,7 @@ namespace Nekobot
         internal static bool HasFolder() => Folder.Length != 0;
         static IEnumerable<string> Files() => System.IO.Directory.EnumerateFiles(Folder, "*.*", UseSubdirs ? System.IO.SearchOption.AllDirectories : System.IO.SearchOption.TopDirectoryOnly).Where(s => exts.Contains(System.IO.Path.GetExtension(s)));
 
-        static Commands.CommandBuilder CreatePLCmd(Commands.CommandGroupBuilder group, string name, string parameter, string description, string alias) => CreatePLCmd(group, name, parameter, description, new string[]{alias});
+        static Commands.CommandBuilder CreatePLCmd(Commands.CommandGroupBuilder group, string name, string parameter, string description, string alias) => CreatePLCmd(group, name, parameter, description, new[]{alias});
         static Commands.CommandBuilder CreatePLCmd(Commands.CommandGroupBuilder group, string name, string parameter, string description, string[] aliases = null)
         {
             var cmd = group.CreateCommand(name)
@@ -223,7 +223,7 @@ namespace Nekobot
                 return ret;
             }
 
-            public void CreatePermalinkCmd(Commands.CommandGroupBuilder group, string name, string alias, bool is_playlist) => CreatePermalinkCmd(group, name, new string[]{alias}, is_playlist);
+            public void CreatePermalinkCmd(Commands.CommandGroupBuilder group, string name, string alias, bool is_playlist) => CreatePermalinkCmd(group, name, new[]{alias}, is_playlist);
             public void CreatePermalinkCmd(Commands.CommandGroupBuilder group, string name, string[] aliases, bool is_playlist)
             {
                 CreatePLCmd(group, name, $"SoundCloud {(!is_playlist ? "Track" : "Playlist")} Permalink"/*(s)"*/, $"I'll add SoundCloud {(is_playlist ? "playlist" : "")} songs to the playlist!", aliases)
@@ -239,7 +239,7 @@ namespace Nekobot
                         }
                     });
             }
-            public void CreateSearchCmd(Commands.CommandGroupBuilder group, string name, string alias, bool is_playlist) => CreateSearchCmd(group, name, new string[]{alias}, is_playlist);
+            public void CreateSearchCmd(Commands.CommandGroupBuilder group, string name, string alias, bool is_playlist) => CreateSearchCmd(group, name, new[]{alias}, is_playlist);
             public void CreateSearchCmd(Commands.CommandGroupBuilder group, string name, string[] aliases, bool is_playlist)
             {
                 CreatePLCmd(group, name, is_playlist ? "SoundCloud Playlist Keywords" : "song to find",
@@ -331,11 +331,8 @@ namespace Nekobot
             return Task.WhenAll(
               streams.Select(s =>
               {
-                  Channel c = client.GetChannel(s);
-                  if (c.Type == ChannelType.Voice)
-                      return Task.Run(() => Stream(c));
-                  else
-                      return null;
+                  var c = client.GetChannel(s);
+                  return c.Type == ChannelType.Voice ? Task.Run(() => Stream(c)) : null;
               })
               .Where(t => t != null)
               .ToArray());
@@ -399,9 +396,8 @@ namespace Nekobot
                 {
                     var rclient = Helpers.GetRestClient("http://www.youtubeinmp3.com/fetch/");
                     MatchCollection m = Regex.Matches(e.Args[0], @"youtu(?:be\.com\/(?:v\/|e(?:mbed)?\/|watch\?v=)|\.be\/)([\w-_]{11}\b)", RegexOptions.IgnoreCase);
-                    foreach (Match match in m)
+                    foreach (var link in from Match match in m select $"youtube.com/watch?v={match.Groups[1]}")
                     {
-                        var link = $"youtube.com/watch?v={match.Groups[1]}";
                         Tuple<string,string> uri_title;
                         try { var video = YouTube.Default.GetVideo(link); uri_title = Tuple.Create(video.Uri, video.Title); }
                         catch
@@ -410,10 +406,9 @@ namespace Nekobot
                             var json = Newtonsoft.Json.Linq.JObject.Parse(rclient.Execute(new RestSharp.RestRequest($"?format=JSON&video={System.Net.WebUtility.UrlEncode(link)}", RestSharp.Method.GET)).Content);
                             uri_title = Tuple.Create(json["link"].ToString(), json["title"].ToString());
                         }
-                        if (playlist[e.User.VoiceChannel.Id].TryInsert(new Song(uri_title.Item1, Song.EType.Youtube, e.User, $"{uri_title.Item2} ({link})")))
-                            e.Channel.SendMessage($"{uri_title.Item2} added to the playlist.");
-                        else
-                            e.Channel.SendMessage($"{e.User.Mention} Your request ({uri_title.Item2}) is already in the playlist.");
+                        e.Channel.SendMessage(playlist[e.User.VoiceChannel.Id].TryInsert(new Song(uri_title.Item1, Song.EType.Youtube, e.User, $"{uri_title.Item2} ({link})"))
+                            ? $"{uri_title.Item2} added to the playlist."
+                            : $"{e.User.Mention} Your request ({uri_title.Item2}) is already in the playlist.");
                     }
                     if (m.Count == 0)
                         e.Channel.SendMessage($"None of {e.Args[0]} could be added to playlist because no valid youtube links were found within.");
@@ -423,7 +418,7 @@ namespace Nekobot
             {
                 SC sc = new SC(Program.config["SoundCloud"]["client_id"].ToString(), Console.Title);
                 sc.CreateSearchCmd(group, "scsearch", "scs", false);
-                sc.CreatePermalinkCmd(group, "screquest", new string[]{"sctrack", "sctr"}, false);
+                sc.CreatePermalinkCmd(group, "screquest", new[]{"sctrack", "sctr"}, false);
                 sc.CreatePermalinkCmd(group, "scplaylist", "scpl", false);
                 //sc.CreateSearchCmd(group, "scplsearch", "scpls", true); // Until this stops giving Gateway timeouts, RIP.
             }
@@ -438,16 +433,9 @@ namespace Nekobot
                         return;
                     }
                     args = args.ToLower();
-                    foreach (var file in Files())
-                    {
-                        if (System.IO.Path.GetFileNameWithoutExtension(file).ToLower().Contains(args))
-                        {
-                            playlist[e.User.VoiceChannel.Id].InsertFile(file, e);
-                            e.Channel.SendMessage($"{e.User.Mention} Your request has been added to the list.");
-                            return;
-                        }
-                    }
-                    e.Channel.SendMessage($"{e.User.Mention} Your request was not found.");
+                    var file = Files().FirstOrDefault(f => System.IO.Path.GetFileNameWithoutExtension(f).ToLower().Contains(args));
+                    if (file != null) playlist[e.User.VoiceChannel.Id].InsertFile(file, e);
+                    e.Channel.SendMessage($"{e.User.Mention} Your request {(file != null ? "has been added to the list" : "was not found")}.");
                 });
 
             group.CreateCommand("skip")

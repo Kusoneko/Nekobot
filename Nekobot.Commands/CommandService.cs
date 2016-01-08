@@ -366,7 +366,7 @@ namespace Nekobot.Commands
                 string flags ="**Flags:** ";
                 if (command.MusicFlag) flags += "Music ";
                 if (command.NsfwFlag) flags += "NSFW ";
-                flags.TrimEnd(' ');
+                flags = flags.TrimEnd(' ');
                 output.AppendLine(flags);
             }
         }

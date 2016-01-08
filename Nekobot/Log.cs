@@ -1,6 +1,7 @@
 ﻿using Discord;
 using Discord.Logging;
 using System;
+using System.Linq;
 using System.Text;
 
 namespace Nekobot
@@ -16,11 +17,7 @@ namespace Nekobot
         public static void Write(LogMessageEventArgs e)
         {
 #if !DEBUG
-            if (e.Severity > LogSeverity.Info) return;
-#endif
-            bool to_console = e.Severity <= Program.Config.LogLevel;
-#if !DEBUG
-            if (!to_console) return;
+            if (e.Severity > LogSeverity.Info || e.Severity > Program.Config.LogLevel) return;
 #endif
 
             //Color
@@ -70,12 +67,9 @@ namespace Nekobot
                 builder.Append(sourceName);
                 builder.Append("] ");
             }
-            for (int i = 0; i < text.Length; i++)
+            foreach (var c in text.Where(c => !char.IsControl(c))) //Strip control chars
             {
-                //Strip control chars
-                char c = text[i];
-                if (!char.IsControl(c))
-                    builder.Append(c);
+                builder.Append(c);
             }
             if (exMessage != null)
             {
@@ -84,7 +78,9 @@ namespace Nekobot
             }
 
             text = builder.ToString();
-            if (to_console)
+#if DEBUG
+            if (e.Severity <= Program.Config.LogLevel)
+#endif
             {
                 Output(text, color);
             }

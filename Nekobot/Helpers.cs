@@ -15,9 +15,8 @@ namespace Nekobot
         {
             if (user.Id == Program.masterId)
                 return 10;
-            if (SQL.ExecuteScalarPos($"select count(perms) from users where user = '{user.Id}'"))
-                return SQL.ReadInt(SQL.ReadUser(user.Id, "perms"));
-            return 0;
+            return SQL.ExecuteScalarPos($"select count(perms) from users where user = '{user.Id}'")
+                ? SQL.ReadInt(SQL.ReadUser(user.Id, "perms")) : 0;
         }
 
         internal static void OnOffCmd(Commands.CommandEventArgs e, Action<bool> action, string failmsg = null)
@@ -59,7 +58,7 @@ namespace Nekobot
                         message += u.Mention + ' ';
                 await e.Channel.SendMessage(message);
             }
-            if (mentions_everyone || mentions_neko || (!perform_when_empty && e.Message.MentionedUsers.Count() == 0))
+            if (mentions_everyone || mentions_neko || (!perform_when_empty && !e.Message.MentionedUsers.Any()))
                 await e.Channel.SendMessage(reaction);
         }
 

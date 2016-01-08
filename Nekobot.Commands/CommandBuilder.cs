@@ -175,9 +175,11 @@ namespace Nekobot.Commands
             => CreateCommand("");
         public CommandBuilder CreateCommand(string cmd)
         {
-            var command = new Command(CommandBuilder.AppendPrefix(_prefix, cmd));
-            command.NsfwFlag = _defaultNsfwFlag;
-            command.MusicFlag = _defaultMusicFlag;
+            var command = new Command(CommandBuilder.AppendPrefix(_prefix, cmd))
+            {
+                NsfwFlag = _defaultNsfwFlag,
+                MusicFlag = _defaultMusicFlag
+            };
             return new CommandBuilder(_service, command, _prefix, _category, _checks);
         }
     }

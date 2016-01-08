@@ -23,7 +23,7 @@ namespace Nekobot
         {
             if (chatbots.Count() == 0) return; // No bot sessions
             string msg = e.Message.Text;
-            string neko = e.Channel.IsPrivate ? "" : Program.GetNeko(e.Server).Name;
+            string neko = e.Channel.IsPrivate ? "" : e.Server.CurrentUser.Name;
             if (chatbots.ContainsKey(e.Channel.Id) && (e.Channel.IsPrivate || HasNeko(msg, neko) || HasNeko(msg, System.Text.RegularExpressions.Regex.Replace(neko, @"\p{Cs}", ""))))
             {
                 string chat;

@@ -133,7 +133,7 @@ namespace Nekobot
         static async Task LewdSX(string chan, Discord.Channel c)
         {
             string result = Helpers.GetRestClient("https://lewdchan.com").Execute(new RestRequest($"{chan}/src/list.php", Method.GET)).Content;
-            List<string> list = result.Split(new string[] { Environment.NewLine }, StringSplitOptions.None).ToList();
+            List<string> list = result.Split(new[]{ Environment.NewLine }, StringSplitOptions.None).ToList();
             Regex re = new Regex(@"([^\s]+(\.(jpg|jpeg|png|gif|bmp)))");
             foreach (Match m in re.Matches(result))
                 list.Add(m.Value);
@@ -156,7 +156,7 @@ namespace Nekobot
                     .Description($"I'll give you a random {type} image from {owner}'s collection")
                     .Do(e => e.Channel.SendFile(Folders(folder)));
         }
-        static void CreateBooruCommand(Commands.CommandGroupBuilder group, string booru, string alias) => CreateBooruCommand(group, booru, new string[]{alias});
+        static void CreateBooruCommand(Commands.CommandGroupBuilder group, string booru, string alias) => CreateBooruCommand(group, booru, new[]{alias});
         static void CreateBooruCommand(Commands.CommandGroupBuilder group, string booru, string[] aliases = null)
         {
             var cmd = group.CreateCommand(booru);
@@ -240,7 +240,7 @@ namespace Nekobot
             CreateBooruCommand(group, "yandere");
             CreateBooruCommand(group, "lolibooru", "loli");
             if (Program.config["Booru"].ToObject<JObject>().Property("sankaku") != null)
-                CreateBooruCommand(group, "sankaku", new string[]{"sankakuchan", "schan"});
+                CreateBooruCommand(group, "sankaku", new[]{"sankakuchan", "schan"});
             //CreateBooruCommand(group, "sankakuidol", "sidol"); // Idol disables their API for some reason.
             CreateBooruCommand(group, "e621", "furry");
         }
