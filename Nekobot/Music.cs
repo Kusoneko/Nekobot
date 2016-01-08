@@ -49,9 +49,6 @@ namespace Nekobot
         {
             internal void Initialize()
             {
-                lock (voteskip) voteskip.Clear();
-                lock (votereset) votereset.Clear();
-                lock (voteencore) voteencore.Clear();
                 lock (this)
                 {
                     var files = Files();
@@ -65,6 +62,21 @@ namespace Nekobot
                         Add(new Song(mp3));
                     }
                 }
+            }
+            // Return true if we're resetting
+            internal bool Cleanup()
+            {
+                lock (voteskip) voteskip.Clear();
+                lock (votereset) votereset.Clear();
+                lock (voteencore) voteencore.Clear();
+                skip = false;
+                if (reset)
+                {
+                    reset = false;
+                    return true;
+                }
+                RemoveAt(0);
+                return false;
             }
 
             #region Information
@@ -315,13 +327,7 @@ namespace Nekobot
                     catch (OperationCanceledException err) { Program.log.Error("Stream", err.Message); }
                 });
                 _client.Wait(); // Prevent endless queueing which would eventually eat up all the ram
-                pl.skip = false;
-                if (pl.reset)
-                {
-                    pl.reset = false;
-                    break;
-                }
-                pl.RemoveAt(0);
+                if (pl.Cleanup()) break;
             }
             await Program.Audio.Leave(c.Server);
         }
