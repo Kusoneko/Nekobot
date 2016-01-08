@@ -92,12 +92,13 @@ namespace Nekobot.Commands
 
                 //Check for command char if one is provided
                 var chars = Config.CommandChars;
-                if (chars.Length > 0)
+                bool mentionreq = Config.MentionCommandChar >= 1;
+                if (chars.Any() || mentionreq)
                 {
                     bool hasCommandChar = chars.Contains(msg[0]);
                     if (!hasCommandChar && (e.Message.Channel.IsPrivate ? Config.RequireCommandCharInPrivate : Config.RequireCommandCharInPublic))
                     {
-                        if (Config.MentionCommandChar >= 1 && e.Message.IsMentioningMe())
+                        if (mentionreq && e.Message.IsMentioningMe())
                         {
                             string neko = '@'+e.Server.CurrentUser.Name;
                             if (neko.Length+2 > msg.Length)
@@ -253,16 +254,12 @@ namespace Nekobot.Commands
                 output.Append("\n\n");
 
                 var chars = Config.CommandChars;
-                if (chars.Length > 0)
-                {
-                    if (chars.Length == 1)
-                        output.AppendLine($"You can use `{chars[0]}` to call a command.");
-                    else
-                        output.AppendLine($"You can use `{string.Join(" ", chars.Take(chars.Length - 1))}` or `{chars.Last()}` to call a command.");
-                    output.AppendLine($"`{chars[0]}help <command>` can tell you more about how to use a command.");
-                }
-                else
-                    output.AppendLine($"`help <command>` can tell you more about how to use a command.");
+                bool has_chars = chars.Any();
+                if (has_chars)
+                    output.AppendLine($"You can use `{(chars.Length == 1 ? chars[0].ToString() : $"{string.Join(" ", chars.Take(chars.Length - 1))}` or `{chars.Last()}")}` to call a command.");
+                if (Config.MentionCommandChar != 0)
+                    output.AppendLine($"You can {(has_chars ? "also " : "")}@mention me before {(Config.MentionCommandChar == 1 ? "" : "or after ")}a command{(has_chars ? ", instead" : "")}.");
+                output.AppendLine($"`{(has_chars ? chars[0].ToString() : "")}help <command>` can tell you more about how to use a command.");
             }
 
             return (replyChannel ?? channel).SendMessage(output.ToString());
