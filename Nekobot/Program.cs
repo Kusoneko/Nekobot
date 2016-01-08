@@ -408,7 +408,7 @@ The current topic is: {e.Channel.Topic}";
                     for (var i = 0; i != 6; ++i)
                     {
                         var number = rnd.Next(1, 60);
-                        if (!lotto.Exists(n => n == number))
+                        if (!lotto.Contains(number))
                             lotto.Add(number);
                     }
                     await e.Channel.SendMessage($"Your lucky numbers are **{lotto[0]}, {lotto[1]}, {lotto[2]}, {lotto[3]}, {lotto[4]}, {lotto[5]}**.");
