@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections.Concurrent;
 using System.Linq;
 using Discord;
 using ChatterBotAPI;
@@ -8,7 +8,7 @@ namespace Nekobot
 {
     class Chatbot
     {
-        static Dictionary<long, ChatterBotSession> chatbots = new Dictionary<long, ChatterBotSession>();
+        static ConcurrentDictionary<ulong, ChatterBotSession> chatbots = new ConcurrentDictionary<ulong, ChatterBotSession>();
 
         static bool HasNeko(string msg, string neko)
         {
@@ -19,16 +19,18 @@ namespace Nekobot
             }
             return false;
         }
-        internal static async void Do(MessageEventArgs e)
+        internal static async System.Threading.Tasks.Task Do(MessageEventArgs e)
         {
             if (chatbots.Count() == 0) return; // No bot sessions
             string msg = e.Message.Text;
             string neko = e.Channel.IsPrivate ? "" : Program.GetNeko(e.Server).Name;
             if (chatbots.ContainsKey(e.Channel.Id) && (e.Channel.IsPrivate || HasNeko(msg, neko) || HasNeko(msg, System.Text.RegularExpressions.Regex.Replace(neko, @"\p{Cs}", ""))))
             {
-                var chat = System.Net.WebUtility.HtmlDecode(chatbots[e.Channel.Id].Think(msg));
-                for (int i = 10; i != 0; --i) try { await Program.client.SendMessage(e.Channel, chat); break; }
-                    catch (HttpException ex) { if (i == 1) System.Console.WriteLine($"Error: {ex.Message}\n Could not SendMessage to {(e.Channel.IsPrivate ? "private" : "public")} channel {e.Channel} in response to {e.User}'s message: {e.Message.Text}"); }
+                string chat;
+                lock (chatbots[e.Channel.Id]) chat = chatbots[e.Channel.Id].Think(msg); // Think in order.
+                chat = System.Net.WebUtility.HtmlDecode(chat);
+                for (int i = 10; i != 0; --i) try { await e.Channel.SendMessage(chat); break; }
+                    catch (Discord.Net.HttpException ex) { if (i == 1) Log.Write(LogSeverity.Error, $"{ex.Message}\nCould not SendMessage to {(e.Channel.IsPrivate ? "private" : "public")} channel {e.Channel} in response to {e.User}'s message: {e.Message.Text}"); }
             }
         }
 
@@ -36,7 +38,7 @@ namespace Nekobot
         {
             var reader = SQL.ReadChannels("chatbot <> -1", "channel,chatbot");
             while (reader.Read())
-                chatbots[System.Convert.ToInt64(reader["channel"].ToString())] =
+                chatbots[System.Convert.ToUInt64(reader["channel"].ToString())] =
                     CreateBotSession((ChatterBotType)System.Convert.ToInt32(reader["chatbot"]));
         }
 
@@ -53,34 +55,31 @@ namespace Nekobot
                 .Parameter("type (clever or jabberwacky)", Commands.ParameterType.Optional)
                 .MinPermissions(3)
                 .Description("I'll turn on/off the chatbot for this channel.\nIf no args, I'll tell you if there's a bot on for this channel.")
-                .Do(async e =>
+                .Do(e =>
                 {
                     bool botstatus = chatbots.ContainsKey(e.Channel.Id);
-                    if (e.Args.Count() != 0)
+                    if (e.Args.Any())
                     {
-                        bool on = e.Args[0] == "on";
-                        bool off = !on && e.Args[0] == "off";
-                        if (on || off)
+                        Helpers.OnOffCmd(e, on =>
                         {
-                            if (botstatus == on || botstatus != off)
-                                await Program.client.SendMessage(e.Channel, "The bot is already " + (botstatus ? "on" : "off") + $" for {e.Channel}");
+                            if (botstatus == on)
+                                e.Channel.SendMessage("The bot is already " + (botstatus ? "on" : "off") + $" for {e.Channel}");
                             else
                             {
                                 int bottype = -1;
                                 if (botstatus)
-                                    chatbots.Remove(e.Channel.Id);
+                                    Helpers.Remove(chatbots, e.Channel.Id);
                                 else
                                 {
                                     bottype = GetBotType(e.Args.Count() == 1 ? "" : e.Args[0]);
                                     chatbots[e.Channel.Id] = CreateBotSession((ChatterBotType)bottype);
                                 }
-                                await Program.client.SendMessage(e.Channel, "The bot is now " + (!botstatus ? "on" : "off") + $" for {e.Channel}");
+                                e.Channel.SendMessage("The bot is now " + (!botstatus ? "on" : "off") + $" for {e.Channel}");
                                 SQL.AddOrUpdateFlag(e.Channel.Id, "chatbot", bottype.ToString());
                             }
-                        }
-                        else await Program.client.SendMessage(e.Channel, "First argument must be on or off.");
+                        }, "First argument must be on or off.");
                     }
-                    else await Program.client.SendMessage(e.Channel, "The bot is currently " + (botstatus ? "on" : "off") + $" for {e.Channel}.");
+                    else e.Channel.SendMessage("The bot is currently " + (botstatus ? "on" : "off") + $" for {e.Channel}.");
                 });
         }
     }

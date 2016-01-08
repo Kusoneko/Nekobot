@@ -11,15 +11,15 @@ namespace Nekobot.Commands
 
         private readonly List<Command> _commands;
         private readonly Dictionary<string, CommandMap> _items;
-        private bool _isHidden;
+        private bool _isVisible, _hasNonAliases, _hasSubGroups;
 
         public string Name => _name;
         public string FullName => _fullName;
-        public bool IsHidden => _isHidden;
+        public bool IsVisible => _isVisible;
+        public bool HasNonAliases => _hasNonAliases;
+        public bool HasSubGroups => _hasSubGroups;
         public IEnumerable<Command> Commands => _commands;
         public IEnumerable<CommandMap> SubGroups => _items.Values;
-        /*public IEnumerable<Command> SubCommands => _items.Select(x => x.Value._command).Where(x => x != null);
-        public IEnumerable<CommandMap> SubGroups => _items.Select(x => x.Value).Where(x => x._items.Count > 0);*/
 
         public CommandMap(CommandMap parent, string name, string fullName)
         {
@@ -28,7 +28,9 @@ namespace Nekobot.Commands
             _fullName = fullName;
             _items = new Dictionary<string, CommandMap>();
             _commands = new List<Command>();
-            _isHidden = true;
+            _isVisible = false;
+            _hasNonAliases = false;
+            _hasSubGroups = false;
         }
         
         public CommandMap GetItem(string text)
@@ -81,14 +83,14 @@ namespace Nekobot.Commands
             return null;
         }
 
-        public void AddCommand(string text, Command command)
+        public void AddCommand(string text, Command command, bool isAlias)
         {
-            AddCommand(0, text.Split(' '), command);
+            AddCommand(0, text.Split(' '), command, isAlias);
         }
-        private void AddCommand(int index, string[] parts, Command command)
+        private void AddCommand(int index, string[] parts, Command command, bool isAlias)
         {
-            if (!command.IsHidden && _isHidden)
-                _isHidden = false;
+            if (!command.IsHidden)
+                _isVisible = true;
 
             if (index != parts.Length)
             {
@@ -99,33 +101,38 @@ namespace Nekobot.Commands
                 {
                     nextGroup = new CommandMap(this, name, fullName);
                     _items.Add(name, nextGroup);
+                    _hasSubGroups = true;
                 }
-                nextGroup.AddCommand(index + 1, parts, command);
+                nextGroup.AddCommand(index + 1, parts, command, isAlias);
             }
             else
+            {
                 _commands.Add(command);
+                if (!isAlias)
+                    _hasNonAliases = true;
+            }
         }
 
         public bool CanRun(User user, Channel channel, out string error)
         {
+            error = null;
             if (_commands.Count > 0)
             {
                 foreach (var cmd in _commands)
                 {
-                    if (!cmd.CanRun(user, channel, out error))
-                        return false;
+                    if (cmd.CanRun(user, channel, out error))
+                        return true;
                 }
             }
             if (_items.Count > 0)
             {
                 foreach (var item in _items)
                 {
-                    if (!item.Value.CanRun(user, channel, out error))
-                        return false;
+                    if (item.Value.CanRun(user, channel, out error))
+                        return true;
                 }
             }
-            error = null;
-            return true;
+            return false;
         }
     }
 }

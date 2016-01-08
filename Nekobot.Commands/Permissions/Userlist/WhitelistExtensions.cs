@@ -1,7 +1,15 @@
-﻿namespace Nekobot.Commands.Permissions.Userlist
+﻿using Discord;
+
+namespace Nekobot.Commands.Permissions.Userlist
 {
     public static class WhitelistExtensions
     {
+        public static DiscordClient UsingGlobalWhitelist(this DiscordClient client, params ulong[] initialUserIds)
+        {
+            client.Services.Add(new WhitelistService(initialUserIds));
+            return client;
+        }
+
         public static CommandBuilder UseGlobalWhitelist(this CommandBuilder builder)
         {
             builder.AddCheck(new WhitelistChecker(builder.Service.Client));

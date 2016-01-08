@@ -9,8 +9,9 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Nekobot.Commands</RootNamespace>
     <AssemblyName>Nekobot.Commands</AssemblyName>
-    <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.6</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -20,6 +21,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -42,11 +44,13 @@
   <ItemGroup>
     <Compile Include="Command.cs" />
     <Compile Include="CommandBuilder.cs" />
+    <Compile Include="CommandErrorEventArgs.cs" />
+    <Compile Include="CommandEventArgs.cs" />
     <Compile Include="CommandExtensions.cs" />
     <Compile Include="CommandMap.cs" />
+    <Compile Include="CommandParameter.cs" />
     <Compile Include="CommandParser.cs" />
     <Compile Include="CommandService.cs" />
-    <Compile Include="CommandService.Events.cs" />
     <Compile Include="CommandServiceConfig.cs" />
     <Compile Include="Permissions\GenericPermissionChecker.cs" />
     <Compile Include="Permissions\IPermissionChecker.cs" />

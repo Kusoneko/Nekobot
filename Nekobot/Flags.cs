@@ -12,9 +12,9 @@ namespace Nekobot
         internal static bool GetIgnored(Channel chan, User user) => GetIgnored(chan) || GetIgnored(user);
         internal static bool GetIgnored(User user) => GetIgnored("user", "users", user.Id);
         internal static bool GetIgnored(Channel chan) => GetIgnored("channel", "flags", chan.Id);
-        static bool GetIgnored(string row, string table, long id) => SQL.ReadBool(SQL.ReadSingle(row, table, id, "ignored"));
+        static bool GetIgnored(string row, string table, ulong id) => SQL.ReadBool(SQL.ReadSingle(row, table, id, "ignored"));
 
-        internal static async Task<string> SetIgnored(string row, string table, long id, char symbol, int perms, int their_perms = 0)
+        internal static async Task<string> SetIgnored(string row, string table, ulong id, char symbol, int perms, int their_perms = 0)
         {
             if (symbol == '#' && perms <3)
                 return $"You are not worthy of changing channel ignored status (permissions < 3).";
@@ -34,9 +34,9 @@ namespace Nekobot
         internal static bool GetMusic(User user)
         {
             var reader = SQL.ReadChannels("music = 1");
-            List<long> streams = new List<long>();
+            List<ulong> streams = new List<ulong>();
             while (reader.Read())
-                streams.Add(Convert.ToInt64(reader["channel"].ToString()));
+                streams.Add(Convert.ToUInt64(reader["channel"].ToString()));
             return user.VoiceChannel != null && streams.Contains(user.VoiceChannel.Id);
         }
 
@@ -47,14 +47,7 @@ namespace Nekobot
             group.CreateCommand("nsfw status")
                 .Alias("canlewd status")
                 .Description("I'll tell you if this channel allows nsfw commands.")
-                .Do(async e =>
-                {
-                    bool nsfw = GetNsfw(e.Channel);
-                    if (nsfw)
-                        await Program.client.SendMessage(e.Channel, "This channel allows nsfw commands.");
-                    else
-                        await Program.client.SendMessage(e.Channel, "This channel doesn't allow nsfw commands.");
-                });
+                .Do(async e => await e.Channel.SendMessage($"This channel {(GetNsfw(e.Channel) ? "allows" : "doesn't allow")} nsfw commands."));
 
             // Moderator Commands
             group.CreateCommand("nsfw")
@@ -62,23 +55,19 @@ namespace Nekobot
                 .Parameter("on/off", Commands.ParameterType.Required)
                 .MinPermissions(1)
                 .Description("I'll set a channel's nsfw flag to on or off.")
-                .Do(async e =>
+                .Do(e =>
                 {
-                    bool on = e.Args[0] == "on";
-                    bool off = !on && e.Args[0] == "off";
-                    if (on || off)
+                    Helpers.OnOffCmd(e, on =>
                     {
-                        bool nsfw = GetNsfw(e.Channel);
                         string status = on ? "allow" : "disallow";
-                        if (nsfw == on || nsfw != off)
-                            await Program.client.SendMessage(e.Channel, $"<@{e.User.Id}>, this channel is already {status}ing nsfw commands.");
+                        if (GetNsfw(e.Channel) == on)
+                            e.Channel.SendMessage($"{e.User.Mention}, this channel is already {status}ing nsfw commands.");
                         else
                         {
-                            await SQL.AddOrUpdateFlagAsync(e.Channel.Id, "nsfw", off ? "0" : "1");
-                            await Program.client.SendMessage(e.Channel, $"I've set this channel to {status} nsfw commands.");
+                            SQL.AddOrUpdateFlag(e.Channel.Id, "nsfw", on ? "1" : "0");
+                            e.Channel.SendMessage($"I've set this channel to {status} nsfw commands.");
                         }
-                    }
-                    else await Program.client.SendMessage(e.Channel, $"<@{e.User.Id}>, '{String.Join(" ", e.Args)}' isn't a valid argument. Please use on or off instead.");
+                    });
                 });
 
             // Administrator Commands
@@ -90,20 +79,17 @@ namespace Nekobot
                 .Description("I'll ignore commands coming from a particular channel or user")
                 .Do(async e =>
                 {
-                    if (e.Message.MentionedChannels.Count() > 0 || e.Message.MentionedUsers.Count() > 0)
+                    if (e.Message.MentionedChannels.Any() || e.Message.MentionedUsers.Any())
                     {
-                        int perms = Program.GetPermissions(e.User, e.Channel);
+                        int perms = Helpers.GetPermissions(e.User, e.Channel);
                         string reply = "";
                         foreach (Channel c in e.Message.MentionedChannels)
                             reply += (reply != "" ? "\n" : "") + await SetIgnored("channel", "flags", c.Id, '#', perms);
                         foreach (User u in e.Message.MentionedUsers)
-                            reply += (reply != "" ? "\n" : "") + await SetIgnored("user", "users", u.Id, '@', perms, Program.GetPermissions(u, e.Channel));
-                        await Program.client.SendMessage(e.Channel, reply);
+                            reply += (reply != "" ? "\n" : "") + await SetIgnored("user", "users", u.Id, '@', perms, Helpers.GetPermissions(u, e.Channel));
+                        await e.Channel.SendMessage(reply);
                     }
-                    else
-                    {
-                        await Program.client.SendMessage(e.Channel, "You need to mention at least one user or channel!");
-                    }
+                    else await e.Channel.SendMessage("You need to mention at least one user or channel!");
                 });
         }
     }

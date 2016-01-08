@@ -7,81 +7,83 @@ using Discord;
 
 namespace Nekobot.Commands
 {
-    /// <summary> A Discord.Net client with extensions for handling common bot operations like text commands. </summary>
     public partial class CommandService : IService
     {
-        private const string DefaultPermissionError = "You do not have permission to access this command.";
+        private readonly List<Command> _allCommands;
+        private readonly Dictionary<string, CommandMap> _categories;
+        private readonly CommandMap _map; //Command map stores all commands by their input text, used for fast resolving and parsing
 
-        private readonly CommandServiceConfig _config;
-        private readonly CommandGroupBuilder _root;
-        private DiscordClient _client;
-
-        public DiscordClient Client => _client;
-        public CommandGroupBuilder Root => _root;
+        public CommandServiceConfig Config { get; }
+        public CommandGroupBuilder Root { get; }
+        public DiscordClient Client { get; private set; }
 
         //AllCommands store a flattened collection of all commands
         public IEnumerable<Command> AllCommands => _allCommands;
-        private readonly List<Command> _allCommands;
+
         private Func<Channel, bool> _getNsfwFlag;
         private Func<User, bool> _getMusicFlag;
         private Func<Channel, User, bool> _getIgnoredChannelFlag;
 
-        //Command map stores all commands by their input text, used for fast resolving and parsing
-        private readonly CommandMap _map;
-
         //Groups store all commands by their module, used for more informative help
         internal IEnumerable<CommandMap> Categories => _categories.Values;
-        private readonly Dictionary<string, CommandMap> _categories;
 
         //Allow stuff to happen when we don't handle a command.
         public Action<MessageEventArgs> NonCommands;
 
+        public event EventHandler<CommandEventArgs> CommandExecuted = delegate { };
+        public event EventHandler<CommandErrorEventArgs> CommandErrored = delegate { };
+
+        private void OnCommand(CommandEventArgs args)
+            => CommandExecuted(this, args);
+        private void OnCommandError(CommandErrorType errorType, CommandEventArgs args, Exception ex = null)
+            => CommandErrored(this, new CommandErrorEventArgs(errorType, args, ex));
+
         public CommandService(CommandServiceConfig config, Func<Channel, bool> getNsfwFlag = null, Func<User, bool> getMusicFlag = null, Func<Channel, User, bool> getIgnoredChannelFlag = null)
         {
-            _config = config;
+            Config = config;
+
             _getNsfwFlag = getNsfwFlag;
             _getMusicFlag = getMusicFlag;
             _getIgnoredChannelFlag = getIgnoredChannelFlag;
             _allCommands = new List<Command>();
             _map = new CommandMap(null, "", "");
             _categories = new Dictionary<string, CommandMap>();
-            _root = new CommandGroupBuilder(this, "", null);
+            Root = new CommandGroupBuilder(this, "", null);
         }
 
         void IService.Install(DiscordClient client)
         {
-            _client = client;
-            _config.Lock();
+            Client = client;
+            Config.Lock();
 
-            if (_config.HelpMode != HelpMode.Disable)
+            if (Config.HelpMode != HelpMode.Disable)
             {
                 CreateCommand("help")
                     .Parameter("command", ParameterType.Multiple)
                     .Hide()
                     .Description("Returns information about commands.")
-                    .Do((Func<CommandEventArgs, Task>)(async e =>
+                    .Do(async e =>
                     {
-                        Channel replyChannel = _config.HelpMode == HelpMode.Public ? e.Channel : await client.CreatePMChannel(e.User);
+                        Channel replyChannel = Config.HelpMode == HelpMode.Public ? e.Channel : await e.User.CreatePMChannel().ConfigureAwait(false);
                         if (e.Args.Length > 0) //Show command help
                         {
                             var map = _map.GetItem(string.Join(" ", e.Args));
                             if (map != null)
-                                await ShowCommandHelp(map, e.User, e.Channel, replyChannel);
+                                await ShowCommandHelp(map, e.User, e.Channel, replyChannel).ConfigureAwait(false);
                             else
-                                await client.SendMessage(replyChannel, "Unable to display help: Unknown command.");
+                                await replyChannel.SendMessage("Unable to display help: Unknown command.").ConfigureAwait(false);
                         }
                         else //Show general help
-                            
                             await ShowGeneralHelp(e.User, e.Channel, replyChannel);
-                    }));
+                    });
             }
 
             client.MessageReceived += async (s, e) =>
             {
                 if (_allCommands.Count == 0)  return;
-                if (e.Message.IsAuthor) return;
+                if (e.Message.User == null || e.Message.User.Id == Client.CurrentUser.Id) return;
 
-                string msg = e.Message.Text;
+                string msg = e.Message.RawText;
                 if (msg.Length == 0) return;
 
                 // Check ignored before doing work
@@ -89,17 +91,16 @@ namespace Nekobot.Commands
                     return;
 
                 //Check for command char if one is provided
-                var chars = _config.CommandChars;
+                var chars = Config.CommandChars;
                 if (chars.Length > 0)
                 {
                     bool hasCommandChar = chars.Contains(msg[0]);
-                    if (!hasCommandChar && (e.Message.Channel.IsPrivate ? _config.RequireCommandCharInPrivate : _config.RequireCommandCharInPublic))
+                    if (!hasCommandChar && (e.Message.Channel.IsPrivate ? Config.RequireCommandCharInPrivate : Config.RequireCommandCharInPublic))
                     {
-                        if (_config.MentionCommandChar >= 1 && e.Message.IsMentioningMe)
+                        if (Config.MentionCommandChar >= 1 && e.Message.IsMentioningMe())
                         {
-                            User nekouser = e.Server.CurrentUser;
-                            string neko = '@'+nekouser.Name;
-                            if (neko.Length+2 > msg.Length || (e.Message.MentionedRoles.Contains(e.Server.EveryoneRole) && e.Message.MentionedUsers.Where(u => u == nekouser).Count() == 0))
+                            string neko = '@'+e.Server.CurrentUser.Name;
+                            if (neko.Length+2 > msg.Length)
                             {
                                 NonCommands(e);
                                 return;
@@ -108,7 +109,7 @@ namespace Nekobot.Commands
                                 msg = msg.Substring(neko.Length+1);
                             else
                             {
-                                int index = _config.MentionCommandChar > 1 ? msg.LastIndexOf(neko) : -1;
+                                int index = Config.MentionCommandChar > 1 ? msg.LastIndexOf(neko) : -1;
                                 if (index == -1)
                                 {
                                     NonCommands(e);
@@ -119,7 +120,7 @@ namespace Nekobot.Commands
                             // Ideally, don't let the command know that we were mentioned, if this is the only mention
                             /*if (msg.IndexOf(neko) != -1)
                             {
-                                e.Message.MentionedUsers = e.Message.MentionedUsers.Where(u => u == nekouser);
+                                e.Message.MentionedUsers = e.Message.MentionedUsers.Where(u => u == e.Server.CurrentUser);
                                 e.Message.IsMentioningMe = false;
                             }*/
                         }
@@ -140,7 +141,7 @@ namespace Nekobot.Commands
                 if (commands == null)
                 {
                     CommandEventArgs errorArgs = new CommandEventArgs(e.Message, null, null);
-                    RaiseCommandError(CommandErrorType.UnknownCommand, errorArgs);
+                    OnCommandError(CommandErrorType.UnknownCommand, errorArgs);
                     NonCommands(e);
                     return;
                 }
@@ -158,7 +159,7 @@ namespace Nekobot.Commands
                             else
                             {
                                 var errorArgs = new CommandEventArgs(e.Message, command, null);
-                                RaiseCommandError(error.Value, errorArgs, new Exception("Error parsing args"));
+                                OnCommandError(error.Value, errorArgs);
                                 return;
                             }
                         }
@@ -169,37 +170,37 @@ namespace Nekobot.Commands
                         string errorText;
                         if (!command.CanRun(eventArgs.User, eventArgs.Channel, out errorText))
                         {
-                            RaiseCommandError(CommandErrorType.BadPermissions, eventArgs, new Exception(errorText ?? DefaultPermissionError));
+                            OnCommandError(CommandErrorType.BadPermissions, eventArgs, errorText != null ? new Exception(errorText) : null);
                             return;
                         }
                         // Check flags
                         bool nsfwAllowed = _getNsfwFlag != null ? _getNsfwFlag(e.Message.Channel) : false;
                         if (!nsfwAllowed && !e.Channel.IsPrivate && command.NsfwFlag)
                         {
-                            RaiseCommandError(CommandErrorType.BadPermissions, eventArgs, new NsfwFlagException());
+                            OnCommandError(CommandErrorType.BadPermissions, eventArgs, new NsfwFlagException());
                             return;
                         }
                         bool isInMusicChannel = _getMusicFlag != null ? _getMusicFlag(e.Message.User) : false;
                         if (command.MusicFlag && !isInMusicChannel)
                         {
-                            RaiseCommandError(CommandErrorType.BadPermissions, eventArgs, new MusicFlagException());
+                            OnCommandError(CommandErrorType.BadPermissions, eventArgs, new MusicFlagException());
                             return;
                         }
 
                         // Run the command
                         try
                         {
-                            RaiseRanCommand(eventArgs);
+                            OnCommand(eventArgs);
                             await command.Run(eventArgs).ConfigureAwait(false);
                         }
                         catch (Exception ex)
                         {
-                            RaiseCommandError(CommandErrorType.Exception, eventArgs, ex);
+                            OnCommandError(CommandErrorType.Exception, eventArgs, ex);
                         }
                         return;
                     }
                     var errorArgs2 = new CommandEventArgs(e.Message, null, null);
-                    RaiseCommandError(CommandErrorType.BadArgCount, errorArgs2);
+                    OnCommandError(CommandErrorType.BadArgCount, errorArgs2);
                 }
             };
         }
@@ -207,16 +208,6 @@ namespace Nekobot.Commands
         public Task ShowGeneralHelp(User user, Channel channel, Channel replyChannel = null)
         {
             StringBuilder output = new StringBuilder();
-            /*output.AppendLine("These are the commands you can use:");
-            output.Append(string.Join(", ", _map.SubCommands
-                .Where(x => x.CanRun(user, channel) && !x.IsHidden)
-                .Select(x => '`' + x.Text + '`' +
-                (x.Aliases.Count() > 0 ? ", `" + string.Join("`, `", x.Aliases) + '`' : ""))));
-            output.AppendLine("\nThese are the groups you can access:");
-            output.Append(string.Join(", ", _map.SubGroups
-                .Where(x => /*x.CanRun(user, channel)*//* && !x.IsHidden)
-                .Select(x => '`' + x.Text + '`')));*/
-
             bool isFirstCategory = true;
             foreach (var category in _categories)
             {
@@ -224,7 +215,7 @@ namespace Nekobot.Commands
                 foreach (var group in category.Value.SubGroups)
                 {
                     string error;
-                    if (!group.IsHidden && group.CanRun(user, channel, out error))
+                    if (group.IsVisible && (group.HasSubGroups || group.HasNonAliases) && group.CanRun(user, channel, out error))
                     {
                         if (isFirstItem)
                         {
@@ -248,7 +239,7 @@ namespace Nekobot.Commands
                             output.Append(", ");
                         output.Append('`');
                         output.Append(group.Name);
-                        if (group.SubGroups.Any())
+                        if (group.HasSubGroups)
                             output.Append("*");
                         output.Append('`');
                     }
@@ -261,7 +252,7 @@ namespace Nekobot.Commands
             {
                 output.Append("\n\n");
 
-                var chars = _config.CommandChars;
+                var chars = Config.CommandChars;
                 if (chars.Length > 0)
                 {
                     if (chars.Length == 1)
@@ -274,7 +265,7 @@ namespace Nekobot.Commands
                     output.AppendLine($"`help <command>` can tell you more about how to use a command.");
             }
 
-            return _client.SendMessage(replyChannel ?? channel, output.ToString());
+            return (replyChannel ?? channel).SendMessage(output.ToString());
         }
 
         private Task ShowCommandHelp(CommandMap map, User user, Channel channel, Channel replyChannel = null)
@@ -284,7 +275,7 @@ namespace Nekobot.Commands
             IEnumerable<Command> cmds = map.Commands;
             bool isFirstCmd = true;
             string error;
-            if (cmds != null)
+            if (cmds.Any())
             {
                 foreach (var cmd in cmds)
                 {
@@ -308,7 +299,7 @@ namespace Nekobot.Commands
             }
 
             bool isFirstSubCmd = true;
-            foreach (var subCmd in map.SubGroups.Where(x => x.CanRun(user, channel, out error) && !x.IsHidden))
+            foreach (var subCmd in map.SubGroups.Where(x => x.CanRun(user, channel, out error) && x.IsVisible))
             {
                 if (isFirstSubCmd)
                 {
@@ -330,17 +321,17 @@ namespace Nekobot.Commands
                 output.AppendLine("There are no commands you have permission to run.");
             }
 
-            return _client.SendMessage(replyChannel ?? channel, output.ToString());
+            return (replyChannel ?? channel).SendMessage(output.ToString());
         }
         public Task ShowCommandHelp(Command command, User user, Channel channel, Channel replyChannel = null)
         {
             StringBuilder output = new StringBuilder();
             string error;
             if (!command.CanRun(user, channel, out error))
-                output.AppendLine(error ?? DefaultPermissionError);
+                output.AppendLine(error ?? "You do not have permission to access this command.");
             else
                 ShowCommandHelpInternal(command, user, channel, output);
-            return _client.SendMessage(replyChannel ?? channel, output.ToString());
+            return (replyChannel ?? channel).SendMessage(output.ToString());
         }
         private void ShowCommandHelpInternal(Command command, User user, Channel channel, StringBuilder output)
         {
@@ -365,7 +356,7 @@ namespace Nekobot.Commands
                 }
             }
             output.Append('`');
-            output.AppendLine($": {command.Description ?? "No description set for this command."}");
+            output.AppendLine($": {command.Description ?? "No description."}");
 
             if (command.Aliases.Any())
                 output.AppendLine($"**Aliases:** `" + string.Join("`, `", command.Aliases) + '`');
@@ -380,8 +371,8 @@ namespace Nekobot.Commands
             }
         }
 
-        public void CreateGroup(string cmd, Action<CommandGroupBuilder> config = null) => _root.CreateGroup(cmd, config);
-        public CommandBuilder CreateCommand(string cmd) => _root.CreateCommand(cmd);
+        public void CreateGroup(string cmd, Action<CommandGroupBuilder> config = null) => Root.CreateGroup(cmd, config);
+        public CommandBuilder CreateCommand(string cmd) => Root.CreateCommand(cmd);
 
         internal void AddCommand(Command command)
         {
@@ -397,14 +388,14 @@ namespace Nekobot.Commands
             }
 
             //Add main command
-            category.AddCommand(command.Text, command);
-            _map.AddCommand(command.Text, command);
+            category.AddCommand(command.Text, command, false);
+            _map.AddCommand(command.Text, command, false);
 
             //Add aliases
             foreach (var alias in command.Aliases)
             {
-                category.AddCommand(alias, command);
-                _map.AddCommand(alias, command);
+                category.AddCommand(alias, command, true);
+                _map.AddCommand(alias, command, true);
             }
         }
     }

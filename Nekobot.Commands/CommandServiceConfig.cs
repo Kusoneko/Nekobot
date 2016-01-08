@@ -42,7 +42,7 @@ namespace Nekobot.Commands
         protected void SetValue<T>(ref T storage, T value)
         {
             if (_isLocked)
-                throw new InvalidOperationException("Unable to modify a discord client's configuration after it has been created.");
+                throw new InvalidOperationException("Unable to modify a service's configuration after it has been created.");
             storage = value;
         }
     }

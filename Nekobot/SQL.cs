@@ -54,23 +54,23 @@ namespace Nekobot
         static void ExecuteNonQuery(string sql) => Command(sql).ExecuteNonQuery();
         internal static async Task ExecuteNonQueryAsync(string sql) => await Command(sql).ExecuteNonQueryAsync();
         internal static bool ExecuteScalarPos(string sql) => System.Convert.ToInt32(Command(sql).ExecuteScalar()) > 0;
-        internal static bool InTable(string row, string table, long id)
+        internal static bool InTable(string row, string table, ulong id)
             => ExecuteScalarPos($"select count({row}) from {table} where {row}='{id}'");
-        internal static string AddOrUpdateCommand(string row, string table, long id, string field, string newval, bool in_table)
+        internal static string AddOrUpdateCommand(string row, string table, ulong id, string field, string newval, bool in_table)
             => in_table
                 ? $"update {table} set {field}={newval} where {row}='{id}'"
                 : $"insert into {table} values ('{id}', {InsertData(table, field, newval)})";
-        static string AddOrUpdateCommand(string row, string table, long id, string field, string newval)
+        static string AddOrUpdateCommand(string row, string table, ulong id, string field, string newval)
             => AddOrUpdateCommand(row, table, id, field, newval, InTable(row, table, id));
-        static void AddOrUpdate(string row, string table, long id, string field, string newval)
+        static void AddOrUpdate(string row, string table, ulong id, string field, string newval)
             => ExecuteNonQuery(AddOrUpdateCommand(row, table, id, field, newval));
-        internal static void AddOrUpdateFlag(long id, string field, string newval)
+        internal static void AddOrUpdateFlag(ulong id, string field, string newval)
             => AddOrUpdate("channel", "flags", id, field, newval);
-        static async Task AddOrUpdateAsync(string row, string table, long id, string field, string newval)
+        static async Task AddOrUpdateAsync(string row, string table, ulong id, string field, string newval)
             => await ExecuteNonQueryAsync(AddOrUpdateCommand(row, table, id, field, newval));
-        internal static async Task AddOrUpdateFlagAsync(long id, string field, string newval)
+        internal static async Task AddOrUpdateFlagAsync(ulong id, string field, string newval)
             => await AddOrUpdateAsync("channel", "flags", id, field, newval);
-        internal static async Task AddOrUpdateUserAsync(long id, string field, string newval)
+        internal static async Task AddOrUpdateUserAsync(ulong id, string field, string newval)
             => await AddOrUpdateAsync("user", "users", id, field, newval);
 
         static SQLiteDataReader ExecuteReader(string sql) => Command(sql).ExecuteReader();
@@ -80,13 +80,13 @@ namespace Nekobot
             => ExecuteReader(value, "users", condition);*/
         internal static SQLiteDataReader ReadChannels(string condition, string value = "channel")
             => ExecuteReader(value, "flags", condition);
-        internal static string ReadSingle(string row, string table, long id, string value)
+        internal static string ReadSingle(string row, string table, ulong id, string value)
         {
             var reader = ExecuteReader(value, table, $"{row} = '{id}'");
             return reader.Read() ? reader[value].ToString() : null;
         }
-        internal static string ReadUser(long id, string value) => ReadSingle("user", "users", id, value);
-        internal static string ReadChannel(long id, string value) => ReadSingle("channel", "flags", id, value);
+        internal static string ReadUser(ulong id, string value) => ReadSingle("user", "users", id, value);
+        internal static string ReadChannel(ulong id, string value) => ReadSingle("channel", "flags", id, value);
         internal static int ReadInt(string data) => data != null ? int.Parse(data) : 0;
         internal static bool ReadBool(string data) => ReadInt(data) == 1;
 

@@ -15,8 +15,8 @@ namespace Nekobot
     {
         class Song
         {
-            internal Song(string uri, EType type = EType.Playlist, long requester = 0, string ext = null) { Uri = uri; Type = type; Requester = requester; Ext = ext; }
-            internal Song Encore() => new Song(Uri, IsOnline ? Type : EType.Encore, 0, Ext);
+            internal Song(string uri, EType type = EType.Playlist, User requester = null, string ext = null) { Uri = uri; Type = type; Requester = requester?.Mention; Ext = ext; }
+            internal Song Encore() => new Song(Uri, IsOnline ? Type : EType.Encore, null, Ext);
 
             internal string Title()
             {
@@ -37,70 +37,227 @@ namespace Nekobot
                 }
                 return Ext;
             }
-            internal string ExtTitle => $"**[{Type}{(Requester != 0 ? $" by <@{Requester}>" : "")}]** {Title()}";
+            internal string ExtTitle => $"**[{Type}{(Requester != null ? $" by {Requester}" : "")}]** {Title()}";
             internal bool IsOnline => Type == EType.Youtube || Type == EType.SoundCloud;
             internal bool Nonrequested => Type != EType.Playlist;
 
             internal enum EType { Playlist, Request, Youtube, SoundCloud, Encore }
-            internal string Uri, Ext;
+            internal string Uri, Requester, Ext;
             internal EType Type;
-            internal long Requester;
+        }
+        class Playlist : List<Song>
+        {
+            internal void Initialize()
+            {
+                lock (voteskip) voteskip.Clear();
+                lock (votereset) votereset.Clear();
+                lock (voteencore) voteencore.Clear();
+                lock (this)
+                {
+                    var files = Files();
+                    var filecount = files.Count();
+                    Random rnd = new Random();
+                    while (Count < (filecount < 11 ? filecount : 11))
+                    {
+                        var mp3 = files.ElementAt(rnd.Next(0, filecount));
+                        if (InPlaylist(mp3))
+                            continue;
+                        Add(new Song(mp3));
+                    }
+                }
+            }
+
+            #region Information
+            bool InPlaylist(string common, bool online = false) => Exists(song => (song.IsOnline == online) && (online ? song.Ext : song.Uri) == common);
+
+            int NonrequestedIndex() => 1 + this.Skip(1).Where(song => song.Nonrequested).Count();
+
+            internal string CurrentSong()
+            {
+                lock (this)
+                    return this[0].Title();
+            }
+            #endregion
+
+            #region Insert Wrappers
+            internal void InsertFile(string file, Commands.CommandEventArgs e)
+            {
+                var i = NonrequestedIndex();
+                var cur_i = FindIndex(song => song.Uri == file);
+                if (cur_i != -1)
+                {
+                    if (i > cur_i)
+                    {
+                        if (cur_i == 0)
+                            Encore(e);
+                        else
+                            e.Channel.SendMessage($"{e.User.Mention} Your request is already in the playlist at {cur_i}.");
+                        return;
+                    }
+                    lock (this) RemoveAt(cur_i);
+                }
+                lock (this) Insert(i, new Song(file, Song.EType.Request, e.User));
+            }
+
+            internal bool TryInsert(Song song)
+            {
+                lock (this)
+                if (!InPlaylist(song.Ext, true))
+                {
+                    Insert(NonrequestedIndex(), song);
+                    return true;
+                }
+                return false;
+            }
+            #endregion
+
+            #region Votes and actions
+            internal bool AddVote(List<ulong> vote, Commands.CommandEventArgs e, string action, string success, string actionshort)
+            {
+                lock (this)
+                if (!vote.Contains(e.User.Id))
+                {
+                    vote.Add(e.User.Id);
+                    var listeners = e.User.VoiceChannel.Users.Count() - 1;
+                    if (vote.Count >= Math.Ceiling((decimal)listeners / 2))
+                    {
+                        e.Channel.SendMessage($"{vote.Count}/{listeners} votes to {action}. 50%+ achieved, {success}...");
+                        return true;
+                    }
+                    e.Channel.SendMessage($"{vote.Count}/{listeners} votes to {action}. (Needs 50% or more to {actionshort})");
+                }
+                return false;
+            }
+
+            internal void Encore(Commands.CommandEventArgs e)
+            {
+                lock (voteencore)
+                if (AddVote(voteencore, e, "replay current song", "song will be replayed", "replay"))
+                    lock (this) Insert(1, this[0].Encore());
+            }
+
+            internal void Skip(Commands.CommandEventArgs e)
+            {
+                lock (voteskip)
+                if (AddVote(voteskip, e, "skip current song", "skipping song", "skip"))
+                    skip = true;
+            }
+            internal async Task Reset(Commands.CommandEventArgs e)
+            {
+                lock (votereset)
+                if (AddVote(votereset, e, "reset the stream", "resetting stream", "reset"))
+                    await ResetStream(e.User.VoiceChannel);
+            }
+            internal void Pause(Commands.CommandEventArgs e)
+            {
+                e.Channel.SendMessage($"{(pause ? "Resum" : "Paus")}ing stream...");
+                pause = !pause;
+            }
+            internal async Task ResetStream(Channel c)
+            {
+                lock (this)
+                {
+                    pause = false;
+                    reset = true;
+                }
+                await Task.Delay(5000);
+                await Stream(c);
+            }
+            #endregion
+
+            List<ulong> voteskip = new List<ulong>(), votereset = new List<ulong>(), voteencore = new List<ulong>();
+            internal bool skip = false, reset = false, pause = false;
         }
         // Music-related variables
         internal static string Folder;
         internal static bool UseSubdirs;
-        static List<long> streams = new List<long>();
-        static Dictionary<long, List<Song>> playlist = new Dictionary<long, List<Song>>();
-        static Dictionary<long, bool> skip = new Dictionary<long, bool>();
-        static Dictionary<long, bool> reset = new Dictionary<long, bool>();
-        internal static Dictionary<long, bool> pause = new Dictionary<long, bool>();
-        static Dictionary<long, List<long>> voteskip = new Dictionary<long, List<long>>();
-        static Dictionary<long, List<long>> votereset = new Dictionary<long, List<long>>();
-        static Dictionary<long, List<long>> voteencore = new Dictionary<long, List<long>>();
+        static List<ulong> streams = new List<ulong>();
+        static Dictionary<ulong, Playlist> playlist = new Dictionary<ulong, Playlist>();
         static string[] exts = { ".wma", ".aac", ".mp3", ".m4a", ".wav", ".flac", ".ogg" };
 
-        internal static IEnumerable<string> Files() => System.IO.Directory.EnumerateFiles(Folder, "*.*", UseSubdirs ? System.IO.SearchOption.AllDirectories : System.IO.SearchOption.TopDirectoryOnly).Where(s => exts.Contains(System.IO.Path.GetExtension(s)));
-        static bool InPlaylist(List<Song> playlist, string common, bool online = false) => playlist.Exists(song => (song.IsOnline == online) && (online ? song.Ext : song.Uri) == common);
-        static int NonrequestedIndex(Commands.CommandEventArgs e) => 1 + playlist[e.User.VoiceChannel.Id].Skip(1).Where(song => song.Nonrequested).Count();
+        internal static bool HasFolder() => Folder.Length != 0;
+        static IEnumerable<string> Files() => System.IO.Directory.EnumerateFiles(Folder, "*.*", UseSubdirs ? System.IO.SearchOption.AllDirectories : System.IO.SearchOption.TopDirectoryOnly).Where(s => exts.Contains(System.IO.Path.GetExtension(s)));
 
-        class SC
+        static Commands.CommandBuilder CreatePLCmd(Commands.CommandGroupBuilder group, string name, string parameter, string description, string alias) => CreatePLCmd(group, name, parameter, description, new string[]{alias});
+        static Commands.CommandBuilder CreatePLCmd(Commands.CommandGroupBuilder group, string name, string parameter, string description, string[] aliases = null)
         {
-            public static async Task<bool> Triad(Commands.CommandEventArgs e, SoundCloud.NET.Models.Track track, bool multiple, string client_id, bool isplaylist = false)
+            var cmd = group.CreateCommand(name)
+                .Parameter(parameter, Commands.ParameterType.Unparsed)
+                .Description(description)
+                .FlagMusic(true);
+            if (aliases != null) foreach (var alias in aliases) cmd.Alias(alias);
+            return cmd;
+        }
+
+        class SC : SoundCloud.NET.SoundCloudManager
+        {
+            public SC(string clientId, string userAgent = "") : base(clientId, userAgent) { }
+            bool Triad(Commands.CommandEventArgs e, SoundCloud.NET.Models.Track track, bool multiple, bool isplaylist = false)
             {
                 var pl = playlist[e.User.VoiceChannel.Id];
                 var title = $"{track.Title} by {track.User.Username}";
                 if (!track.Streamable)
                 {
-                    if (multiple) await Program.client.SendMessage(e.Channel, $"{title} is not streamable.");
+                    if (multiple) e.Channel.SendMessage($"{title} is not streamable.");
                     return false;
                 }
                 var ext = $"{title} (**{track.PermalinkUrl}**)";
-                if (!InPlaylist(pl, ext, true))
+                if (pl.TryInsert(new Song($"{track.StreamUrl}?client_id={ClientID}", Song.EType.SoundCloud, e.User, ext)))
                 {
-                    var uri = track.StreamUrl;
-                    pl.Insert(NonrequestedIndex(e), new Song($"{uri}?client_id={client_id}", Song.EType.SoundCloud, e.User.Id, ext));
-                    if (!isplaylist) await Program.client.SendMessage(e.Channel, $"{title} added to the playlist.");
+                    if (!isplaylist) e.Channel.SendMessage($"{title} added to the playlist.");
                     return true;
                 }
                 if (multiple)
-                    await Program.client.SendMessage(e.Channel, $"{title} is already in the playlist.");
+                    e.Channel.SendMessage($"{title} is already in the playlist.");
                 return false;
             }
-
-            public static async Task<bool> PLTriad(Commands.CommandEventArgs e, SoundCloud.NET.Models.Playlist playlist, bool multiple, string client_id)
+            bool Triad(Commands.CommandEventArgs e, SoundCloud.NET.Models.Playlist playlist, bool multiple)
             {
                 bool ret = false;
                 foreach (var track in playlist.Tracks)
-                    ret |= await Triad(e, track, false, client_id, true);
+                    ret |= Triad(e, track, false, true);
                 if (ret)
-                    await Program.client.SendMessage(e.Channel, $"The contents of {playlist.Title} by {playlist.User.Username} have been added to the playlist.");
+                    e.Channel.SendMessage($"The contents of {playlist.Title} by {playlist.User.Username} have been added to the playlist.");
                 else if (!multiple)
-                    await Program.client.SendMessage(e.Channel, $"There is nothing in {playlist.Title} that isn't already in the playlist.");
+                    e.Channel.SendMessage($"There is nothing in {playlist.Title} that isn't already in the playlist.");
                 return ret;
             }
 
-            public static SoundCloud.NET.SearchParameters SearchArgs(string[] args)
-                => new SoundCloud.NET.SearchParameters { SearchString = string.Join(" ", args), Streamable = true };
+            public void CreatePermalinkCmd(Commands.CommandGroupBuilder group, string name, string alias, bool is_playlist) => CreatePermalinkCmd(group, name, new string[]{alias}, is_playlist);
+            public void CreatePermalinkCmd(Commands.CommandGroupBuilder group, string name, string[] aliases, bool is_playlist)
+            {
+                CreatePLCmd(group, name, $"SoundCloud {(!is_playlist ? "Track" : "Playlist")} Permalink"/*(s)"*/, $"I'll add SoundCloud {(is_playlist ? "playlist" : "")} songs to the playlist!", aliases)
+                    .Do(e =>
+                    {
+                        //MatchCollection m = Regex.Matches(e.Args[0], @"", RegexOptions.IgnoreCase);
+                        if (e.Args[0] == ""/*m.Count == 0*/)
+                            e.Channel.SendMessage($"{e.User.Mention} No SoundCloud permalink matches.");
+                        else //foreach (Match match in m)
+                        {
+                            if (is_playlist) Triad(e, GetPlaylist(e.Args[0]/*match.Groups[1]*/), false);
+                            else Triad(e, GetTrack(e.Args[0]/*match.Groups[1]*/), true);
+                        }
+                    });
+            }
+            public void CreateSearchCmd(Commands.CommandGroupBuilder group, string name, string alias, bool is_playlist) => CreateSearchCmd(group, name, new string[]{alias}, is_playlist);
+            public void CreateSearchCmd(Commands.CommandGroupBuilder group, string name, string[] aliases, bool is_playlist)
+            {
+                CreatePLCmd(group, name, is_playlist ? "SoundCloud Playlist Keywords" : "song to find",
+                    $"I'll search for your {(is_playlist ? "playlist " : "")}request on SoundCloud!\nResults will be considered in order until one not in the playlist is found.", aliases)
+                    .Do(e =>
+                    {
+                        var search = new SoundCloud.NET.SearchParameters { SearchString = string.Join(" ", e.Args), Streamable = true };
+                        var container = is_playlist ? (SoundCloud.NET.Models.BaseModel[])SearchPlaylist(search) : SearchTrack(search);
+                        if (container.Count() == 0)
+                        {
+                            e.Channel.SendMessage($"{e.User.Mention} Your request was not found.");
+                            return;
+                        }
+                        foreach (var thing in container)
+                            if (is_playlist ? Triad(e, (SoundCloud.NET.Models.Playlist)thing, true) : Triad(e, (SoundCloud.NET.Models.Track)thing, false)) return;
+                        e.Channel.SendMessage($"{e.User.Mention} No results for your requested search aren't already in the playlist.");
+                    });
+            }
         }
 
         static IWaveProvider Reader(string file)
@@ -113,33 +270,17 @@ namespace Nekobot
             } catch { }
             return null;
         }
-        static async Task Stream(long cid)
+        static async Task Stream(Channel c)
         {
-            Channel c = Program.client.GetChannel(cid);
-            Discord.Audio.IDiscordVoiceClient _client = await Voice.JoinServer(c);
-            Random rnd = new Random();
+            ulong cid = c.Id;
+            var _client = await Voice.JoinServer(c);
+            if (_client == null) return; // TODO: Remove when voice works.
             if (!playlist.ContainsKey(cid))
-                playlist.Add(cid, new List<Song>());
-            if (!skip.ContainsKey(cid))
-                skip.Add(cid, false);
-            if (!reset.ContainsKey(cid))
-                reset.Add(cid, false);
-            if (!pause.ContainsKey(cid))
-                pause.Add(cid, false);
+                playlist.Add(cid, new Playlist());
             while (streams.Contains(cid))
             {
-                voteskip[cid] = new List<long>();
-                votereset[cid] = new List<long>();
-                voteencore[cid] = new List<long>();
-                var files = Files();
-                var filecount = files.Count();
-                while (playlist[cid].Count() < (filecount < 11 ? filecount : 11))
-                {
-                    var mp3 = files.ElementAt(rnd.Next(0, filecount));
-                    if (InPlaylist(playlist[cid], mp3))
-                        continue;
-                    playlist[cid].Add(new Song(mp3));
-                }
+                var pl = playlist[cid];
+                pl.Initialize();
                 await Task.Run(async () =>
                 {
                     try
@@ -147,10 +288,12 @@ namespace Nekobot
                         var outFormat = new WaveFormat(48000, 16, 1);
                         int blockSize = outFormat.AverageBytesPerSecond; // 1 second
                         byte[] buffer = new byte[blockSize];
-                        var musicReader = Reader(playlist[cid][0].Uri);
+                        string uri;
+                        lock (pl) uri = pl[0].Uri;
+                        var musicReader = Reader(uri);
                         if (musicReader == null)
                         {
-                            Console.WriteLine($"{playlist[cid][0].Uri} couldn't be read.");
+                            Program.log.Warning("Stream", $"{uri} couldn't be read.");
                             return;
                         }
                         using (var resampler = new MediaFoundationResampler(musicReader, outFormat) { ResamplerQuality = 60 })
@@ -158,44 +301,39 @@ namespace Nekobot
                             int byteCount;
                             while ((byteCount = resampler.Read(buffer, 0, blockSize)) > 0)
                             {
-                                if (!streams.Contains(cid) || skip[cid] || reset[cid])
+                                while(pl.pause) await Task.Delay(500); // Play Voice.cs commands in here?
+                                if (!streams.Contains(cid) || pl.skip || pl.reset)
                                 {
-                                    _client.ClearVoicePCM();
+                                    _client.Clear();
                                     await Task.Delay(1000);
                                     break;
                                 }
-                                while(pause[cid]) await Task.Delay(500); // Play Voice.cs commands in here?
-                                _client.SendVoicePCM(buffer, blockSize);
+                                _client.Send(buffer, 0, blockSize);
                             }
                         }
                     }
-                    catch (OperationCanceledException err) { Console.WriteLine(err.Message); }
+                    catch (OperationCanceledException err) { Program.log.Error("Stream", err.Message); }
                 });
-                await _client.WaitVoice(); // Prevent endless queueing which would eventually eat up all the ram
-                skip[cid] = false;
-                if (reset[cid])
+                _client.Wait(); // Prevent endless queueing which would eventually eat up all the ram
+                pl.skip = false;
+                if (pl.reset)
                 {
-                    reset[cid] = false;
+                    pl.reset = false;
                     break;
                 }
-                playlist[cid].RemoveAt(0);
+                pl.RemoveAt(0);
             }
-            voteskip.Remove(cid);
-            votereset.Remove(cid);
-            voteencore.Remove(cid);
-            skip.Remove(cid);
-            reset.Remove(cid);
-            pause.Remove(cid);
-            await Program.client.LeaveVoiceServer(c.Server);
+            await Program.Audio.Leave(c.Server);
         }
 
-        internal static Task StartStreams()
+        internal static Task StartStreams(DiscordClient client)
         {
             return Task.WhenAll(
               streams.Select(s =>
               {
-                  if (Program.client.GetChannel(s).Type == "voice")
-                      return Task.Run(() => Stream(s));
+                  Channel c = client.GetChannel(s);
+                  if (c.Type == ChannelType.Voice)
+                      return Task.Run(() => Stream(c));
                   else
                       return null;
               })
@@ -207,71 +345,39 @@ namespace Nekobot
         {
             var reader = SQL.ReadChannels("music=1");
             while (reader.Read())
-                streams.Add(Convert.ToInt64(reader["channel"].ToString()));
+                streams.Add(Convert.ToUInt64(reader["channel"].ToString()));
         }
 
-        static async Task ResetStream(long channel)
+        internal static void StopStream(ulong stream)
         {
-            reset[channel] = true;
-            await Task.Delay(5000);
-            await Stream(channel);
+            SQL.AddOrUpdateFlag(stream, "music", "0");
+            playlist[stream].pause = false;
+            streams.Remove(stream);
         }
 
         internal static async Task StopStreams(Server server)
         {
-            var serverstreams = streams.Where(stream => Program.client.GetChannel(stream).Server == server).ToArray();
+            var serverstreams = streams.Where(stream => server.GetChannel(stream) != null).ToArray();
             foreach (var stream in serverstreams)
-            {
-                SQL.AddOrUpdateFlag(stream, "music", "0");
-                if (pause[stream]) pause[stream] = false;
-                streams.Remove(stream);
-            }
+                StopStream(stream);
             if (serverstreams.Length != 0)
                 await Task.Delay(5000);
         }
 
-        static async Task Encore(Commands.CommandEventArgs e)
-        {
-            if (await AddVote(voteencore, e, "replay current song", "song will be replayed", "replay"))
-            {
-                var pl = playlist[e.User.VoiceChannel.Id];
-                pl.Insert(1, pl[0].Encore());
-            }
-        }
-
-        static int CountVoiceChannelMembers(Channel chan)
-        {
-            if (chan.Type != "voice") return -1;
-            return chan.Members.Where(u => u.VoiceChannel == chan).Count()-1;
-        }
-
-        static async Task<bool> AddVote(Dictionary<long, List<long>> votes, Commands.CommandEventArgs e, string action, string success, string actionshort)
-        {
-            var vote = votes[e.User.VoiceChannel.Id];
-            if (!vote.Contains(e.User.Id))
-            {
-                vote.Add(e.User.Id);
-                var listeners = CountVoiceChannelMembers(e.User.VoiceChannel);
-                if (vote.Count >= Math.Ceiling((decimal)listeners / 2))
-                {
-                    await Program.client.SendMessage(e.Channel, $"{vote.Count}/{listeners} votes to {action}. 50%+ achieved, {success}...");
-                    return true;
-                }
-                await Program.client.SendMessage(e.Channel, $"{vote.Count}/{listeners} votes to {action}. (Needs 50% or more to {actionshort})");
-            }
-            return false;
-        }
-
         internal static void AddCommands(Commands.CommandGroupBuilder group)
         {
+            if (!HasFolder()) return;
+
             group.CreateCommand("playlist")
                 .Description("I'll give you the list of songs in the playlist.")
                 .FlagMusic(true)
-                .Do(async e =>
+                .Do(e =>
                 {
                     string reply = "";
                     int i = -1;
-                    foreach(var t in playlist[e.User.VoiceChannel.Id])
+                    var pl = playlist[e.User.VoiceChannel.Id];
+                    lock (pl)
+                    foreach(var t in pl)
                     {
                         reply += (++i == 0) ? $"Currently playing: {t.Title()}.\nNext songs:" : $"\n{i} - {t.ExtTitle}";
                         if (reply.Length > 2000)
@@ -280,186 +386,96 @@ namespace Nekobot
                             break;
                         }
                     }
-                    await Program.client.SendMessage(e.Channel, reply);
+                    e.Channel.SendMessage(reply);
                 });
 
             group.CreateCommand("song")
                 .Description("I'll tell you the song I'm currently playing.")
                 .FlagMusic(true)
-                .Do(async e =>
-                {
-                    await Program.client.SendMessage(e.Channel, $"Currently playing: {playlist[e.User.VoiceChannel.Id][0].Title()}.");
-                });
+                .Do(e => e.Channel.SendMessage($"Currently playing: {playlist[e.User.VoiceChannel.Id].CurrentSong()}."));
 
-            // TODO: Clean up the request commands, they share too much code.
-            group.CreateCommand("ytrequest")
-                .Parameter("youtube video link(s)", Commands.ParameterType.Unparsed)
-                .Description("I'll add youtube videos to the playlist")
-                .FlagMusic(true)
-                .Do(async e =>
+            CreatePLCmd(group, "ytrequest", "youtube video link(s)", "I'll add youtube videos to the playlist")
+                .Do(e =>
                 {
+                    var rclient = Helpers.GetRestClient("http://www.youtubeinmp3.com/fetch/");
                     MatchCollection m = Regex.Matches(e.Args[0], @"youtu(?:be\.com\/(?:v\/|e(?:mbed)?\/|watch\?v=)|\.be\/)([\w-_]{11}\b)", RegexOptions.IgnoreCase);
                     foreach (Match match in m)
                     {
                         var link = $"youtube.com/watch?v={match.Groups[1]}";
                         Tuple<string,string> uri_title;
-                        try { var video = await YouTube.Default.GetVideoAsync(link); uri_title = Tuple.Create(video.Uri, video.Title); }
+                        try { var video = YouTube.Default.GetVideo(link); uri_title = Tuple.Create(video.Uri, video.Title); }
                         catch
                         {
-                            Program.rclient.BaseUrl = new Uri("http://www.youtubeinmp3.com/fetch/");
                             // Content is sometimes an html page instead of JSON, we should ask why.
-                            var json = Newtonsoft.Json.Linq.JObject.Parse(Program.rclient.Execute(new RestSharp.RestRequest($"?format=JSON&video={System.Net.WebUtility.UrlEncode(link)}", RestSharp.Method.GET)).Content);
+                            var json = Newtonsoft.Json.Linq.JObject.Parse(rclient.Execute(new RestSharp.RestRequest($"?format=JSON&video={System.Net.WebUtility.UrlEncode(link)}", RestSharp.Method.GET)).Content);
                             uri_title = Tuple.Create(json["link"].ToString(), json["title"].ToString());
                         }
-                        var pl = playlist[e.User.VoiceChannel.Id];
-                        var ext = $"{uri_title.Item2} ({link})";
-                        if (InPlaylist(pl, ext, true))
-                            await Program.client.SendMessage(e.Channel, $"<@{e.User.Id}> Your request ({uri_title.Item2}) is already in the playlist.");
+                        if (playlist[e.User.VoiceChannel.Id].TryInsert(new Song(uri_title.Item1, Song.EType.Youtube, e.User, $"{uri_title.Item2} ({link})")))
+                            e.Channel.SendMessage($"{uri_title.Item2} added to the playlist.");
                         else
-                        {
-                            pl.Insert(NonrequestedIndex(e), new Song(uri_title.Item1, Song.EType.Youtube, e.User.Id, ext));
-                            await Program.client.SendMessage(e.Channel, $"{uri_title.Item2} added to the playlist.");
-                        }
+                            e.Channel.SendMessage($"{e.User.Mention} Your request ({uri_title.Item2}) is already in the playlist.");
                     }
                     if (m.Count == 0)
-                        await Program.client.SendMessage(e.Channel, $"None of {e.Args[0]} could be added to playlist because no valid youtube links were found within.");
+                        e.Channel.SendMessage($"None of {e.Args[0]} could be added to playlist because no valid youtube links were found within.");
                 });
 
             if (Program.config["SoundCloud"].HasValues)
             {
-                var client_id = Program.config["SoundCloud"]["client_id"].ToString();
-                var mgr = new SoundCloud.NET.SoundCloudManager(client_id, Program.rclient.UserAgent);
-                group.CreateCommand("scsearch")
-                    .Alias("scs")
-                    .Parameter("song to find", Commands.ParameterType.Required)
-                    .Parameter("...", Commands.ParameterType.Multiple)
-                    .Description("I'll search for your request on SoundCloud!\nResults will be considered in order until one not in the playlist is found.")
-                    .FlagMusic(true)
-                    .Do(async e =>
-                    {
-                        var tracks = mgr.SearchTrack(SC.SearchArgs(e.Args));
-                        if (tracks.Count() == 0)
-                        {
-                            await Program.client.SendMessage(e.Channel, $"<@{e.User.Id}> Your request was not found.");
-                            return;
-                        }
-                        foreach (var track in tracks)
-                            if (await SC.Triad(e, track, false, client_id)) return;
-                        await Program.client.SendMessage(e.Channel, $"<@{e.User.Id}> No results for your requested search aren't already in the playlist.");
-                    });
-
-                group.CreateCommand("screquest")
-                    .Alias("sctrack")
-                    .Alias("sctr")
-                    .Parameter("SoundCloud Track Permalink"/*(s)"*/, Commands.ParameterType.Unparsed)
-                    .Description("I'll add SoundCloud songs to the playlist!")
-                    .FlagMusic(true)
-                    .Do(async e =>
-                    {
-                        //MatchCollection m = Regex.Matches(e.Args[0], @"", RegexOptions.IgnoreCase);
-                        if (e.Args[0] == ""/*m.Count == 0*/)
-                            await Program.client.SendMessage(e.Channel, $"<@{e.User.Id}> No SoundCloud track permalink matches.");
-                        else //foreach (Match match in m)
-                            await SC.Triad(e, mgr.GetTrack(e.Args[0])/*match.Groups[1]*/, true, client_id);
-                    });
-
-                group.CreateCommand("scplaylist")
-                    .Alias("scpl")
-                    .Parameter("SoundCloud Playlist Permalink"/*(s)"*/, Commands.ParameterType.Unparsed)
-                    .Description("I'll add SoundCloud playlist songs to the playlist!")
-                    .FlagMusic(true)
-                    .Do(async e =>
-                    {
-                        //MatchCollection m = Regex.Matches(e.Args[0], @"", RegexOptions.IgnoreCase);
-                        if (e.Args[0] == ""/*m.Count == 0*/)
-                            await Program.client.SendMessage(e.Channel, $"<@{e.User.Id}> No SoundCloud playlist permalink matches.");
-                        else //foreach (Match match in m)
-                            await SC.PLTriad(e, mgr.GetPlaylist(e.Args[0]/*match.Groups[1]*/), false, client_id);
-                    });
-
-                group.CreateCommand("scplsearch")
-                    .Alias("scpls")
-                    .Parameter("SoundCloud Playlist Keywords", Commands.ParameterType.Unparsed)
-                    .Description("I'll add SoundCloud playlist songs to the playlist!")
-                    .FlagMusic(true)
-                    .AddCheck((h, i, d) => false).Hide() // Until this stops giving Gateway timeouts, RIP.
-                    .Do(async e =>
-                    {
-                        var pls = mgr.SearchPlaylist(SC.SearchArgs(e.Args));
-                        foreach (var pl in pls)
-                            if (await SC.PLTriad(e, pl, true, client_id)) return;
-                        await Program.client.SendMessage(e.Channel, $"<@{e.User.Id}> No results for your requested search aren't already in the playlist.");
-                    });
+                SC sc = new SC(Program.config["SoundCloud"]["client_id"].ToString(), Console.Title);
+                sc.CreateSearchCmd(group, "scsearch", "scs", false);
+                sc.CreatePermalinkCmd(group, "screquest", new string[]{"sctrack", "sctr"}, false);
+                sc.CreatePermalinkCmd(group, "scplaylist", "scpl", false);
+                //sc.CreateSearchCmd(group, "scplsearch", "scpls", true); // Until this stops giving Gateway timeouts, RIP.
             }
 
-            group.CreateCommand("request")
-                .Parameter("song to find", Commands.ParameterType.Required)
-                .Parameter("...", Commands.ParameterType.Multiple)
-                .Description("I'll try to add your request to the playlist!")
-                .FlagMusic(true)
-                .Do(async e =>
+            CreatePLCmd(group, "request", "song to find", "I'll try to add your request to the playlist!")
+                .Do(e =>
                 {
+                    var args = string.Join(" ", e.Args);
+                    if (args.Length == 0)
+                    {
+                        e.Channel.SendMessage("You need to provide at least a character to search for.");
+                        return;
+                    }
+                    args = args.ToLower();
                     foreach (var file in Files())
                     {
-                        if (System.IO.Path.GetFileNameWithoutExtension(file).ToLower().Contains(string.Join(" ", e.Args).ToLower()))
+                        if (System.IO.Path.GetFileNameWithoutExtension(file).ToLower().Contains(args))
                         {
-                            var pl = playlist[e.User.VoiceChannel.Id];
-                            var i = NonrequestedIndex(e);
-                            var cur_i = pl.FindIndex(song => song.Uri == file);
-                            if (cur_i != -1)
-                            {
-                                if (i > cur_i)
-                                {
-                                    if (cur_i == 0)
-                                        await Encore(e);
-                                    else
-                                        await Program.client.SendMessage(e.Channel, $"<@{e.User.Id}> Your request is already in the playlist at {cur_i}.");
-                                    return;
-                                }
-                                pl.RemoveAt(cur_i);
-                            }
-                            pl.Insert(i, new Song(file, Song.EType.Request, e.User.Id));
-                            await Program.client.SendMessage(e.Channel, $"<@{e.User.Id}> Your request has been added to the list.");
+                            playlist[e.User.VoiceChannel.Id].InsertFile(file, e);
+                            e.Channel.SendMessage($"{e.User.Mention} Your request has been added to the list.");
                             return;
                         }
                     }
-                    await Program.client.SendMessage(e.Channel, $"<@{e.User.Id}> Your request was not found.");
+                    e.Channel.SendMessage($"{e.User.Mention} Your request was not found.");
                 });
 
             group.CreateCommand("skip")
                 .Description("Vote to skip the current song. (Will skip at 50% or more)")
                 .FlagMusic(true)
-                .Do(async e =>
-                {
-                    if (await AddVote(voteskip, e, "skip current song", "skipping song", "skip"))
-                       skip[e.User.VoiceChannel.Id] = true;
-                });
+                .Do(e => playlist[e.User.VoiceChannel.Id].Skip(e));
 
             group.CreateCommand("reset")
                 .Description("Vote to reset the stream. (Will reset at 50% or more)")
                 .FlagMusic(true)
-                .Do(async e =>
-                {
-                    if (await AddVote(votereset, e, "reset the stream", "resetting stream", "reset"))
-                        await ResetStream(e.User.VoiceChannel.Id);
-                });
+                .Do(e => playlist[e.User.VoiceChannel.Id].Reset(e));
 
             group.CreateCommand("encore")
                 .Alias("replay")
                 .Alias("ankoru")
                 .Description("Vote to replay the current song. (Will replay at 50% or more)")
                 .FlagMusic(true)
-                .Do(async e => await Encore(e));
+                .Do(e => playlist[e.User.VoiceChannel.Id].Encore(e));
 
             // Moderator commands
             group.CreateCommand("forceskip")
                 .MinPermissions(1)
                 .FlagMusic(true)
-                .Description("I'll skip the currently playing song.")
-                .Do(async e =>
+                .Description("I'll skip the currently playing song(s).")
+                .Do(e =>
                 {
-                    skip[e.User.VoiceChannel.Id] = true;
-                    await Program.client.SendMessage(e.Channel, "Forcefully skipping song...");
+                    playlist[e.User.VoiceChannel.Id].skip = true;
+                    e.Channel.SendMessage("Forcefully skipping...");
                 });
 
             group.CreateCommand("forcereset")
@@ -468,8 +484,8 @@ namespace Nekobot
                 .Description("I'll reset the stream in case of bugs, while keeping the playlist intact.")
                 .Do(async e =>
                 {
-                    await Program.client.SendMessage(e.Channel, "Reseting stream...");
-                    await ResetStream(e.User.VoiceChannel.Id);
+                    await e.Channel.SendMessage("Reseting stream...");
+                    await playlist[e.User.VoiceChannel.Id].ResetStream(e.User.VoiceChannel);
                 });
 
             group.CreateCommand("pause")
@@ -477,49 +493,38 @@ namespace Nekobot
                 .MinPermissions(1)
                 .FlagMusic(true)
                 .Description("I'll toggle pause on the stream")
-                .Do(async e =>
-                {
-                    await Program.client.SendMessage(e.Channel, $"{(pause[e.User.VoiceChannel.Id] ? "Resum" : "Paus")}ing stream...");
-                    pause[e.User.VoiceChannel.Id] = !pause[e.User.VoiceChannel.Id];
-                });
+                .Do(e => playlist[e.User.VoiceChannel.Id].Pause(e));
 
             // Administrator commands
             group.CreateCommand("music")
                 .Parameter("on/off", Commands.ParameterType.Required)
                 .Description("I'll start or end a stream in a particular voice channel, which you need to be in.")
                 .MinPermissions(2)
-                .Do(async e =>
+                .Do(e =>
                 {
-                    if (e.User.VoiceChannel?.Id <= 0)
-                        await Program.client.SendMessage(e.Channel, $"<@{e.User.Id}>, you need to be in a voice channel to use this.");
-                    else
+                    if (e.User.VoiceChannel?.Id <= 0) e.Channel.SendMessage($"{e.User.Mention}, you need to be in a voice channel to use this.");
+                    else Helpers.OnOffCmd(e, async on =>
                     {
-                        bool on = e.Args[0] == "on";
-                        bool off = !on && e.Args[0] == "off";
-                        if (on || off)
+                        bool has_stream = streams.Contains(e.User.VoiceChannel.Id);
+                        string status = on ? "start" : "halt";
+                        if (has_stream == on)
                         {
-                            bool has_stream = streams.Contains(e.User.VoiceChannel.Id);
-                            string status = on ? "start" : "halt";
-                            if (has_stream == on || has_stream != off)
-                            {
-                                string blah = on ? "streaming in! Did you mean to !reset or !forcereset the stream?" : "not streaming in!";
-                                await Program.client.SendMessage(e.Channel, $"<@{e.User.Id}>, I can't {status} streaming in a channel that I'm already {blah}");
-                            }
-                            else
-                            {
-                                SQL.AddOrUpdateFlag(e.User.VoiceChannel.Id, "music", off ? "0" : "1");
-                                await Program.client.SendMessage(e.Channel, $"<@{e.User.Id}>, I'm {status}ing the stream!");
-                                if (on)
-                                {
-                                    await StopStreams(e.Server);
-                                    streams.Add(e.User.VoiceChannel.Id);
-                                    await Stream(e.User.VoiceChannel.Id);
-                                }
-                                else streams.Remove(e.User.VoiceChannel.Id);
-                            }
+                            string blah = on ? "streaming in! Did you mean to !reset or !forcereset the stream?" : "not streaming in!";
+                            await e.Channel.SendMessage($"{e.User.Mention}, I can't {status} streaming in a channel that I'm already {blah}");
                         }
-                        else await Program.client.SendMessage(e.Channel, $"<@{e.User.Id}>, the argument needs to be either on or off.");
-                    }
+                        else
+                        {
+                            await e.Channel.SendMessage($"{e.User.Mention}, I'm {status}ing the stream!");
+                            if (on)
+                            {
+                                SQL.AddOrUpdateFlag(e.User.VoiceChannel.Id, "music", "1");
+                                await StopStreams(e.Server);
+                                streams.Add(e.User.VoiceChannel.Id);
+                                await Stream(e.User.VoiceChannel);
+                            }
+                            else StopStream(e.User.VoiceChannel.Id);
+                        }
+                    });
                 });
         }
     }

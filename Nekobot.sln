@@ -20,7 +20,13 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChatterBotAPI", "chatter-bo
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SoundCloud.NET", "SoundCloud.NET\SoundCloud.NET\SoundCloud.NET.csproj", "{17333AE0-A1EB-4B40-8865-8261C690814C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Discord.Net.Audio", "Discord.Net\src\Discord.Net.Audio.Net45\Discord.Net.Audio.csproj", "{7BFEF748-B934-4621-9B11-6302E3A9F6B3}"
+EndProject
 Global
+	GlobalSection(SharedMSBuildProjectFiles) = preSolution
+		Discord.Net\src\Discord.Net.Shared\Discord.Net.Shared.projitems*{7bfef748-b934-4621-9b11-6302e3a9f6b3}*SharedItemsImports = 4
+		Discord.Net\src\Discord.Net.Shared\Discord.Net.Shared.projitems*{8d71a857-879a-4a10-859e-5ff824ed6688}*SharedItemsImports = 4
+	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		FullDebug|Any CPU = FullDebug|Any CPU
@@ -41,8 +47,8 @@ Global
 		{4C109E0E-5837-4A2E-8AB4-AB1F5CEAAC2D}.Release|Any CPU.Build.0 = Release|Any CPU
 		{8D71A857-879A-4A10-859E-5FF824ED6688}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{8D71A857-879A-4A10-859E-5FF824ED6688}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{8D71A857-879A-4A10-859E-5FF824ED6688}.FullDebug|Any CPU.ActiveCfg = FullDebug|Any CPU
-		{8D71A857-879A-4A10-859E-5FF824ED6688}.FullDebug|Any CPU.Build.0 = FullDebug|Any CPU
+		{8D71A857-879A-4A10-859E-5FF824ED6688}.FullDebug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8D71A857-879A-4A10-859E-5FF824ED6688}.FullDebug|Any CPU.Build.0 = Debug|Any CPU
 		{8D71A857-879A-4A10-859E-5FF824ED6688}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8D71A857-879A-4A10-859E-5FF824ED6688}.Release|Any CPU.Build.0 = Release|Any CPU
 		{2E624962-F155-432C-A90A-E1CE75DEE9EA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
@@ -57,6 +63,12 @@ Global
 		{17333AE0-A1EB-4B40-8865-8261C690814C}.FullDebug|Any CPU.Build.0 = Debug|Any CPU
 		{17333AE0-A1EB-4B40-8865-8261C690814C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{17333AE0-A1EB-4B40-8865-8261C690814C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7BFEF748-B934-4621-9B11-6302E3A9F6B3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7BFEF748-B934-4621-9B11-6302E3A9F6B3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7BFEF748-B934-4621-9B11-6302E3A9F6B3}.FullDebug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7BFEF748-B934-4621-9B11-6302E3A9F6B3}.FullDebug|Any CPU.Build.0 = Debug|Any CPU
+		{7BFEF748-B934-4621-9B11-6302E3A9F6B3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7BFEF748-B934-4621-9B11-6302E3A9F6B3}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
