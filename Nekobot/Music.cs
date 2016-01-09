@@ -126,7 +126,7 @@ namespace Nekobot
             #region Votes and actions
             internal bool AddVote(List<ulong> vote, Commands.CommandEventArgs e, string action, string success, string actionshort)
             {
-                lock (this)
+                lock (vote)
                 if (!vote.Contains(e.User.Id))
                 {
                     vote.Add(e.User.Id);
@@ -143,21 +143,18 @@ namespace Nekobot
 
             internal void Encore(Commands.CommandEventArgs e)
             {
-                lock (voteencore)
                 if (AddVote(voteencore, e, "replay current song", "song will be replayed", "replay"))
                     lock (this) Insert(1, this[0].Encore());
             }
 
             internal void Skip(Commands.CommandEventArgs e)
             {
-                lock (voteskip)
-                if (AddVote(voteskip, e, "skip current song", "skipping song", "skip"))
+                if (!skip && AddVote(voteskip, e, "skip current song", "skipping song", "skip"))
                     skip = true;
             }
             internal async Task Reset(Commands.CommandEventArgs e)
             {
-                lock (votereset)
-                if (AddVote(votereset, e, "reset the stream", "resetting stream", "reset"))
+                if (!reset && AddVote(votereset, e, "reset the stream", "resetting stream", "reset"))
                     await ResetStream(e.User.VoiceChannel);
             }
             internal void Pause(Commands.CommandEventArgs e)
