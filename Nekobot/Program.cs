@@ -171,7 +171,7 @@ namespace Nekobot
                         if (users == null)
                             response = await GetLastScrobble(api, Tuple.Create(e.Args[0], e.Args[0], false));
                         else foreach (var user in (from u in users select Tuple.Create(SQL.ReadUser(u.Id, "lastfm"), u.Name, u == e.User)))
-                            response += (user.Item1.Any() ? await GetLastScrobble(api, user)
+                            response += (user.Item1 != null ? await GetLastScrobble(api, user)
                                     : $"I don't know {(user.Item3 ? "your" : $"{user.Item2}'s")} lastfm yet{(user.Item3 ? ", please use the `setlastfm <username>` command" : "")}"
                                 ) + ".\n";
                         await e.Channel.SendMessage(response);
@@ -808,7 +808,7 @@ The current topic is: {e.Channel.Topic}";
         static async Task<string> GetLastScrobble(LastFM.UserApi api, Tuple<string, string, bool> user)
         {
             var d = (await api.GetRecentScrobbles(user.Item1, count: 1)).FirstOrDefault();
-            return $"{user.Item2} {(d != null ? "last" : "hasn't")} listened to {(d != null ? $"**{d.Name}** by **{d.ArtistName}**" : "anything")})";
+            return $"{user.Item2} {(d != null ? "last" : "hasn't")} listened to {(d != null ? $"**{d.Name}** by **{d.ArtistName}**" : "anything")}";
         }
 
         private static void LoadConfig()
