@@ -101,7 +101,7 @@ namespace Nekobot
             internal string CurrentSong()
             {
                 lock(this)
-                    return EmptyPlaylist() ?? this[0].Title();
+                    return EmptyPlaylist() ?? $"Currently playing: {this[0].Title()}.";
             }
 
             internal string SongList()
@@ -406,7 +406,7 @@ namespace Nekobot
             group.CreateCommand("song")
                 .Description("I'll tell you the song I'm currently playing.")
                 .FlagMusic(true)
-                .Do(e => e.Channel.SendMessage($"Currently playing: {playlist[e.User.VoiceChannel.Id].CurrentSong()}."));
+                .Do(e => e.Channel.SendMessage(playlist[e.User.VoiceChannel.Id].CurrentSong()));
 
             CreatePLCmd(group, "ytrequest", "youtube video link(s)", "I'll add youtube videos to the playlist")
                 .Do(e =>
