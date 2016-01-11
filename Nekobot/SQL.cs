@@ -51,7 +51,7 @@ namespace Nekobot
         {
             try { ExecuteNonQuery($"alter table {table} add {field}"); } catch { }
         }
-        static void ExecuteNonQuery(string sql) => Command(sql).ExecuteNonQuery();
+        internal static void ExecuteNonQuery(string sql) => Command(sql).ExecuteNonQuery();
         internal static async Task ExecuteNonQueryAsync(string sql) => await Command(sql).ExecuteNonQueryAsync();
         internal static bool ExecuteScalarPos(string sql) => System.Convert.ToInt32(Command(sql).ExecuteScalar()) > 0;
         internal static bool InTable(string row, string table, ulong id)
