@@ -124,21 +124,26 @@ namespace Nekobot
             #region Insert Wrappers
             internal void InsertFile(string file, Commands.CommandEventArgs e)
             {
-                var i = NonrequestedIndex();
-                var cur_i = FindIndex(song => song.Uri == file);
-                if (cur_i != -1)
+                lock (this)
                 {
-                    if (i > cur_i)
+                    var i = NonrequestedIndex();
+                    var cur_i = FindIndex(song => song.Uri == file);
+                    if (cur_i != -1)
                     {
-                        if (cur_i == 0)
-                            Encore(e);
-                        else
-                            e.Channel.SendMessage($"{e.User.Mention} Your request is already in the playlist at {cur_i}.");
-                        return;
+                        if (i > cur_i)
+                        {
+                            if (cur_i == 0)
+                            {
+                                if (EncoreVote(e)) InsertEncore();
+                            }
+                            else
+                                e.Channel.SendMessage($"{e.User.Mention} Your request is already in the playlist at {cur_i}.");
+                            return;
+                        }
+                        RemoveAt(cur_i);
                     }
-                    lock (this) RemoveAt(cur_i);
+                    Insert(i, new Song(file, Song.EType.Request, e.User));
                 }
-                lock (this) Insert(i, new Song(file, Song.EType.Request, e.User));
             }
 
             internal bool TryInsert(Song song)
@@ -151,6 +156,8 @@ namespace Nekobot
                 }
                 return false;
             }
+
+            void InsertEncore() => Insert(1, this[0].Encore());
             #endregion
 
             #region Votes and actions
@@ -173,10 +180,13 @@ namespace Nekobot
                 return false;
             }
 
+            bool EncoreVote(Commands.CommandEventArgs e)
+                => AddVote(voteencore, e, "replay current song", "song will be replayed", "replay");
+
             internal void Encore(Commands.CommandEventArgs e)
             {
-                if (AddVote(voteencore, e, "replay current song", "song will be replayed", "replay"))
-                    lock (this) Insert(1, this[0].Encore());
+                if (EncoreVote(e))
+                    lock (this) InsertEncore();
             }
 
             internal void Skip(Commands.CommandEventArgs e)
