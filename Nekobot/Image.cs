@@ -20,19 +20,20 @@ namespace Nekobot
                 B, // Anything >= this uses json, api is more clearly defined. We'll use xml to get count for this type.
                 Sankaku, // Nasty, doesn't support xml response (needed for count), we'll just consider there to be 1000 pages to choose from if there are any at all.
             }
-            Board(string link, string resource, string post, Type type)
+            Board(string link, string resource, string post, Type type, bool shorten)
             {
                 Link = link;
                 Resource = resource;
                 Post = post;
                 _type = type;
+                _shorten = shorten;
                 _rclient = Helpers.GetRestClient(Link);
             }
-            static Board A(string link) =>
-                new Board(link, $"index.php?page=dapi&s=post&q=index&limit=1&pid=", "/index.php?page=post&s=view&id=", Type.A);
-            static Board B(string link, Type type = Type.B) =>
-                new Board(link, $"post/index.json?limit=1&page=", "/post/show/", type);
-            static Board Sankaku(string board) => B($"https://{board}.sankakucomplex.com", Type.Sankaku);
+            static Board A(string link, bool shorten = false) =>
+                new Board(link, $"index.php?page=dapi&s=post&q=index&limit=1&pid=", "/index.php?page=post&s=view&id=", Type.A, shorten);
+            static Board B(string link, bool shorten = true, Type type = Type.B) =>
+                new Board(link, $"post/index.json?limit=1&page=", "/post/show/", type, shorten);
+            static Board Sankaku(string board) => B($"https://{board}.sankakucomplex.com", false, Type.Sankaku);
 
             public static Board Get(string booru, string tags)
             {
@@ -45,7 +46,7 @@ namespace Nekobot
                 booru == "lolibooru" ? B("http://lolibooru.moe") :
                 booru == "sankaku" ? Sankaku("chan") :
                 //booru == "sankakuidol" ? Sankaku("idol") :
-                booru == "e621" ? B("https://e621.net")
+                booru == "e621" ? B("https://e621.net", false)
                 : null;
 
                 var boardconf = (JObject)Program.config["Booru"].SelectToken(booru);
@@ -81,13 +82,21 @@ namespace Nekobot
                 return JObject.Parse(JsonConvert.SerializeXmlNode(xml))["posts"];
             }
 
+            private string GetFileUrl(JToken res, string prefix)
+            {
+                var ret = res[$"{prefix}file_url"].ToString();
+                if (!_shorten) return ret;
+                var md5 = res[$"{prefix}md5"].ToString();
+                return ret.Substring(0, ret.LastIndexOf(md5)+md5.Length) + ret.Substring(ret.LastIndexOf('.'));
+            }
+
             public string GetImageLink(int rnd)
             {
                 var json = _type >= Type.B;
                 var res = Common(Resource + rnd.ToString(), json);
                 string prefix = !json ? "@" : "";
                 if (!json) res = (JObject)res["post"];
-                return $"**{Link}{Post}{res[$"{prefix}id"].ToString()}** {(_type == Type.Sankaku ? "http:" : "")}{res[$"{prefix}file_url"].ToString().Replace(" ", "%20")}";
+                return $"**{Link}{Post}{res[$"{prefix}id"].ToString()}** {(_type == Type.Sankaku ? "http:" : _type == Type.Danbooru ? _rclient.BaseUrl.ToString() : "")}{GetFileUrl(res, prefix)}";
             }
 
             public int GetPostCount()
@@ -102,6 +111,7 @@ namespace Nekobot
             public string Resource;
             public string Post;
             private Type _type;
+            private bool _shorten;
             private RestClient _rclient;
         }
         static async Task Booru(string booru, Commands.CommandEventArgs e)
