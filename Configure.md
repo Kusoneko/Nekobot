@@ -69,7 +69,7 @@ The game Nekobot will be shown as playing by default. (Empty string will be no g
 
 ### Music Folder
 The full path to a folder containing the music files to be used for music streaming.
-If empty, all music commands will be disabled.
+If empty, the `request` command will be disabled, and music will only be played when a command is issued to queue music from elsewhere.
 
 The musicUseSubfolders setting is whether or not to include files buried in folders within your musicFolder.
 

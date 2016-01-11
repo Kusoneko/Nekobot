@@ -49,6 +49,7 @@ namespace Nekobot
         {
             internal void Initialize()
             {
+                if (!HasFolder()) return;
                 lock (this)
                 {
                     var files = Files();
@@ -84,10 +85,39 @@ namespace Nekobot
 
             int NonrequestedIndex() => 1 + this.Skip(1).Where(song => song.Nonrequested).Count();
 
+            internal async Task<string> CurrentUri()
+            {
+                while (!this.Any())
+                {
+                    if (reset) return null;
+                    await Task.Delay(5000);
+                }
+                lock (this) return this[0].Uri;
+            }
+
+            string EmptyPlaylist() =>
+                this.Any() ? null : "The playlist is currently empty, use commands to request something.";
+
             internal string CurrentSong()
             {
+                lock(this)
+                    return EmptyPlaylist() ?? this[0].Title();
+            }
+
+            internal string SongList()
+            {
                 lock (this)
-                    return this[0].Title();
+                {
+                    string reply = EmptyPlaylist() ?? "";
+                    if (reply != "") return reply;
+                    int i = -1;
+                    foreach(var t in this)
+                    {
+                        reply += (++i == 0) ? $"Currently playing: {t.Title()}.\nNext songs:" : $"\n{i} - {t.ExtTitle}";
+                        if (reply.Length > 2000) return reply.Substring(0, reply.LastIndexOf('\n'));
+                    }
+                    return reply;
+                }
             }
             #endregion
 
@@ -171,7 +201,7 @@ namespace Nekobot
                     pause = false;
                     reset = true;
                 }
-                await Task.Delay(5000);
+                await Task.Delay(7500);
                 await Stream(c);
             }
             #endregion
@@ -186,7 +216,7 @@ namespace Nekobot
         static Dictionary<ulong, Playlist> playlist = new Dictionary<ulong, Playlist>();
         static string[] exts = { ".wma", ".aac", ".mp3", ".m4a", ".wav", ".flac", ".ogg" };
 
-        internal static bool HasFolder() => Folder.Length != 0;
+        static bool HasFolder() => Folder.Length != 0;
         static IEnumerable<string> Files() => System.IO.Directory.EnumerateFiles(Folder, "*.*", UseSubdirs ? System.IO.SearchOption.AllDirectories : System.IO.SearchOption.TopDirectoryOnly).Where(s => exts.Contains(System.IO.Path.GetExtension(s)));
 
         static Commands.CommandBuilder CreatePLCmd(Commands.CommandGroupBuilder group, string name, string parameter, string description, string alias) => CreatePLCmd(group, name, parameter, description, new[]{alias});
@@ -299,8 +329,8 @@ namespace Nekobot
                         var outFormat = new WaveFormat(48000, 16, Program.Audio.Config.Channels);
                         int blockSize = outFormat.AverageBytesPerSecond; // 1 second
                         byte[] buffer = new byte[blockSize];
-                        string uri;
-                        lock (pl) uri = pl[0].Uri;
+                        string uri = await pl.CurrentUri();
+                        if (uri == null) return; // Only happens if we're done here.
                         var musicReader = Reader(uri);
                         if (musicReader == null)
                         {
@@ -368,28 +398,10 @@ namespace Nekobot
 
         internal static void AddCommands(Commands.CommandGroupBuilder group)
         {
-            if (!HasFolder()) return;
-
             group.CreateCommand("playlist")
                 .Description("I'll give you the list of songs in the playlist.")
                 .FlagMusic(true)
-                .Do(e =>
-                {
-                    string reply = "";
-                    int i = -1;
-                    var pl = playlist[e.User.VoiceChannel.Id];
-                    lock (pl)
-                    foreach(var t in pl)
-                    {
-                        reply += (++i == 0) ? $"Currently playing: {t.Title()}.\nNext songs:" : $"\n{i} - {t.ExtTitle}";
-                        if (reply.Length > 2000)
-                        {
-                            reply = reply.Substring(0, reply.LastIndexOf('\n'));
-                            break;
-                        }
-                    }
-                    e.Channel.SendMessage(reply);
-                });
+                .Do(e => e.Channel.SendMessage(playlist[e.User.VoiceChannel.Id].SongList()));
 
             group.CreateCommand("song")
                 .Description("I'll tell you the song I'm currently playing.")
@@ -428,20 +440,23 @@ namespace Nekobot
                 //sc.CreateSearchCmd(group, "scplsearch", "scpls", true); // Until this stops giving Gateway timeouts, RIP.
             }
 
-            CreatePLCmd(group, "request", "song to find", "I'll try to add your request to the playlist!")
-                .Do(e =>
-                {
-                    var args = string.Join(" ", e.Args);
-                    if (args.Length == 0)
+            if (HasFolder())
+            {
+                CreatePLCmd(group, "request", "song to find", "I'll try to add your request to the playlist!")
+                    .Do(e =>
                     {
-                        e.Channel.SendMessage("You need to provide at least a character to search for.");
-                        return;
-                    }
-                    args = args.ToLower();
-                    var file = Files().FirstOrDefault(f => System.IO.Path.GetFileNameWithoutExtension(f).ToLower().Contains(args));
-                    if (file != null) playlist[e.User.VoiceChannel.Id].InsertFile(file, e);
-                    e.Channel.SendMessage($"{e.User.Mention} Your request {(file != null ? "has been added to the list" : "was not found")}.");
-                });
+                        var args = string.Join(" ", e.Args);
+                        if (args.Length == 0)
+                        {
+                            e.Channel.SendMessage("You need to provide at least a character to search for.");
+                            return;
+                        }
+                        args = args.ToLower();
+                        var file = Files().FirstOrDefault(f => System.IO.Path.GetFileNameWithoutExtension(f).ToLower().Contains(args));
+                        if (file != null) playlist[e.User.VoiceChannel.Id].InsertFile(file, e);
+                        e.Channel.SendMessage($"{e.User.Mention} Your request {(file != null ? "has been added to the list" : "was not found")}.");
+                    });
+            }
 
             group.CreateCommand("skip")
                 .Description("Vote to skip the current song. (Will skip at 50% or more)")

@@ -13,8 +13,6 @@ namespace Nekobot
     {
         internal static void Startup(DiscordClient c)
         {
-            if (!Music.HasFolder()) return;
-
             c.UsingAudio(new AudioServiceConfig
             {
                 Mode = AudioMode.Outgoing,
