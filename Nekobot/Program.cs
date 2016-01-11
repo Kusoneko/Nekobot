@@ -161,7 +161,7 @@ namespace Nekobot
             {
                 lfclient = new LastFM.LastfmClient(config["LastFM"]["apikey"].ToString(), config["LastFM"]["apisecret"].ToString());
                 group.CreateCommand("lastfm")
-                    .Parameter("username(s", Commands.ParameterType.Unparsed)
+                    .Parameter("username(s)", Commands.ParameterType.Unparsed)
                     .Description("I'll tell you the last thing you, a lastfm user, or users on this server (if I know their lastfm) listened to.")
                     .Do(async e =>
                     {
