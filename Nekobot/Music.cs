@@ -81,13 +81,15 @@ namespace Nekobot
             }
 
             #region Information
+            bool Any => this.Any();
+
             bool InPlaylist(string common, bool online = false) => Exists(song => (song.IsOnline == online) && (online ? song.Ext : song.Uri) == common);
 
-            int NonrequestedIndex() => 1 + this.Skip(1).Where(song => song.Nonrequested).Count();
+            int NonrequestedIndex() => Any ? 1 + this.Skip(1).Where(song => song.Nonrequested).Count() : 0;
 
             internal async Task<string> CurrentUri()
             {
-                while (!this.Any())
+                while (!Any)
                 {
                     if (reset) return null;
                     await Task.Delay(5000);
@@ -96,7 +98,7 @@ namespace Nekobot
             }
 
             string EmptyPlaylist() =>
-                this.Any() ? null : "The playlist is currently empty, use commands to request something.";
+                Any ? null : "The playlist is currently empty, use commands to request something.";
 
             internal string CurrentSong()
             {
