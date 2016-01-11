@@ -87,7 +87,7 @@ namespace Nekobot
                 var ret = res[$"{prefix}file_url"].ToString();
                 if (!_shorten) return ret;
                 var md5 = res[$"{prefix}md5"].ToString();
-                return ret.Substring(0, ret.LastIndexOf(md5)+md5.Length) + ret.Substring(ret.LastIndexOf('.'));
+                return ret.Substring(0, ret.IndexOf(md5)+md5.Length) + ret.Substring(ret.LastIndexOf('.'));
             }
 
             public string GetImageLink(int rnd)
