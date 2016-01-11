@@ -161,18 +161,20 @@ namespace Nekobot
             {
                 lfclient = new LastFM.LastfmClient(config["LastFM"]["apikey"].ToString(), config["LastFM"]["apisecret"].ToString());
                 group.CreateCommand("lastfm")
-                    .Parameter("username", Commands.ParameterType.Unparsed)
-                    .Description("I'll tell you the last thing a lastfm user listened to.")
+                    .Parameter("username(s", Commands.ParameterType.Unparsed)
+                    .Description("I'll tell you the last thing you, a lastfm user, or users on this server (if I know their lastfm) listened to.")
                     .Do(async e =>
                     {
-                        var user = e.Args[0];
-                        if (user == "") user = SQL.ReadUser(e.User.Id, "lastfm");
-                        if (user != null)
-                        {
-                            var d = (await new LastFM.UserApi(lfclient.Auth, lfclient.HttpClient).GetRecentScrobbles(user, count: 1)).First();
-                            await e.Channel.SendMessage($"{(e.Args[0] == "" ? e.User.Name : user)} last listened to **{d.Name}** by **{d.ArtistName}**");
-                        }
-                        else await e.Channel.SendMessage($"I don't know your lastfm yet, please use the `setlastfm <username>` command.");
+                        var api = new LastFM.UserApi(lfclient.Auth, lfclient.HttpClient);
+                        var users = e.Args[0].Any() ? e.Message.MentionedUsers.Any() ? e.Message.MentionedUsers : null : new[]{e.User};
+                        var response = "";
+                        if (users == null)
+                            response = await GetLastScrobble(api, Tuple.Create(e.Args[0], e.Args[0], false));
+                        else foreach (var user in (from u in users select Tuple.Create(SQL.ReadUser(u.Id, "lastfm"), u.Name, u == e.User)))
+                            response += (user.Item1.Any() ? await GetLastScrobble(api, user)
+                                    : $"I don't know {(user.Item3 ? "your" : $"{user.Item2}'s")} lastfm yet{(user.Item3 ? ", please use the `setlastfm <username>` command" : "")}"
+                                ) + ".\n";
+                        await e.Channel.SendMessage(response);
                     });
 
                 group.CreateCommand("setlastfm")
@@ -801,6 +803,12 @@ The current topic is: {e.Channel.Topic}";
             }
 
             return animeWatched;
+        }
+
+        static async Task<string> GetLastScrobble(LastFM.UserApi api, Tuple<string, string, bool> user)
+        {
+            var d = (await api.GetRecentScrobbles(user.Item1, count: 1)).FirstOrDefault();
+            return $"{user.Item2} {(d != null ? "last" : "hasn't")} listened to {(d != null ? $"**{d.Name}** by **{d.ArtistName}**" : "anything")})";
         }
 
         private static void LoadConfig()
