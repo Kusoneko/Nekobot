@@ -115,7 +115,7 @@ namespace Nekobot
                     int i = -1;
                     foreach(var t in this)
                     {
-                        reply += (++i == 0) ? $"Currently playing: {t.Title()}.\nNext songs:" : $"\n{i} - {t.ExtTitle}";
+                        reply += (++i == 0) ? $"Currently playing: {t.Title()}.{(Count > 1 ? "\nNext songs:" : "")}" : $"\n{i} - {t.ExtTitle}";
                         if (reply.Length > 2000) return reply.Substring(0, reply.LastIndexOf('\n'));
                     }
                     return reply;
