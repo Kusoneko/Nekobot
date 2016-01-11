@@ -52,9 +52,9 @@ namespace Nekobot
                 lock (this)
                 {
                     var files = Files();
-                    var filecount = files.Count();
+                    var filecount = Math.Min(files.Count(), 11);
                     Random rnd = new Random();
-                    while (Count < (filecount < 11 ? filecount : 11))
+                    while (Count < filecount)
                     {
                         var mp3 = files.ElementAt(rnd.Next(0, filecount));
                         if (InPlaylist(mp3))
