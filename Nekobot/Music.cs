@@ -286,7 +286,7 @@ namespace Nekobot
             internal void Stop()
             {
                 SQL.AddOrUpdateFlag(Channel.Id, "music", "0");
-                playlist[Channel.Id].pause = false;
+                playlist[Channel.Id].Exit();
                 streams.Remove(this);
             }
 
