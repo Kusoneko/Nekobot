@@ -550,7 +550,7 @@ namespace Nekobot
                 .MinPermissions(2)
                 .Do(e =>
                 {
-                    if (e.User.VoiceChannel?.Id <= 0) e.Channel.SendMessage($"{e.User.Mention}, you need to be in a voice channel to use this.");
+                    if (e.User.VoiceChannel == null) e.Channel.SendMessage($"{e.User.Mention}, you need to be in a voice channel to use this.");
                     else Helpers.OnOffCmd(e, async on =>
                     {
                         bool has_stream = streams.Has(e.User.VoiceChannel);
