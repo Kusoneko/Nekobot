@@ -96,7 +96,7 @@ namespace Nekobot
                 var res = Common(Resource + rnd.ToString(), json);
                 string prefix = !json ? "@" : "";
                 if (!json) res = (JObject)res["post"];
-                return $"**{Link}{Post}{res[$"{prefix}id"].ToString()}** {(_type == Type.Sankaku ? "http:" : _type == Type.Danbooru ? _rclient.BaseUrl.ToString() : "")}{GetFileUrl(res, prefix)}";
+                return $"**{Link}{Post}{res[$"{prefix}id"].ToString()}** {(_type == Type.Sankaku ? "http:" : "")}{GetFileUrl(res, prefix)}";
             }
 
             public int GetPostCount()
