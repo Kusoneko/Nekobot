@@ -586,7 +586,7 @@ The current topic is: {e.Channel.Topic}";
                 {
                     int newPermLevel;
                     int eUserPerm = Helpers.GetPermissions(e.User, e.Channel);
-                    if (e.Args[1] == "" || e.Message.MentionedUsers.Any())
+                    if (e.Args[1] == "" || !e.Message.MentionedUsers.Any())
                         await e.Channel.SendMessage("You need to at least specify a permission level and mention one user.");
                     else if (!int.TryParse(e.Args[0], out newPermLevel))
                         await e.Channel.SendMessage("The first argument needs to be the new permission level.");
