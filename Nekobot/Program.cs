@@ -622,7 +622,7 @@ The current topic is: {e.Channel.Topic}";
                 .Do(async e =>
                 {
                     await e.Channel.SendMessage("Bye bye!");
-                    await Music.StopStreams(e.Server);
+                    await Music.Stop(e.Server);
                     await e.Server.Leave();
                 });
 
@@ -697,8 +697,6 @@ The current topic is: {e.Channel.Topic}";
             //Log to the console whenever someone uses a command
             commands.CommandExecuted += (s, e) => client.Log.Info("Command", $"{e.User.Name}: {e.Command.Text}");
 
-            Voice.Startup(client);
-
             commands.CreateGroup("", group => GenerateCommands(group));
             commands.NonCommands = e => Task.Run(()=>Chatbot.Do(e));
             // Load the chatbots
@@ -727,7 +725,7 @@ The current topic is: {e.Channel.Topic}";
                 // Connection, join server if there is one in config, and start music streams
                 if (config["server"].ToString() != "")
                     (await client.GetInvite(config["server"].ToString()))?.Accept();
-                await Music.StartStreams(client);
+                Voice.Startup(client);
             });
         }
 

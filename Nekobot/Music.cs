@@ -199,32 +199,155 @@ namespace Nekobot
             internal async Task Reset(Commands.CommandEventArgs e)
             {
                 if (!reset && AddVote(votereset, e, "reset the stream", "resetting stream", "reset"))
-                    await ResetStream(e.User.VoiceChannel);
+                    await streams.Reset(e.User.VoiceChannel);
             }
             internal void Pause(Commands.CommandEventArgs e)
             {
                 e.Channel.SendMessage($"{(pause ? "Resum" : "Paus")}ing stream...");
                 pause = !pause;
             }
-            internal async Task ResetStream(Channel c)
+            internal void Reset()
             {
                 lock (this)
                 {
                     pause = false;
                     reset = true;
                 }
-                await Task.Delay(7500);
-                await Stream(c);
             }
             #endregion
 
             List<ulong> voteskip = new List<ulong>(), votereset = new List<ulong>(), voteencore = new List<ulong>();
             internal bool skip = false, reset = false, pause = false;
         }
+
+        internal class Stream
+        {
+            internal Stream(Channel chan) { Channel = chan; }
+
+            static IWaveProvider Reader(string file)
+            {
+                for (byte i = 3; i != 0; --i) try
+                {
+                    return System.IO.Path.GetExtension(file) == ".ogg"
+                            ? (IWaveProvider)new NAudio.Vorbis.VorbisWaveReader(file)
+                            : new MediaFoundationReader(file);
+                } catch { }
+                return null;
+            }
+            internal async Task Play()
+            {
+                ulong cid = Channel.Id;
+                var _client = await Voice.JoinServer(Channel);
+                if (_client == null) return; // TODO: Remove when voice works.
+                if (!playlist.ContainsKey(cid))
+                    playlist.Add(cid, new Playlist());
+                while (streams.Contains(this))
+                {
+                    var pl = playlist[cid];
+                    pl.Initialize();
+                    await Task.Run(async () =>
+                    {
+                        try
+                        {
+                            var outFormat = new WaveFormat(48000, 16, Program.Audio.Config.Channels);
+                            int blockSize = outFormat.AverageBytesPerSecond; // 1 second
+                            byte[] buffer = new byte[blockSize];
+                            string uri = await pl.CurrentUri();
+                            if (uri == null) return; // Only happens if we're done here.
+                            var musicReader = Reader(uri);
+                            if (musicReader == null)
+                            {
+                                Program.log.Warning("Stream", $"{uri} couldn't be read.");
+                                return;
+                            }
+                            using (var resampler = new MediaFoundationResampler(musicReader, outFormat) { ResamplerQuality = 60 })
+                            {
+                                int byteCount;
+                                while ((byteCount = resampler.Read(buffer, 0, blockSize)) > 0)
+                                {
+                                    while(pl.pause) await Task.Delay(500); // Play Voice.cs commands in here?
+                                    if (!streams.Contains(this) || pl.skip || pl.reset)
+                                    {
+                                        _client.Clear();
+                                        await Task.Delay(1000);
+                                        break;
+                                    }
+                                    _client.Send(buffer, 0, blockSize);
+                                }
+                            }
+                        }
+                        catch (OperationCanceledException err) { Program.log.Error("Stream", err.Message); }
+                    });
+                    _client.Wait(); // Prevent endless queueing which would eventually eat up all the ram
+                    if (pl.Cleanup()) break;
+                }
+                await Program.Audio.Leave(Channel.Server);
+            }
+
+            internal void Stop()
+            {
+                SQL.AddOrUpdateFlag(Channel.Id, "music", "0");
+                playlist[Channel.Id].pause = false;
+                streams.Remove(this);
+            }
+
+            internal Channel Channel;
+            internal Server Server => Channel.Server;
+        }
+
+        internal class Streams : List<Stream>
+        {
+            internal bool Has(Channel c) => this.Any(s => c == s.Channel);
+            internal Stream Get(Channel c) => this.First(s => c == s.Channel);
+
+            internal async Task AddStream(Channel c)
+            {
+                var stream = new Stream(c);
+                Add(stream);
+                await stream.Play();
+            }
+
+            internal Task Load(DiscordClient client)
+            {
+                // Load the stream channels
+                var channels = new List<ulong>();
+                var reader = SQL.ReadChannels("music=1");
+                while (reader.Read())
+                    channels.Add(Convert.ToUInt64(reader["channel"].ToString()));
+                return Task.WhenAll(
+                  channels.Select(s =>
+                  {
+                      var c = client.GetChannel(s);
+                      return c.Type == ChannelType.Voice ? Task.Run(async() => await AddStream(c)) : null;
+                  })
+                  .Where(t => t != null)
+                  .ToArray());
+            }
+
+            internal async Task Stop(Server server)
+            {
+                var serverstreams = this.Where(stream => server == stream.Server).ToArray();
+                foreach (var stream in serverstreams)
+                    stream.Stop();
+                if (serverstreams.Length != 0)
+                    await Task.Delay(5000);
+            }
+
+            internal async Task Reset(Channel c)
+            {
+                playlist[c.Id].Reset();
+                await Task.Delay(7500);
+                await streams.First(s => s.Channel == c).Play(); // If this throws, something has gone horribly wrong.
+            }
+        }
+
+        internal static void Load(DiscordClient c) => streams.Load(c);
+        internal static async Task Stop(Server s) => await streams.Stop(s);
+
         // Music-related variables
         internal static string Folder;
         internal static bool UseSubdirs;
-        static List<ulong> streams = new List<ulong>();
+        static Streams streams = new Streams();
         static Dictionary<ulong, Playlist> playlist = new Dictionary<ulong, Playlist>();
         static string[] exts = { ".wma", ".aac", ".mp3", ".m4a", ".wav", ".flac", ".ogg" };
 
@@ -311,101 +434,6 @@ namespace Nekobot
                         e.Channel.SendMessage($"{e.User.Mention} No results for your requested search aren't already in the playlist.");
                     });
             }
-        }
-
-        static IWaveProvider Reader(string file)
-        {
-            for (byte i = 3; i != 0; --i) try
-            {
-                return System.IO.Path.GetExtension(file) == ".ogg"
-                        ? (IWaveProvider)new NAudio.Vorbis.VorbisWaveReader(file)
-                        : new MediaFoundationReader(file);
-            } catch { }
-            return null;
-        }
-        static async Task Stream(Channel c)
-        {
-            ulong cid = c.Id;
-            var _client = await Voice.JoinServer(c);
-            if (_client == null) return; // TODO: Remove when voice works.
-            if (!playlist.ContainsKey(cid))
-                playlist.Add(cid, new Playlist());
-            while (streams.Contains(cid))
-            {
-                var pl = playlist[cid];
-                pl.Initialize();
-                await Task.Run(async () =>
-                {
-                    try
-                    {
-                        var outFormat = new WaveFormat(48000, 16, Program.Audio.Config.Channels);
-                        int blockSize = outFormat.AverageBytesPerSecond; // 1 second
-                        byte[] buffer = new byte[blockSize];
-                        string uri = await pl.CurrentUri();
-                        if (uri == null) return; // Only happens if we're done here.
-                        var musicReader = Reader(uri);
-                        if (musicReader == null)
-                        {
-                            Program.log.Warning("Stream", $"{uri} couldn't be read.");
-                            return;
-                        }
-                        using (var resampler = new MediaFoundationResampler(musicReader, outFormat) { ResamplerQuality = 60 })
-                        {
-                            int byteCount;
-                            while ((byteCount = resampler.Read(buffer, 0, blockSize)) > 0)
-                            {
-                                while(pl.pause) await Task.Delay(500); // Play Voice.cs commands in here?
-                                if (!streams.Contains(cid) || pl.skip || pl.reset)
-                                {
-                                    _client.Clear();
-                                    await Task.Delay(1000);
-                                    break;
-                                }
-                                _client.Send(buffer, 0, blockSize);
-                            }
-                        }
-                    }
-                    catch (OperationCanceledException err) { Program.log.Error("Stream", err.Message); }
-                });
-                _client.Wait(); // Prevent endless queueing which would eventually eat up all the ram
-                if (pl.Cleanup()) break;
-            }
-            await Program.Audio.Leave(c.Server);
-        }
-
-        internal static Task StartStreams(DiscordClient client)
-        {
-            return Task.WhenAll(
-              streams.Select(s =>
-              {
-                  var c = client.GetChannel(s);
-                  return c.Type == ChannelType.Voice ? Task.Run(() => Stream(c)) : null;
-              })
-              .Where(t => t != null)
-              .ToArray());
-        }
-
-        internal static void LoadStreams()
-        {
-            var reader = SQL.ReadChannels("music=1");
-            while (reader.Read())
-                streams.Add(Convert.ToUInt64(reader["channel"].ToString()));
-        }
-
-        internal static void StopStream(ulong stream)
-        {
-            SQL.AddOrUpdateFlag(stream, "music", "0");
-            playlist[stream].pause = false;
-            streams.Remove(stream);
-        }
-
-        internal static async Task StopStreams(Server server)
-        {
-            var serverstreams = streams.Where(stream => server.GetChannel(stream) != null).ToArray();
-            foreach (var stream in serverstreams)
-                StopStream(stream);
-            if (serverstreams.Length != 0)
-                await Task.Delay(5000);
         }
 
         internal static void AddCommands(Commands.CommandGroupBuilder group)
@@ -505,7 +533,7 @@ namespace Nekobot
                 .Do(async e =>
                 {
                     await e.Channel.SendMessage("Reseting stream...");
-                    await playlist[e.User.VoiceChannel.Id].ResetStream(e.User.VoiceChannel);
+                    await streams.Reset(e.User.VoiceChannel);
                 });
 
             group.CreateCommand("pause")
@@ -525,7 +553,7 @@ namespace Nekobot
                     if (e.User.VoiceChannel?.Id <= 0) e.Channel.SendMessage($"{e.User.Mention}, you need to be in a voice channel to use this.");
                     else Helpers.OnOffCmd(e, async on =>
                     {
-                        bool has_stream = streams.Contains(e.User.VoiceChannel.Id);
+                        bool has_stream = streams.Has(e.User.VoiceChannel);
                         string status = on ? "start" : "halt";
                         if (has_stream == on)
                         {
@@ -538,11 +566,10 @@ namespace Nekobot
                             if (on)
                             {
                                 SQL.AddOrUpdateFlag(e.User.VoiceChannel.Id, "music", "1");
-                                await StopStreams(e.Server);
-                                streams.Add(e.User.VoiceChannel.Id);
-                                await Stream(e.User.VoiceChannel);
+                                await streams.Stop(e.Server);
+                                await streams.AddStream(e.User.VoiceChannel);
                             }
-                            else StopStream(e.User.VoiceChannel.Id);
+                            else streams.Get(e.User.VoiceChannel).Stop();
                         }
                     });
                 });

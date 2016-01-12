@@ -21,8 +21,7 @@ namespace Nekobot
                 Bitrate = 512,
             });
 
-            // Load the stream channels
-            Music.LoadStreams();
+            Music.Load(c);
         }
 
         internal static async Task<IAudioClient> JoinServer(Channel c)
