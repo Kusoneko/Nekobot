@@ -10,7 +10,7 @@ namespace Nekobot
     {
         static ConcurrentDictionary<ulong, ChatterBotSession> chatbots = new ConcurrentDictionary<ulong, ChatterBotSession>();
 
-        static bool HasNeko(string msg, string neko)
+        static bool HasNeko(ref string msg, string neko)
         {
             if (msg.ToLower().IndexOf(neko.ToLower()) != -1)
             {
@@ -24,7 +24,7 @@ namespace Nekobot
             if (chatbots.Count() == 0) return; // No bot sessions
             string msg = e.Message.Text;
             string neko = e.Channel.IsPrivate ? "" : e.Server.CurrentUser.Name;
-            if (chatbots.ContainsKey(e.Channel.Id) && (e.Channel.IsPrivate || HasNeko(msg, neko) || HasNeko(msg, System.Text.RegularExpressions.Regex.Replace(neko, @"\p{Cs}", ""))))
+            if (chatbots.ContainsKey(e.Channel.Id) && (e.Channel.IsPrivate || HasNeko(ref msg, neko) || HasNeko(ref msg, System.Text.RegularExpressions.Regex.Replace(neko, @"\p{Cs}", ""))))
             {
                 string chat;
                 lock (chatbots[e.Channel.Id]) chat = chatbots[e.Channel.Id].Think(msg); // Think in order.
