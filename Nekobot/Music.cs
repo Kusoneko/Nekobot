@@ -341,6 +341,7 @@ namespace Nekobot
             }
         }
 
+        internal static bool Get(Channel c) => c != null && streams.Has(c);
         internal static void Load(DiscordClient c) => streams.Load(c);
         internal static async Task Stop(Server s) => await streams.Stop(s);
 
@@ -553,7 +554,7 @@ namespace Nekobot
                     if (e.User.VoiceChannel == null) e.Channel.SendMessage($"{e.User.Mention}, you need to be in a voice channel to use this.");
                     else Helpers.OnOffCmd(e, async on =>
                     {
-                        bool has_stream = streams.Has(e.User.VoiceChannel);
+                        bool has_stream = Get(e.User.VoiceChannel);
                         string status = on ? "start" : "halt";
                         if (has_stream == on)
                         {

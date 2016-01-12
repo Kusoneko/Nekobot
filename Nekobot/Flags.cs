@@ -31,14 +31,7 @@ namespace Nekobot
             return $"<{symbol}{id}> is " + (!isIgnored ? "now" : "no longer") + " ignored.";
         }
 
-        internal static bool GetMusic(User user)
-        {
-            var reader = SQL.ReadChannels("music = 1");
-            List<ulong> streams = new List<ulong>();
-            while (reader.Read())
-                streams.Add(Convert.ToUInt64(reader["channel"].ToString()));
-            return user.VoiceChannel != null && streams.Contains(user.VoiceChannel.Id);
-        }
+        internal static bool GetMusic(User user) => Music.Get(user.VoiceChannel);
 
         internal static bool GetNsfw(Channel chan) => SQL.ReadBool(SQL.ReadChannel(chan.Id, "nsfw"));
 
