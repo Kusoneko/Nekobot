@@ -71,9 +71,9 @@ namespace Nekobot
                 lock (votereset) votereset.Clear();
                 lock (voteencore) voteencore.Clear();
                 skip = false;
-                if (reset)
+                if (exit)
                 {
-                    reset = false;
+                    exit = false;
                     return true;
                 }
                 RemoveAt(0);
@@ -91,7 +91,7 @@ namespace Nekobot
             {
                 while (!Any)
                 {
-                    if (reset) return null;
+                    if (exit) return null;
                     await Task.Delay(5000);
                 }
                 lock (this) return this[0].Uri;
@@ -198,7 +198,7 @@ namespace Nekobot
             }
             internal async Task Reset(Commands.CommandEventArgs e)
             {
-                if (!reset && AddVote(votereset, e, "reset the stream", "resetting stream", "reset"))
+                if (!exit && AddVote(votereset, e, "reset the stream", "resetting stream", "reset"))
                     await streams.Reset(e.User.VoiceChannel);
             }
             internal void Pause(Commands.CommandEventArgs e)
@@ -206,18 +206,18 @@ namespace Nekobot
                 e.Channel.SendMessage($"{(pause ? "Resum" : "Paus")}ing stream...");
                 pause = !pause;
             }
-            internal void Reset()
+            internal void Exit()
             {
                 lock (this)
                 {
                     pause = false;
-                    reset = true;
+                    exit = true;
                 }
             }
             #endregion
 
             List<ulong> voteskip = new List<ulong>(), votereset = new List<ulong>(), voteencore = new List<ulong>();
-            internal bool skip = false, reset = false, pause = false;
+            internal bool skip = false, exit = false, pause = false;
         }
 
         class Stream
@@ -265,7 +265,7 @@ namespace Nekobot
                                 while (resampler.Read(buffer, 0, blockSize) > 0)
                                 {
                                     while(pl.pause) await Task.Delay(500); // Play Voice.cs commands in here?
-                                    if (!streams.Contains(this) || pl.skip || pl.reset)
+                                    if (!streams.Contains(this) || pl.skip || pl.exit)
                                     {
                                         _client.Clear();
                                         await Task.Delay(1000);
@@ -334,7 +334,7 @@ namespace Nekobot
 
             internal async Task Reset(Channel c)
             {
-                playlist[c.Id].Reset();
+                playlist[c.Id].Exit();
                 await Task.Delay(7500);
                 await streams.First(s => s.Channel == c).Play(); // If this throws, something has gone horribly wrong.
             }
