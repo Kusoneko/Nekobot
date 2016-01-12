@@ -262,8 +262,7 @@ namespace Nekobot
                             }
                             using (var resampler = new MediaFoundationResampler(musicReader, outFormat) { ResamplerQuality = 60 })
                             {
-                                int byteCount;
-                                while ((byteCount = resampler.Read(buffer, 0, blockSize)) > 0)
+                                while (resampler.Read(buffer, 0, blockSize) > 0)
                                 {
                                     while(pl.pause) await Task.Delay(500); // Play Voice.cs commands in here?
                                     if (!streams.Contains(this) || pl.skip || pl.reset)
