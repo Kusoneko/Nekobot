@@ -220,7 +220,7 @@ namespace Nekobot
             internal bool skip = false, reset = false, pause = false;
         }
 
-        internal class Stream
+        class Stream
         {
             internal Stream(Channel chan) { Channel = chan; }
 
@@ -295,7 +295,7 @@ namespace Nekobot
             internal Server Server => Channel.Server;
         }
 
-        internal class Streams : List<Stream>
+        class Streams : List<Stream>
         {
             internal bool Has(Channel c) => this.Any(s => c == s.Channel);
             internal Stream Get(Channel c) => this.First(s => c == s.Channel);
