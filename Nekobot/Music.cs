@@ -80,6 +80,15 @@ namespace Nekobot
                 return false;
             }
 
+            internal void RequestMode()
+            {
+                lock(this)
+                {
+                    Clear();
+                    skip = true; // Force a skip to get out of current song and move on.
+                }
+            }
+
             #region Information
             bool Any => this.Any();
 
@@ -222,7 +231,7 @@ namespace Nekobot
 
         class Stream
         {
-            internal Stream(Channel chan) { Channel = chan; }
+            internal Stream(Channel chan, bool request) { Channel = chan; _request = request; }
 
             static IWaveProvider Reader(string file)
             {
@@ -244,7 +253,7 @@ namespace Nekobot
                 var pl = Playlist;
                 while (streams.Contains(this))
                 {
-                    pl.Initialize();
+                    if (!_request) pl.Initialize();
                     await Task.Run(async () =>
                     {
                         try
@@ -292,16 +301,30 @@ namespace Nekobot
 
             internal Channel Channel;
             internal Server Server => Channel.Server;
+            Playlist Playlist => playlist[Channel.Id];
+
+            private bool _request;
+            internal bool Request
+            {
+                get { return _request; }
+                set
+                {
+                    if (_request = value)
+                        Playlist.RequestMode();
+                    else
+                        Playlist.Initialize();
+                }
+            }
         }
 
         class Streams : List<Stream>
         {
             internal bool Has(Channel c) => this.Any(s => c == s.Channel);
-            internal Stream Get(Channel c) => this.First(s => c == s.Channel);
+            internal Stream Get(Channel c) => this.FirstOrDefault(s => c == s.Channel);
 
-            internal async Task AddStream(Channel c)
+            internal async Task AddStream(Channel c, bool request = false)
             {
-                var stream = new Stream(c);
+                var stream = new Stream(c, request);
                 Add(stream);
                 await stream.Play();
             }
@@ -309,18 +332,13 @@ namespace Nekobot
             internal Task Load(DiscordClient client)
             {
                 // Load the stream channels
-                var channels = new List<ulong>();
-                var reader = SQL.ReadChannels("music=1");
+                var channels = new List<Tuple<Channel,int>>();
+                var reader = SQL.ReadChannels("music<>0", "channel,music");
                 while (reader.Read())
-                    channels.Add(Convert.ToUInt64(reader["channel"].ToString()));
+                    channels.Add(Tuple.Create(client.GetChannel(Convert.ToUInt64(reader["channel"].ToString())), int.Parse(reader["music"].ToString())));
                 return Task.WhenAll(
-                  channels.Select(s =>
-                  {
-                      var c = client.GetChannel(s);
-                      return c.Type == ChannelType.Voice ? Task.Run(async() => await AddStream(c)) : null;
-                  })
-                  .Where(t => t != null)
-                  .ToArray());
+                  channels.Select(s => s.Item1.Type == ChannelType.Voice ? Task.Run(async() => await AddStream(s.Item1, s.Item2 == 2)) : null)
+                  .Where(t => t != null).ToArray());
             }
 
             internal async Task Stop(Server server)
@@ -553,12 +571,21 @@ namespace Nekobot
                     if (e.User.VoiceChannel == null) e.Channel.SendMessage($"{e.User.Mention}, you need to be in a voice channel to use this.");
                     else Helpers.OnOffCmd(e, async on =>
                     {
-                        bool has_stream = Get(e.User.VoiceChannel);
+                        var stream = streams.Get(e.User.VoiceChannel);
                         string status = on ? "start" : "halt";
-                        if (has_stream == on)
+                        if ((stream != null) == on)
                         {
-                            string blah = on ? "streaming in! Did you mean to !reset or !forcereset the stream?" : "not streaming in!";
-                            await e.Channel.SendMessage($"{e.User.Mention}, I can't {status} streaming in a channel that I'm already {blah}");
+                            if (on && stream.Request) // The user is switching back to normal streaming mode.
+                            {
+                                SQL.AddOrUpdateFlag(e.User.VoiceChannel.Id, "music", "1");
+                                stream.Request = false;
+                                await e.Channel.SendMessage("Switching to normal streaming mode.");
+                            }
+                            else
+                            {
+                                string blah = on ? "streaming in! Did you mean to !reset or !forcereset the stream?" : "not streaming in!";
+                                await e.Channel.SendMessage($"{e.User.Mention}, I can't {status} streaming in a channel that I'm already {blah}");
+                            }
                         }
                         else
                         {
@@ -573,6 +600,26 @@ namespace Nekobot
                         }
                     });
                 });
+
+            if (HasFolder()) // Request-driven mode is always on when we don't have a folder, therefore we won't need this command.
+            {
+                group.CreateCommand("music request")
+                    .Description("I'll turn request-driven streaming on in a particular voice channel, which you need to be in.")
+                    .MinPermissions(2)
+                    .Do(e =>
+                    {
+                        var stream = streams.Get(e.User.VoiceChannel);
+                        if (stream == null) Task.Run(() => streams.AddStream(e.User.VoiceChannel, true));
+                        else if (stream.Request)
+                        {
+                            e.Channel.SendMessage("The stream is already in request mode.");
+                            return;
+                        }
+                        else stream.Request = true;
+                        SQL.AddOrUpdateFlag(e.User.VoiceChannel.Id, "music", "2");
+                        e.Channel.SendMessage("I am now streaming in request-driven mode.");
+                    });
+            }
         }
     }
 }
