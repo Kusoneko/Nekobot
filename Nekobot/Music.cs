@@ -76,7 +76,7 @@ namespace Nekobot
                     exit = false;
                     return true;
                 }
-                RemoveAt(0);
+                lock(this) if (Any) RemoveAt(0);
                 return false;
             }
 
@@ -241,9 +241,9 @@ namespace Nekobot
                 if (_client == null) return; // TODO: Remove when voice works.
                 if (!playlist.ContainsKey(cid))
                     playlist.Add(cid, new Playlist());
+                var pl = Playlist;
                 while (streams.Contains(this))
                 {
-                    var pl = playlist[cid];
                     pl.Initialize();
                     await Task.Run(async () =>
                     {
