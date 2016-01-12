@@ -80,7 +80,7 @@ namespace Nekobot
                             reply += (reply != "" ? "\n" : "") + await SetIgnored("channel", "flags", c.Id, '#', perms);
                         foreach (User u in e.Message.MentionedUsers)
                             reply += (reply != "" ? "\n" : "") + await SetIgnored("user", "users", u.Id, '@', perms, Helpers.GetPermissions(u, e.Channel));
-                        await e.Channel.SendMessage(reply);
+                        if (reply != "") await e.Channel.SendMessage(reply);
                     }
                     else await e.Channel.SendMessage("You need to mention at least one user or channel!");
                 });

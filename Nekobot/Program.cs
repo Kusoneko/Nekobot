@@ -35,7 +35,7 @@ namespace Nekobot
                 .Description("I'll give you information about the mentioned user(s).")
                 .Do(async e =>
                 {
-                    if (e.Args[0] == "") return;
+                    if (e.Args[0] == "" || !e.Message.MentionedUsers.Any()) return;
                     string reply = "";
                     bool oniicheck = e.User.Id == 63299786798796800;
                     foreach (User u in e.Message.MentionedUsers)
