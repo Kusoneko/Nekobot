@@ -460,6 +460,49 @@ namespace Nekobot
             }
         }
 
+        static class YT
+        {
+            static RestSharp.RestClient rclient = Helpers.GetRestClient("http://www.youtubeinmp3.com/fetch/");
+
+            class VideoData
+            {
+                public VideoData(string u, string t, string l) { Uri = u; Title = t; Link = l; }
+                public string Uri, Title, Link;
+                public static VideoData Get(string link)
+                {
+                    try { var video = YouTube.Default.GetVideo(link); return new VideoData(video.Uri, video.Title, link); }
+                    catch
+                    {
+                        // TODO: Content is sometimes an html page instead of JSON, we should ask why.
+                        var json = Newtonsoft.Json.Linq.JObject.Parse(rclient.Execute(new RestSharp.RestRequest($"?format=JSON&video={System.Net.WebUtility.UrlEncode(link)}", RestSharp.Method.GET)).Content);
+                        return new VideoData(json["link"].ToString(), json["title"].ToString(), link);
+                    }
+                }
+            }
+
+            static bool Triad(Commands.CommandEventArgs e, VideoData video)
+            {
+                bool ret = playlist[e.User.VoiceChannel.Id].TryInsert(new Song(video.Uri, Song.EType.Youtube, e.User, video.Title + (video.Link == null ? "" : $" ({video.Link})")));
+                e.Channel.SendMessage(ret ? $"{video.Title} added to the playlist."
+                        : $"{e.User.Mention} Your request ({video.Title}) is already in the playlist.");
+                return ret;
+            }
+
+            static public void CreateCommand(Commands.CommandGroupBuilder group, string name, string alias) => CreateCommand(group, name, new[]{alias});
+            static public void CreateCommand(Commands.CommandGroupBuilder group, string name, string[] aliases = null)
+            {
+                CreatePLCmd(group, name, $"youtube video link(s)", $"I'll add youtube videos to the playlist", aliases)
+                    .Do(e =>
+                    {
+                        MatchCollection m = Regex.Matches(e.Args[0], $@"youtu(?:be\.com\/(?:v\/|e(?:mbed)?\/|watch\?v=)|\.be\/)([\w-_]{"{11}"}\b)", RegexOptions.IgnoreCase);
+                        if (m.Count == 0)
+                            e.Channel.SendMessage($"None of {e.Args[0]} could be added to playlist because no valid youtube links were found within.");
+                        else foreach (var link in from Match match in m select $"youtube.com/watch?v={match.Groups[1]}")
+                            Triad(e, VideoData.Get(link));
+                    });
+            }
+        }
+
         internal static void AddCommands(Commands.CommandGroupBuilder group)
         {
             group.CreateCommand("playlist")
@@ -477,28 +520,7 @@ namespace Nekobot
                 .FlagMusic(true)
                 .Do(e => e.Channel.SendMessage(playlist[e.User.VoiceChannel.Id].CurrentSong()));
 
-            CreatePLCmd(group, "ytrequest", "youtube video link(s)", "I'll add youtube videos to the playlist")
-                .Do(e =>
-                {
-                    var rclient = Helpers.GetRestClient("http://www.youtubeinmp3.com/fetch/");
-                    MatchCollection m = Regex.Matches(e.Args[0], @"youtu(?:be\.com\/(?:v\/|e(?:mbed)?\/|watch\?v=)|\.be\/)([\w-_]{11}\b)", RegexOptions.IgnoreCase);
-                    foreach (var link in from Match match in m select $"youtube.com/watch?v={match.Groups[1]}")
-                    {
-                        Tuple<string,string> uri_title;
-                        try { var video = YouTube.Default.GetVideo(link); uri_title = Tuple.Create(video.Uri, video.Title); }
-                        catch
-                        {
-                            // Content is sometimes an html page instead of JSON, we should ask why.
-                            var json = Newtonsoft.Json.Linq.JObject.Parse(rclient.Execute(new RestSharp.RestRequest($"?format=JSON&video={System.Net.WebUtility.UrlEncode(link)}", RestSharp.Method.GET)).Content);
-                            uri_title = Tuple.Create(json["link"].ToString(), json["title"].ToString());
-                        }
-                        e.Channel.SendMessage(playlist[e.User.VoiceChannel.Id].TryInsert(new Song(uri_title.Item1, Song.EType.Youtube, e.User, $"{uri_title.Item2} ({link})"))
-                            ? $"{uri_title.Item2} added to the playlist."
-                            : $"{e.User.Mention} Your request ({uri_title.Item2}) is already in the playlist.");
-                    }
-                    if (m.Count == 0)
-                        e.Channel.SendMessage($"None of {e.Args[0]} could be added to playlist because no valid youtube links were found within.");
-                });
+            YT.CreateCommand(group, "ytrequest");
 
             if (Program.config["SoundCloud"].HasValues)
             {
