@@ -494,7 +494,7 @@ namespace Nekobot
                 SC sc = new SC(Program.config["SoundCloud"]["client_id"].ToString(), Console.Title);
                 sc.CreateSearchCmd(group, "scsearch", "scs", false);
                 sc.CreatePermalinkCmd(group, "screquest", new[]{"sctrack", "sctr"}, false);
-                sc.CreatePermalinkCmd(group, "scplaylist", "scpl", false);
+                sc.CreatePermalinkCmd(group, "scplaylist", "scpl", true);
                 //sc.CreateSearchCmd(group, "scplsearch", "scpls", true); // Until this stops giving Gateway timeouts, RIP.
             }
 
