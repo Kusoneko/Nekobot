@@ -62,6 +62,16 @@ namespace Nekobot
                 await e.Channel.SendMessage(reaction);
         }
 
+        internal static string ZeroPadding(float count)
+        {
+            string ret = "";
+            while ((count/=10) >= 1)
+                ret += '0';
+            return ret;
+        }
+        internal static string ZeroPaddingAt(int i, ref string padding)
+            => (i % 10) == 0 ? padding = padding.Substring(1) : padding;
+
         internal static void Remove<T, V>(System.Collections.Concurrent.ConcurrentDictionary<T, V> tv, T t)
         {
             V v;

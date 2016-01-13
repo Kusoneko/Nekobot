@@ -121,10 +121,11 @@ namespace Nekobot
                 {
                     string reply = EmptyPlaylist() ?? "";
                     if (reply != "") return reply;
+                    string padding = Helpers.ZeroPadding(Count);
                     int i = -1;
                     foreach(var t in this)
                     {
-                        reply += (++i == 0) ? $"Currently playing: {t.Title()}.{(Count > 1 ? "\nNext songs:" : "")}" : $"\n{i} - {t.ExtTitle}";
+                        reply += (++i == 0) ? $"Currently playing: {t.Title()}.{(Count > 1 ? "\nNext songs:" : "")}" : $"\n{Helpers.ZeroPaddingAt(i, ref padding)}{i} - {t.ExtTitle}";
                         if (reply.Length > 2000) return reply.Substring(0, reply.LastIndexOf('\n'));
                     }
                     return reply;
@@ -494,7 +495,7 @@ namespace Nekobot
                 SC sc = new SC(Program.config["SoundCloud"]["client_id"].ToString(), Console.Title);
                 sc.CreateSearchCmd(group, "scsearch", "scs", false);
                 sc.CreatePermalinkCmd(group, "screquest", new[]{"sctrack", "sctr"}, false);
-                sc.CreatePermalinkCmd(group, "scplaylist", "scpl", true);
+                sc.CreatePermalinkCmd(group, "scplaylist", "scpl", false);
                 //sc.CreateSearchCmd(group, "scplsearch", "scpls", true); // Until this stops giving Gateway timeouts, RIP.
             }
 
