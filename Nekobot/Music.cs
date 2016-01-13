@@ -421,17 +421,16 @@ namespace Nekobot
             public void CreatePermalinkCmd(Commands.CommandGroupBuilder group, string name, string alias, bool is_playlist) => CreatePermalinkCmd(group, name, new[]{alias}, is_playlist);
             public void CreatePermalinkCmd(Commands.CommandGroupBuilder group, string name, string[] aliases, bool is_playlist)
             {
-                CreatePLCmd(group, name, $"SoundCloud {(!is_playlist ? "Track" : "Playlist")} Permalink"/*(s)"*/, $"I'll add SoundCloud {(is_playlist ? "playlist" : "")} songs to the playlist!", aliases)
+                CreatePLCmd(group, name, $"SoundCloud {(!is_playlist ? "Track" : "Playlist")} Permalink(s)", $"I'll add SoundCloud {(is_playlist ? "playlist " : "")}songs to the playlist!", aliases)
                     .Do(e =>
                     {
-                        //MatchCollection m = Regex.Matches(e.Args[0], @"", RegexOptions.IgnoreCase);
-                        if (e.Args[0] == ""/*m.Count == 0*/)
-                            e.Channel.SendMessage($"{e.User.Mention} No SoundCloud permalink matches.");
-                        else //foreach (Match match in m)
-                        {
-                            if (is_playlist) Triad(e, GetPlaylist(e.Args[0]/*match.Groups[1]*/), false);
-                            else Triad(e, GetTrack(e.Args[0]/*match.Groups[1]*/), true);
-                        }
+                        // TODO: Find out if snd.sc links for playlists exist, it's doubtful since it's not exposed in their ui.
+                        MatchCollection m = Regex.Matches(e.Args[0].Replace(' ', '\n'), $@"^https?:\/\/(soundcloud\.com({(is_playlist ? "" : "?!")}\/.+\/sets){(is_playlist ? "" : @"|snd\.sc")})\/.+$", RegexOptions.IgnoreCase|RegexOptions.Multiline);
+                        if (m.Count == 0)
+                            e.Channel.SendMessage($"{e.User.Mention} No SoundCloud {(is_playlist ? "playlist" : "track")} permalink matches.");
+                        else foreach (var link in from Match match in m select match.Groups[0].ToString())
+                            if (is_playlist) Triad(e, GetPlaylist(link), false);
+                            else Triad(e, GetTrack(link), true);
                     });
             }
             public void CreateSearchCmd(Commands.CommandGroupBuilder group, string name, string alias, bool is_playlist) => CreateSearchCmd(group, name, new[]{alias}, is_playlist);
