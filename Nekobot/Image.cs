@@ -101,8 +101,9 @@ namespace Nekobot
 
             public int GetPostCount()
             {
-                var sankaku = _type == Type.Sankaku;
-                var res = Common(!sankaku ? "post/index.xml?limit=1" : Resource, sankaku);
+                var type_a = _type == Type.A;
+                var sankaku = !type_a && _type == Type.Sankaku;
+                var res = Common(!type_a && !sankaku ? "post/index.xml?limit=1" : Resource, sankaku);
                 return sankaku ? res.ToString() == "" ? 0 : 1000
                     : res["@count"].ToObject<int>();
             }
