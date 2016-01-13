@@ -115,6 +115,12 @@ namespace Nekobot
                     return EmptyPlaylist() ?? $"Currently playing: {this[0].Title()}.";
             }
 
+            internal string SongCount()
+            {
+                lock (this)
+                    return EmptyPlaylist() ?? $"There are currently {Count} songs left in the playlist.";
+            }
+
             internal string SongList()
             {
                 lock (this)
@@ -460,6 +466,11 @@ namespace Nekobot
                 .Description("I'll give you the list of songs in the playlist.")
                 .FlagMusic(true)
                 .Do(e => e.Channel.SendMessage(playlist[e.User.VoiceChannel.Id].SongList()));
+
+            group.CreateCommand("songcount")
+                .Alias("playlist size")
+                .FlagMusic(true)
+                .Do(e => e.Channel.SendMessage(playlist[e.User.VoiceChannel.Id].SongCount()));
 
             group.CreateCommand("song")
                 .Description("I'll tell you the song I'm currently playing.")
