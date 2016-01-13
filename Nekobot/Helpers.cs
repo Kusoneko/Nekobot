@@ -6,7 +6,7 @@ using RestSharp;
 
 namespace Nekobot
 {
-    internal class Helpers
+    internal static class Helpers
     {
         internal static RestClient GetRestClient(string baseUri)
             => new RestClient(baseUri) { UserAgent = Console.Title };
