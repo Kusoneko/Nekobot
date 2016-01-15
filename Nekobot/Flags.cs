@@ -10,14 +10,32 @@ namespace Nekobot
     class Flags
     {
         internal static bool GetIgnored(Channel chan, User user) => GetIgnored(chan) || GetIgnored(user);
-        internal static bool GetIgnored(User user) => GetIgnored("user", "users", user.Id);
+        internal static bool GetIgnored(User user) => GetIgnored("user", "users", user.Id) || (user.Server != null && GetIgnored(user.Roles));
         internal static bool GetIgnored(Channel chan) => GetIgnored("channel", "flags", chan.Id);
         static bool GetIgnored(string row, string table, ulong id) => SQL.ReadBool(SQL.ReadSingle(row, table, id, "ignored"));
+        internal static bool GetIgnored(IEnumerable<Role> roles)
+        {
+            var reader = SQL.ReadRoles("ignored=1");
+            var ignored = new List<ulong>();
+            while (reader.Read())
+                ignored.Add(ulong.Parse(reader["role"].ToString()));
+            if (ignored.Any())
+                foreach(var role in roles)
+                    if (ignored.Contains(role.Id)) return true;
+            return false;
+        }
 
         internal static async Task<string> SetIgnored(string row, string table, ulong id, char symbol, int perms, int their_perms = 0)
         {
-            if (symbol == '#' && perms <3)
-                return $"You are not worthy of changing channel ignored status (permissions < 3).";
+            if (symbol == '?')
+            {
+                if (their_perms == -1)
+                    return $"You cannot change the ignored status of your own roles.";
+                if (their_perms == -2)
+                    return $"I shall not ignore the roles of my senpai!";
+            }
+            if ((symbol == '#' || symbol == '?') && perms <3)
+                return $"You are not worthy of changing {(symbol == '?' ? "role" : "channel")} ignored status (permissions < 3).";
             if (symbol == '@')
             {
                 if (id == Program.masterId)
@@ -67,12 +85,13 @@ namespace Nekobot
             group.CreateCommand("ignore")
                 .Parameter("channel", Commands.ParameterType.Optional)
                 .Parameter("user", Commands.ParameterType.Optional)
+                //.Parameter("role", Commands.ParameterType.Optional)
                 .Parameter("...", Commands.ParameterType.Multiple)
                 .MinPermissions(1)
-                .Description("I'll ignore commands coming from a particular channel or user")
+                .Description("I'll ignore a particular channel or user"/* or role*/)
                 .Do(async e =>
                 {
-                    if (e.Message.MentionedChannels.Any() || e.Message.MentionedUsers.Any())
+                    if (e.Message.MentionedChannels.Any() || e.Message.MentionedUsers.Any() /*|| e.Message.MentionedRoles.Any()*/)
                     {
                         int perms = Helpers.GetPermissions(e.User, e.Channel);
                         string reply = "";
@@ -80,9 +99,42 @@ namespace Nekobot
                             reply += (reply != "" ? "\n" : "") + await SetIgnored("channel", "flags", c.Id, '#', perms);
                         foreach (User u in e.Message.MentionedUsers)
                             reply += (reply != "" ? "\n" : "") + await SetIgnored("user", "users", u.Id, '@', perms, Helpers.GetPermissions(u, e.Channel));
-                        if (reply != "") await e.Channel.SendMessage(reply);
+                        var senpai = e.Server.GetUser(Program.masterId);
+                        /*foreach (Role r in e.Message.MentionedRoles)
+                            reply += (reply != "" ? "\n" : "") + await SetIgnored("role", "roles", r.Id, '?', perms, senpai.Roles.Contains(r) ? -2 : e.User.Roles.Contains(r) ? -1 : perms);*/
+                        await e.Channel.SendMessage(reply);
                     }
-                    else await e.Channel.SendMessage("You need to mention at least one user or channel!");
+                    else await e.Channel.SendMessage("You need to mention at least one user or channel!"/*or role*/);
+                });
+
+            group.CreateCommand("ignore role")
+                .Parameter("role(s)", Commands.ParameterType.Unparsed)
+                .MinPermissions(3)
+                .Description("I'll ignore particular roles (comma separated)")
+                .Do(async e =>
+                {
+                    string reply = "";
+                    if (e.Args[0] == "")
+                        reply = "You need to mention at least one role!";
+                    else
+                    {
+                        int perms = Helpers.GetPermissions(e.User, e.Channel);
+                        var senpai = e.Server.GetUser(Program.masterId);
+                        foreach (var str in e.Args[0].Split(','))
+                        {
+                            var roles = e.Server.FindRoles(str);
+                            var count = roles.Count();
+                            if (reply != "") reply += '\n';
+                            if (count != 1)
+                                reply += $"{(count == 0 ? "No" : count.ToString())} roles found for {str}";
+                            else
+                            {
+                                var r = roles.Single();
+                                reply += await SetIgnored("role", "roles", r.Id, '?', perms, senpai.Roles.Contains(r) ? -2 : e.User.Roles.Contains(r) ? -1 : perms);
+                            }
+                        }
+                    }
+                    await e.Channel.SendMessage(reply);
                 });
         }
     }

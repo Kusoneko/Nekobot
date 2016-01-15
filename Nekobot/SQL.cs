@@ -17,6 +17,7 @@ namespace Nekobot
             CreateField("users", "lastfm varchar(15)");
             CreateTable("flags (channel varchar(17), nsfw int, music int, ignored int, chatbot int)");
             CreateField("flags", "chatbot int");
+            CreateTable("roles (role varchar(17), ignored int)");
         }
 
         // SQL Helpers
@@ -42,6 +43,13 @@ namespace Nekobot
                     case "chatbot": return $"0, 0, 0, {newval}";
                 }
             }
+            /*else if (table == "roles")
+            {
+                switch(field)
+                {
+                    case "ignored": return $"{newval}";
+                }
+            }*/
             else return newval;
             throw new System.Exception($"Unknown field '{field}' in table '{table}.'");
         }
@@ -80,6 +88,8 @@ namespace Nekobot
             => ExecuteReader(value, "users", condition);*/
         internal static SQLiteDataReader ReadChannels(string condition, string value = "channel")
             => ExecuteReader(value, "flags", condition);
+        internal static SQLiteDataReader ReadRoles(string condition, string value = "role")
+            => ExecuteReader(value, "roles", condition);
         internal static string ReadSingle(string row, string table, ulong id, string value)
         {
             var reader = ExecuteReader(value, table, $"{row} = '{id}'");
