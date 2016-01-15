@@ -404,7 +404,7 @@ The current topic is: {e.Channel.Topic}";
                                     if (times > 1) response += $" = {subtotal}.\n";
                                     total += subtotal;
                                 }
-                                response += $"Total Result = {total}";
+                                response += $"{(times == 1 ? "" : "Total Result")} = {total}.";
                             }
                             await e.Channel.SendMessage(response);
                         }
