@@ -387,12 +387,26 @@ The current topic is: {e.Channel.Topic}";
                             int sides = e.Args.Count() >= 2 ? int.Parse(e.Args[1]): 6;
                             int times = e.Args.Count() >= 3 ? int.Parse(e.Args[2]): 1;
 
-                            int roll = 0;
-                            Random rnd = new Random();
-                            for (int i = times; i > 0; i--)
-                                for (int j = dice; j > 0; j--)
-                                    roll += rnd.Next(1, sides + 1);
-                            await e.Channel.SendMessage($"You rolled {dice} different {sides}-sided dice {times} times... Result: **{roll}**");
+                            string response = (dice <= 0 || sides <= 1 || times <= 0) ? $"{sides*times*dice}, baka!" : "";
+                            if (!response.Any())
+                            {
+                                var total = 0;
+                                Random rnd = new Random();
+                                for (int i = times; i > 0; i--)
+                                {
+                                    var subtotal = 0;
+                                    for (int j = dice; j > 0; j--)
+                                    {
+                                        var roll = rnd.Next(1, sides + 1);
+                                        if (dice > 1) response += $"{roll}{(j == 1 ? "" : ", ")}";
+                                        subtotal += roll;
+                                    }
+                                    if (times > 1) response += $" = {subtotal}.\n";
+                                    total += subtotal;
+                                }
+                                response += $"Total Result = {total}";
+                            }
+                            await e.Channel.SendMessage(response);
                         }
                         else
                             await e.Channel.SendMessage("Arguments are not all numbers!");
