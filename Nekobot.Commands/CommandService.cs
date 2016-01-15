@@ -74,7 +74,7 @@ namespace Nekobot.Commands
                                 await replyChannel.SendMessage("Unable to display help: Unknown command.").ConfigureAwait(false);
                         }
                         else //Show general help
-                            await ShowGeneralHelp(e.User, e.Channel, replyChannel);
+                            await ShowGeneralHelp(e.User, e.Channel, replyChannel).ConfigureAwait(false);
                     });
             }
 
