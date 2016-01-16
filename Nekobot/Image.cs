@@ -69,7 +69,7 @@ namespace Nekobot
                         }
                     }
                 }
-                board._rclient.AddDefaultParameter("tags", System.Net.WebUtility.UrlEncode(tags));
+                board._rclient.AddDefaultParameter("tags", tags);
                 return board;
             }
 
