@@ -14,6 +14,9 @@ namespace Nekobot
 {
     partial class Program
     {
+        static Task DoPing(int ms, Message msg)
+           => msg.Edit($"{msg.RawText} ({msg.Timestamp.Millisecond - ms} milliseconds)");
+
         // Commands first to help with adding new commands
         static void GenerateCommands(CommandGroupBuilder group)
         {
@@ -23,7 +26,11 @@ namespace Nekobot
             // User commands
             group.CreateCommand("ping")
                 .Description("I'll reply with 'Pong!'")
-                .Do(async e => await e.Channel.SendMessage($"{e.User.Mention}, Pong!"));
+                .Do(async e => await DoPing(e.Message.Timestamp.Millisecond, await e.Channel.SendMessage($"{e.User.Mention}, Pong!")));
+
+            group.CreateCommand("pong")
+                .Description("I'll reply with 'Ping?'")
+                .Do(async e => await DoPing(e.Message.Timestamp.Millisecond, await e.Channel.SendMessage($"{e.User.Mention}, Ping?")));
 
             group.CreateCommand("status")
                 .Description("I'll give statistics about the servers, channels and users.")
