@@ -414,14 +414,14 @@ namespace Nekobot
             }
             bool Triad(Commands.CommandEventArgs e, SoundCloud.NET.Models.Playlist playlist, bool multiple)
             {
-                bool ret = false;
+                int ret = 0; // playlist.TrackCount includes unplayable tracks.
                 foreach (var track in playlist.Tracks)
-                    ret |= Triad(e, track, false, true);
-                if (ret)
-                    e.Channel.SendMessage($"The contents of {playlist.Title} by {playlist.User.Username} have been added to the playlist.");
+                    if (Triad(e, track, false, true)) ++ret;
+                if (ret != 0)
+                    e.Channel.SendMessage($"The contents of {playlist.Title} by {playlist.User.Username} ({ret} tracks) have been added to the playlist.");
                 else if (!multiple)
                     e.Channel.SendMessage($"There is nothing in {playlist.Title} that isn't already in the playlist.");
-                return ret;
+                return ret != 0;
             }
 
             public void CreatePermalinkCmd(Commands.CommandGroupBuilder group, string name, string alias, bool is_playlist) => CreatePermalinkCmd(group, name, new[]{alias}, is_playlist);
