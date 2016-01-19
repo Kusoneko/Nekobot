@@ -431,7 +431,7 @@ namespace Nekobot
                     .Do(e =>
                     {
                         // TODO: Find out if snd.sc links for playlists exist, it's doubtful since it's not exposed in their ui.
-                        MatchCollection m = Regex.Matches(e.Args[0].Replace(' ', '\n'), $@"^https?:\/\/(?:soundcloud\.com(?:{(is_playlist ? "" : "?!")}\/.+\/sets){(is_playlist ? "" : @"|snd\.sc")})\/.+$", RegexOptions.IgnoreCase|RegexOptions.Multiline);
+                        MatchCollection m = Regex.Matches(e.Args[0].Replace(' ', '\n'), $@"^https?:\/\/(?:soundcloud\.com({(is_playlist ? "?:" : "?!")}\/.+\/sets){(is_playlist ? "" : @"|snd\.sc")})\/.+$", RegexOptions.IgnoreCase|RegexOptions.Multiline);
                         if (m.Count == 0)
                             e.Channel.SendMessage($"{e.User.Mention} No SoundCloud {(is_playlist ? "playlist" : "track")} permalink matches.");
                         else foreach (var link in from Match match in m select match.Groups[0].ToString())
