@@ -29,6 +29,7 @@ namespace Nekobot
                 .Do(async e => await DoPing(e.Message.Timestamp.Millisecond, await e.Channel.SendMessage($"{e.User.Mention}, Pong!")));
 
             group.CreateCommand("pong")
+                .Hide() // More of an easter egg, don't show in help.
                 .Description("I'll reply with 'Ping?'")
                 .Do(async e => await DoPing(e.Message.Timestamp.Millisecond, await e.Channel.SendMessage($"{e.User.Mention}, Ping?")));
 
