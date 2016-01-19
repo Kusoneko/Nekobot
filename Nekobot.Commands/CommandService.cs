@@ -100,7 +100,7 @@ namespace Nekobot.Commands
                     {
                         if (mentionreq && e.Message.IsMentioningMe())
                         {
-                            string neko = '@'+e.Server.CurrentUser.Name;
+                            string neko = e.Server.CurrentUser.Mention;
                             if (neko.Length+2 > msg.Length)
                             {
                                 NonCommands(e);
