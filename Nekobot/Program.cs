@@ -728,7 +728,7 @@ The current topic is: {e.Channel.Topic}";
             new Thread(InputThread).Start();
 
             //DiscordClient will automatically reconnect once we've established a connection, until then we loop on our end
-            client.Run(async() =>
+            client.ExecuteAndWait(async() =>
             {
                 while (true)
                 {

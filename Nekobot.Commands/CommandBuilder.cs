@@ -1,12 +1,13 @@
-﻿using System;
+﻿using Discord;
+using Nekobot.Commands.Permissions;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Discord;
 
 namespace Nekobot.Commands
 {
-    using Permissions;
+    //TODO: Make this more friendly and expose it to be extendable
     public sealed class CommandBuilder
     {
         private readonly CommandService _service;
@@ -19,17 +20,24 @@ namespace Nekobot.Commands
 
         public CommandService Service => _service;
 
-        internal CommandBuilder(CommandService service, Command command, string prefix = "", string category = "", IEnumerable<IPermissionChecker> initialChecks = null)
+        internal CommandBuilder(CommandService service, string text, string prefix = "", string category = "", IEnumerable<IPermissionChecker> initialChecks = null, bool defaultNsfwFlag = false, bool defaultMusicFlag = false)
         {
             _service = service;
-            _command = command;
+            _prefix = prefix;
+
+            _command = new Command(AppendPrefix(prefix, text))
+            {
+                NsfwFlag = defaultNsfwFlag,
+                MusicFlag = defaultMusicFlag
+            };
             _command.Category = category;
-            _params = new List<CommandParameter>();
+
             if (initialChecks != null)
                 _checks = new List<IPermissionChecker>(initialChecks);
             else
                 _checks = new List<IPermissionChecker>();
-            _prefix = prefix;
+
+            _params = new List<CommandParameter>();
             _aliases = new List<string>();
 
             _allowRequiredParams = true;
@@ -126,7 +134,7 @@ namespace Nekobot.Commands
                 return prefix;
         }
     }
-    public sealed class CommandGroupBuilder
+    public class CommandGroupBuilder
     {
         private readonly CommandService _service;
         private readonly string _prefix;
@@ -137,10 +145,11 @@ namespace Nekobot.Commands
 
         public CommandService Service => _service;
 
-        internal CommandGroupBuilder(CommandService service, string prefix, IEnumerable<IPermissionChecker> initialChecks = null, bool defaultNsfwFlag = false, bool defaultMusicFlag = false)
+        internal CommandGroupBuilder(CommandService service, string prefix = "", string category = null, IEnumerable<IPermissionChecker> initialChecks = null, bool defaultNsfwFlag = false, bool defaultMusicFlag = false)
         {
             _service = service;
             _prefix = prefix;
+            _category = category;
             if (initialChecks != null)
                 _checks = new List<IPermissionChecker>(initialChecks);
             else
@@ -166,21 +175,14 @@ namespace Nekobot.Commands
         public void DefaultNsfwFlag(bool isNsfw) => _defaultNsfwFlag = isNsfw;
         public void DefaultMusicFlag(bool isMusicRelated) => _defaultMusicFlag = isMusicRelated;
 
-        public CommandGroupBuilder CreateGroup(string cmd, Action<CommandGroupBuilder> config = null)
+        public CommandGroupBuilder CreateGroup(string cmd, Action<CommandGroupBuilder> config)
         {
-            config(new CommandGroupBuilder(_service, CommandBuilder.AppendPrefix(_prefix, cmd), _checks, _defaultNsfwFlag, _defaultMusicFlag));
+            config(new CommandGroupBuilder(_service, CommandBuilder.AppendPrefix(_prefix, cmd), _category, _checks, _defaultNsfwFlag, _defaultMusicFlag));
             return this;
         }
         public CommandBuilder CreateCommand()
             => CreateCommand("");
         public CommandBuilder CreateCommand(string cmd)
-        {
-            var command = new Command(CommandBuilder.AppendPrefix(_prefix, cmd))
-            {
-                NsfwFlag = _defaultNsfwFlag,
-                MusicFlag = _defaultMusicFlag
-            };
-            return new CommandBuilder(_service, command, _prefix, _category, _checks);
-        }
+            => new CommandBuilder(_service, cmd, _prefix, _category, _checks, _defaultNsfwFlag, _defaultMusicFlag);
     }
 }

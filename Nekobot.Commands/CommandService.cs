@@ -46,9 +46,9 @@ namespace Nekobot.Commands
             _getMusicFlag = getMusicFlag;
             _getIgnoredChannelFlag = getIgnoredChannelFlag;
             _allCommands = new List<Command>();
-            _map = new CommandMap(null, "", "");
+            _map = new CommandMap();
             _categories = new Dictionary<string, CommandMap>();
-            Root = new CommandGroupBuilder(this, "", null);
+            Root = new CommandGroupBuilder(this);
         }
 
         void IService.Install(DiscordClient client)
@@ -380,7 +380,7 @@ namespace Nekobot.Commands
             string categoryName = command.Category ?? "";
             if (!_categories.TryGetValue(categoryName, out category))
             {
-                category = new CommandMap(null, "", "");
+                category = new CommandMap();
                 _categories.Add(categoryName, category);
             }
 

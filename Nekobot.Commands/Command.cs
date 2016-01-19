@@ -1,12 +1,13 @@
+using Discord;
+using Nekobot.Commands.Permissions;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Discord;
 
 namespace Nekobot.Commands
 {
-    using Permissions;
-    public sealed class Command
+    //TODO: Make this more friendly and expose it to be extendable
+    public class Command
     {
         private string[] _aliases;
         internal CommandParameter[] _parameters;
@@ -23,6 +24,7 @@ namespace Nekobot.Commands
 
         public IEnumerable<string> Aliases => _aliases;
         public IEnumerable<CommandParameter> Parameters => _parameters;
+        public CommandParameter this[string name] => _parametersByName[name];
 
         internal Command(string text)
         {
@@ -33,7 +35,6 @@ namespace Nekobot.Commands
             _parametersByName = new Dictionary<string, CommandParameter>();
         }
 
-        public CommandParameter this[string name] => _parametersByName[name];
 
         internal void SetAliases(string[] aliases)
         {
