@@ -477,7 +477,7 @@ namespace Nekobot
             }
             private SoundCloud.NET.Models.BaseModel[] Search(Commands.CommandEventArgs e, bool is_playlist, int desired = 0)
             {
-                var search = new SoundCloud.NET.SearchParameters { SearchString = string.Join(" ", desired != 0 ? e.Args.Skip(1) : e.Args), Limit = 200, Streamable = true };
+                var search = new SoundCloud.NET.SearchParameters(string.Join(" ", desired != 0 ? e.Args.Skip(1) : e.Args)){ Limit = 200, Streamable = true };
                 var container = is_playlist ? (SoundCloud.NET.Models.BaseModel[])SearchPlaylist(search) : SearchTrack(search, desired != 0 ? desired : 500);
                 if (container.Count() == 0)
                 {
@@ -494,8 +494,8 @@ namespace Nekobot
                 var cmd = CreatePLCmd(group, name,
                     $"I'll search for your {(is_playlist ? "playlist " : "")}request on SoundCloud!\nResults will be considered {(st == SearchType.Random ? $"{random_tries} times at random until one is found that isn't already in the playlist." : $"in order until {(!multiple ? "one not in the playlist is found" : "the amount of count or all (that are not already in the playlist) have been added")}")}.", aliases);
                 if (multiple) cmd.Parameter("count", Commands.ParameterType.Optional);
-                // Until we can figure out how to include Playlist search terms, RIP.
-                cmd.Parameter(is_playlist ? "nothing yet" : "keywords", Commands.ParameterType.Unparsed);
+                // Until we can figure out how to include Playlist search terms without getting gateway errors, RIP.
+                if (!is_playlist) cmd.Parameter("keywords", Commands.ParameterType.Unparsed);
                 cmd.Do(e => st == SearchType.Random ? Task.Run(() =>
                     {
                         var container = Search(e, is_playlist);
