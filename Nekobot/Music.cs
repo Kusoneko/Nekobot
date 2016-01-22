@@ -268,7 +268,6 @@ namespace Nekobot
             {
                 ulong cid = Channel.Id;
                 var _client = await Voice.JoinServer(Channel);
-                if (_client == null) return; // TODO: Remove when voice works.
                 if (!playlist.ContainsKey(cid))
                     playlist.Add(cid, new Playlist());
                 var pl = Playlist;
