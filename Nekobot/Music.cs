@@ -348,6 +348,18 @@ namespace Nekobot
                   .Where(t => t != null).ToArray());
             }
 
+            internal async Task Play(Commands.CommandEventArgs e, bool request, Stream stream = null)
+            {
+                SQL.AddOrUpdateFlag(e.User.VoiceChannel.Id, "music", request ? "2" : "1");
+                if (stream != null)
+                    stream.Request = request;
+                else
+                {
+                    await streams.Stop(e.Server);
+                    await streams.AddStream(e.User.VoiceChannel, request);
+                }
+            }
+
             internal async Task Stop(Server server)
             {
                 var serverstreams = this.Where(stream => server == stream.Server).ToArray();
@@ -610,9 +622,8 @@ namespace Nekobot
                         {
                             if (on && stream.Request) // The user is switching back to normal streaming mode.
                             {
-                                SQL.AddOrUpdateFlag(e.User.VoiceChannel.Id, "music", "1");
-                                stream.Request = false;
                                 await e.Channel.SendMessage("Switching to normal streaming mode.");
+                                await streams.Play(e, false, stream);
                             }
                             else
                             {
@@ -623,12 +634,7 @@ namespace Nekobot
                         else
                         {
                             await e.Channel.SendMessage($"{e.User.Mention}, I'm {status}ing the stream!");
-                            if (on)
-                            {
-                                SQL.AddOrUpdateFlag(e.User.VoiceChannel.Id, "music", "1");
-                                await streams.Stop(e.Server);
-                                await streams.AddStream(e.User.VoiceChannel);
-                            }
+                            if (on) await streams.Play(e, false);
                             else streams.Get(e.User.VoiceChannel).Stop();
                         }
                     });
@@ -642,14 +648,12 @@ namespace Nekobot
                     .Do(e =>
                     {
                         var stream = streams.Get(e.User.VoiceChannel);
-                        if (stream == null) Task.Run(() => streams.AddStream(e.User.VoiceChannel, true));
-                        else if (stream.Request)
+                        if (stream != null && stream.Request)
                         {
                             e.Channel.SendMessage("The stream is already in request mode.");
                             return;
                         }
-                        else stream.Request = true;
-                        SQL.AddOrUpdateFlag(e.User.VoiceChannel.Id, "music", "2");
+                        Task.Run(() => streams.Play(e, true, stream));
                         e.Channel.SendMessage("I am now streaming in request-driven mode.");
                     });
             }
