@@ -16,6 +16,7 @@ namespace Nekobot
     {
         static Task DoPing(int ms, Message msg)
            => msg.Edit($"{msg.RawText} ({msg.Timestamp.Millisecond - ms} milliseconds)");
+        static TimeSpan Uptime() => DateTime.Now - System.Diagnostics.Process.GetCurrentProcess().StartTime;
 
         // Commands first to help with adding new commands
         static void GenerateCommands(CommandGroupBuilder group)
@@ -34,8 +35,12 @@ namespace Nekobot
                 .Do(async e => await DoPing(e.Message.Timestamp.Millisecond, await e.Channel.SendMessage($"{e.User.Mention}, Ping?")));
 
             group.CreateCommand("status")
-                .Description("I'll give statistics about the servers, channels and users.")
-                .Do(async e => await e.Channel.SendMessage($"I'm connected to {client.Servers.Count()} servers, which have a total of {client.Servers.SelectMany(x => x.TextChannels).Count()} text and {client.Servers.SelectMany(x => x.VoiceChannels).Count()} voice channels, and see a total of {client.Servers.SelectMany(x => x.Users).Distinct().Count()} different users."));
+                .Description("I'll tell you some useful stats about myself.")
+                .Do(async e => await e.Channel.SendMessage($"I'm connected to {client.Servers.Count()} servers, which have a total of {client.Servers.SelectMany(x => x.TextChannels).Count()} text and {client.Servers.SelectMany(x => x.VoiceChannels).Count()} voice channels, and see a total of {client.Servers.SelectMany(x => x.Users).Distinct().Count()} different users.\n{Format.Code($"Uptime: {Uptime()}\n{Console.Title}")}"));
+
+            group.CreateCommand("uptime")
+                .Description("I'll tell you how long I've been awake~")
+                .Do(e => e.Channel.SendMessage(Format.Code(Uptime().ToString())));
 
             group.CreateCommand("whois")
                 .Alias("getinfo")
