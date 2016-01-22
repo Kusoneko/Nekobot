@@ -34,6 +34,26 @@ namespace Nekobot
                 .Description("I'll reply with 'Ping?'")
                 .Do(async e => await DoPing(e.Message.Timestamp.Millisecond, await e.Channel.SendMessage($"{e.User.Mention}, Ping?")));
 
+            group.CreateCommand("servers")
+                .Description("I'll send you statistics about the servers, channels and users (can be spammy, goes to private).")
+                .MinPermissions(4)
+                .Do(async e =>
+                {
+                    var output = "";
+                    foreach (var server in client.Servers)
+                    {
+                        output += $"{server.Name}: {server.TextChannels.Count()} text & {server.VoiceChannels.Count()} voice channels, {server.Users.Count()} users. ID: {server.Id}";
+                        if (output.Length >= 2000)
+                        {
+                            var index = output.Length == 2000 ? 0 : output.LastIndexOf('\n');
+                            await e.User.SendMessage(Format.Code(index == 0 ? output : output.Substring(0, index)));
+                            output = index == 0 ? "" : output.Substring(index+1);
+                        }
+                        else output += '\n';
+                    }
+                    if (output.Any()) await e.User.SendMessage(Format.Code(output));
+                });
+
             group.CreateCommand("status")
                 .Description("I'll tell you some useful stats about myself.")
                 .Do(async e => await e.Channel.SendMessage($"I'm connected to {client.Servers.Count()} servers, which have a total of {client.Servers.SelectMany(x => x.TextChannels).Count()} text and {client.Servers.SelectMany(x => x.VoiceChannels).Count()} voice channels, and see a total of {client.Servers.SelectMany(x => x.Users).Distinct().Count()} different users.\n{Format.Code($"Uptime: {Uptime()}\n{Console.Title}")}"));
