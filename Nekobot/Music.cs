@@ -80,12 +80,26 @@ namespace Nekobot
                 return false;
             }
 
-            internal void RequestMode()
+            internal void SkipSongs(int count = 1)
+            {
+                if (count >= Count)
+                    SkipAll();
+                else if (count > 0)
+                {
+                    lock (this)
+                    {
+                        if (count != 1) RemoveRange(1, count - 1);
+                        skip = true; // Skip current song.
+                    }
+                }
+            }
+
+            internal void SkipAll()
             {
                 lock(this)
                 {
                     Clear();
-                    skip = true; // Force a skip to get out of current song and move on.
+                    skip = true; // Skip current song.
                 }
             }
 
@@ -210,7 +224,7 @@ namespace Nekobot
             internal void Skip(Commands.CommandEventArgs e)
             {
                 if (!skip && AddVote(voteskip, e, "skip current song", "skipping song", "skip"))
-                    skip = true;
+                    SkipSongs();
             }
             internal async Task Reset(Commands.CommandEventArgs e)
             {
@@ -317,7 +331,7 @@ namespace Nekobot
                 set
                 {
                     if (_request = value)
-                        Playlist.RequestMode();
+                        Playlist.SkipAll();
                     else
                         Playlist.Initialize();
                 }
@@ -581,11 +595,13 @@ namespace Nekobot
             // Moderator commands
             group.CreateCommand("forceskip")
                 .MinPermissions(1)
+                .Parameter("count", Commands.ParameterType.Optional)
                 .FlagMusic(true)
                 .Description("I'll skip the currently playing song(s).")
                 .Do(e =>
                 {
-                    playlist[e.User.VoiceChannel.Id].skip = true;
+                    int count;
+                    playlist[e.User.VoiceChannel.Id].SkipSongs(e.Args.Any() && int.TryParse(e.Args[0], out count) ? count : 1);
                     e.Channel.SendMessage("Forcefully skipping...");
                 });
 
