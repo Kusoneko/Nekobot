@@ -434,7 +434,7 @@ The current topic is: {e.Channel.Topic}";
                                         if (dice > 1) response += $"{roll}{(j == 1 ? "" : ", ")}";
                                         subtotal += roll;
                                     }
-                                    if (times > 1) response += dice > 1 ? $" = {subtotal}\n." : $"{subtotal}{(i == 1 ? "" : ", ")}";
+                                    if (times > 1) response += dice > 1 ? $" = {subtotal}.\n" : $"{subtotal}{(i == 1 ? "" : ", ")}";
                                     total += subtotal;
                                 }
                                 response += $"{(times == 1 || dice == 1 ? "" : "Total Result")} = {total}.";
