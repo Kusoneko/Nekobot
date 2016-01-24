@@ -510,7 +510,7 @@ namespace Nekobot
                     : Task.Run(() =>
                     {
                         int max = 0;
-                        if (multiple && e.Args.Length > 1 && !int.TryParse(e.Args[0], out max))
+                        if (multiple && e.Args.Length > 1 && e.Args[1] != "" && !int.TryParse(e.Args[0], out max))
                             max = 100;
                         var container = Search(e, is_playlist, max);
                         if (container == null) return;
