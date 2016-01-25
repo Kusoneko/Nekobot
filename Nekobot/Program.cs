@@ -807,7 +807,6 @@ The current topic is: {e.Channel.Topic}";
                     try
                     {
                         await client.Connect(config["email"].ToString(), config["password"].ToString());
-                        client.SetGame(config["game"].ToString());
                         break;
                     }
                     catch (Exception ex)
@@ -955,6 +954,7 @@ The current topic is: {e.Channel.Topic}";
         private static void Connected(object sender, EventArgs e)
         {
             Log.Write(LogSeverity.Warning, "Connected.");
+            client.SetGame(config["game"].ToString());
         }
 
         private static void CommandErrored(object sender, CommandErrorEventArgs e)
