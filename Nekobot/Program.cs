@@ -362,6 +362,53 @@ The current topic is: {e.Channel.Topic}";
                         await e.Channel.SendMessage(u.Mention + (u.AvatarUrl == null ? " has no avatar." : $"'s avatar is: {u.AvatarUrl}"));
                 });
 
+            group.CreateCommand("lastlog")
+                .Parameter("few (default 4)", Commands.ParameterType.Optional)
+                .Parameter("string to search for (case-sensitive)", Commands.ParameterType.Unparsed)
+                .Description("I'll search for and return the last `few` messages in this channel with your search string in them (This may take a while, depending on history size and `few`)")
+                .Do(async e =>
+                {
+                    var args = e.Args;
+                    if (!Helpers.HasArg(args))
+                        await e.Channel.SendMessage("Just read the last messages yourself, baka!");
+                    else
+                    {
+                        int few = 4;
+                        if (Helpers.HasArg(args, 1) && int.TryParse(args[0], out few))
+                            args = args.Skip(1).ToArray();
+                        if (few <= 0)
+                        {
+                            await e.Channel.SendMessage("You're silly!");
+                            return;
+                        }
+
+                        Func<Message, DateTime> time = msg => msg.Timestamp;
+                        var msgs = e.Channel.Messages.OrderByDescending(time);
+                        var search = string.Join(" ", args).TrimEnd();
+                        var found = msgs.Where(s => s.Id != e.Message.Id && s.Text.Contains(search)); // We're obviously not searching for this message.
+                        while (found.Count() < few)
+                        {
+                            msgs = (await e.Channel.DownloadMessages(relativeMessageId: msgs.Last().Id)).OrderByDescending(time);
+                            found = found.Concat(msgs.Where(s => s.Text.Contains(search)));
+                            if (msgs.Count() < 100) break; // We must be at the end.
+                        }
+
+                        if ((few = Math.Min(found.Count(), few)) == 0)
+                            await e.Channel.SendMessage("None found...");
+                        else foreach (var msg in found.OrderByDescending(time).Take(few))
+                        {
+                            var extradata = $"[{msg.Timestamp}]{msg.User.Name}:";
+                            // If the message would reach the max if we add extra data, send that separate.
+                            if (msg.RawText.Length + extradata.Length >= 1999)
+                            {
+                                await e.Channel.SendMessage(extradata);
+                                await e.Channel.SendMessage(msg.RawText);
+                            }
+                            else await e.Channel.SendMessage($"{extradata} {msg.RawText}");
+                        }
+                    }
+                });
+
             group.CreateCommand("rand")
                 .Parameter("min", Commands.ParameterType.Optional)
                 .Parameter("max", Commands.ParameterType.Optional)
