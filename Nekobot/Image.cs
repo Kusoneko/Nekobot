@@ -17,6 +17,7 @@ namespace Nekobot
             enum Type
             {
                 A, // Sends XML responses, doesn't offer JSON
+                A_HTTP_NEEDED, // Stupid boards that violate reason when returning "file_url"
                 B, // Anything >= this uses json, api is more clearly defined. We'll use xml to get count for this type.
                 Sankaku, // Nasty, doesn't support xml response (needed for count), we'll just consider there to be 1000 pages to choose from if there are any at all.
             }
@@ -29,8 +30,8 @@ namespace Nekobot
                 _shorten = shorten;
                 _rclient = Helpers.GetRestClient(Link);
             }
-            static Board A(string link, bool shorten = false) =>
-                new Board(link, $"index.php?page=dapi&s=post&q=index&limit=1&pid=", "/index.php?page=post&s=view&id=", Type.A, shorten);
+            static Board A(string link, bool needs_http = false, bool shorten = false) =>
+                new Board(link, $"index.php?page=dapi&s=post&q=index&limit=1&pid=", "/index.php?page=post&s=view&id=", needs_http ? Type.A_HTTP_NEEDED : Type.A, shorten);
             static Board B(string link, bool shorten = true, Type type = Type.B) =>
                 new Board(link, $"post/index.json?limit=1&page=", "/post/show/", type, shorten);
             static Board Sankaku(string board) => B($"https://{board}.sankakucomplex.com", false, Type.Sankaku);
@@ -40,7 +41,7 @@ namespace Nekobot
                 Board board =
                 booru == "safebooru" ? A("http://safebooru.org") :
                 //booru == "gelbooru" ? A("http://gelbooru.com") :
-                booru == "rule34" ? A("http://rule34.xxx") :
+                booru == "rule34" ? A("http://rule34.xxx", true) :
                 booru == "konachan" ? B("http://konachan.com") :
                 booru == "yandere" ? B("https://yande.re") :
                 booru == "lolibooru" ? B("http://lolibooru.moe") :
@@ -96,12 +97,12 @@ namespace Nekobot
                 var res = Common(Resource + rnd.ToString(), json);
                 string prefix = !json ? "@" : "";
                 if (!json) res = (JObject)res["post"];
-                return $"**{Link}{Post}{res[$"{prefix}id"].ToString()}** {(_type == Type.Sankaku ? "http:" : "")}{GetFileUrl(res, prefix)}";
+                return $"**{Link}{Post}{res[$"{prefix}id"].ToString()}** {(_type == Type.A_HTTP_NEEDED || _type == Type.Sankaku ? "http:" : "")}{GetFileUrl(res, prefix)}";
             }
 
             public int GetPostCount()
             {
-                var type_a = _type == Type.A;
+                var type_a = _type < Type.B;
                 var sankaku = !type_a && _type == Type.Sankaku;
                 var res = Common(!type_a && !sankaku ? "post/index.xml?limit=1" : Resource, sankaku);
                 return sankaku ? res.ToString() == "" ? 0 : 1000
