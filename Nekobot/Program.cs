@@ -251,7 +251,7 @@ namespace Nekobot
 
             group.CreateCommand("uninstall")
                 .Description("A great advice in any situation.")
-                .Do(async e => await e.Channel.SendMessage("https://www.youtube.com/watch?v=5sQzi0dn_dA"));
+                .Do(async e => await e.Channel.SendMessage("https://youtu.be/TJB0uCERrEQ"));
 
             group.CreateCommand("killyourself")
                 .Alias("kys")
