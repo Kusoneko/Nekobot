@@ -62,6 +62,19 @@ namespace Nekobot
                 await e.Channel.SendMessage(reaction);
         }
 
+        internal static Func<Message, DateTime> MsgTime => msg => msg.Timestamp;
+
+        internal static async Task DoToMessages(Channel c, int few, Func<IOrderedEnumerable<Message>, bool, int> perform)
+        {
+            var msgs = c.Messages.OrderByDescending(MsgTime);
+            var donecount = perform(msgs, true); // Let them know this contains this message.
+            while (donecount < few)
+            {
+                msgs = (await c.DownloadMessages(relativeMessageId: msgs.Last().Id)).OrderByDescending(MsgTime);
+                donecount += perform(msgs, false);
+                if (msgs.Count() < 100) break; // We must be at the end.
+            }
+        }
         internal static string ZeroPadding(float count)
         {
             string ret = "";

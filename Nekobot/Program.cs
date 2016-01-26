@@ -382,20 +382,17 @@ The current topic is: {e.Channel.Topic}";
                             return;
                         }
 
-                        Func<Message, DateTime> time = msg => msg.Timestamp;
-                        var msgs = e.Channel.Messages.OrderByDescending(time);
                         var search = string.Join(" ", args).TrimEnd();
-                        var found = msgs.Where(s => s.Id != e.Message.Id && s.Text.Contains(search)); // We're obviously not searching for this message.
-                        while (found.Count() < few)
+                        var found = new List<Message>();
+                        await Helpers.DoToMessages(e.Channel, few, (msgs, has_cmd_msg) =>
                         {
-                            msgs = (await e.Channel.DownloadMessages(relativeMessageId: msgs.Last().Id)).OrderByDescending(time);
-                            found = found.Concat(msgs.Where(s => s.Text.Contains(search)));
-                            if (msgs.Count() < 100) break; // We must be at the end.
-                        }
+                            found.AddRange(has_cmd_msg ? msgs.Where(s => s.Id != e.Message.Id && s.Text.Contains(search)) : msgs.Where(s => s.Text.Contains(search)));
+                            return found.Count();
+                        });
 
                         if ((few = Math.Min(found.Count(), few)) == 0)
                             await e.Channel.SendMessage("None found...");
-                        else foreach (var msg in found.OrderByDescending(time).Take(few))
+                        else foreach (var msg in found.Take(few))
                         {
                             var extradata = $"[{msg.Timestamp}]{msg.User.Name}:";
                             // If the message would reach the max if we add extra data, send that separate.
@@ -750,6 +747,36 @@ The current topic is: {e.Channel.Topic}";
                 .Description("I'll set my current game to something else (empty for no game).")
                 .MinPermissions(4)
                 .Do(e => client.SetGame(e.Args[0])); // TODO: Store current game in database(varchar(128)) instead of config?
+
+            group.CreateCommand("deletelast")
+                .MinPermissions(4)
+                .Parameter("few", Commands.ParameterType.Required)
+                .Description("I'll delete the last `few` messages, and the command message.")
+                .Do(async e =>
+                {
+                    var few = int.Parse(e.Args[0]);
+                    if (few <= 0)
+                    {
+                        await e.Channel.SendMessage("You're silly!");
+                        return;
+                    }
+
+                    if (e.Channel.IsPrivate || !e.Server.CurrentUser.GetPermissions(e.Channel).ManageMessages)
+                    {
+                        await e.Channel.SendMessage("I can't even do that here.");
+                        return;
+                    }
+
+                    await Helpers.DoToMessages(e.Channel, few, (msgs, has_cmd_msg) =>
+                    {
+                        foreach (var msg in msgs)
+                        {
+                            Task t = msg.Delete();
+                            if ((!has_cmd_msg || e.Message.Id != msg.Id) && --few == 0) break;
+                        }
+                        return msgs.Count() - (has_cmd_msg ? 1 : 0);
+                    });
+                });
 
             Flags.AddCommands(group);
             Chatbot.AddCommands(group);
