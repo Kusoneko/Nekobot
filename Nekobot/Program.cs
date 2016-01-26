@@ -242,12 +242,12 @@ namespace Nekobot
                 .Alias("sadhorn")
                 .Alias("icri")
                 .Description("When sad things happen...")
-                .Do(async e => await e.Channel.SendMessage("https://www.youtube.com/watch?v=0JAn8eShOo8"));
+                .Do(async e => await e.Channel.SendMessage("https://youtu.be/0JAn8eShOo8"));
 
             group.CreateCommand("notnow")
                 .Alias("rinpls")
                 .Description("How to Rekt: Rin 101")
-                .Do(async e => await e.Channel.SendMessage("https://www.youtube.com/watch?v=2BZUzJfKFwM"));
+                .Do(async e => await e.Channel.SendMessage("https://youtu.be/2BZUzJfKFwM"));
 
             group.CreateCommand("uninstall")
                 .Description("A great advice in any situation.")
@@ -256,14 +256,14 @@ namespace Nekobot
             group.CreateCommand("killyourself")
                 .Alias("kys")
                 .Description("Another great advice.")
-                .Do(async e => await e.Channel.SendMessage("https://www.youtube.com/watch?v=2dbR2JZmlWo"));
+                .Do(async e => await e.Channel.SendMessage("https://youtu.be/2dbR2JZmlWo"));
 
             group.CreateCommand("congratulations")
                 .Alias("congrats")
                 .Alias("grats")
                 .Alias("gg")
                 .Description("Congratulate someone for whatever reason.")
-                .Do(async e => await e.Channel.SendMessage("https://www.youtube.com/watch?v=oyFQVZ2h0V8"));
+                .Do(async e => await e.Channel.SendMessage("https://youtu.be/oyFQVZ2h0V8"));
 
             group.CreateCommand("gitgud")
                 .Description("A great advice in any situation.")
@@ -492,7 +492,7 @@ The current topic is: {e.Channel.Topic}";
                             await e.Channel.SendMessage("Arguments are not all numbers!");
                     }
                     else
-                        await e.Channel.SendMessage("https://www.youtube.com/watch?v=dQw4w9WgXcQ");
+                        await e.Channel.SendMessage("https://youtu.be/dQw4w9WgXcQ");
                 });
 
             group.CreateCommand("lotto")
