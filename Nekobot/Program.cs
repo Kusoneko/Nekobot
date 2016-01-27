@@ -778,6 +778,12 @@ The current topic is: {e.Channel.Topic}";
                     });
                 });
 
+            group.CreateCommand("setname")
+                .Parameter("New name", Commands.ParameterType.Unparsed)
+                .Description("I'll change my name to whatever you wish.")
+                .MinPermissions(4)
+                .Do(e => client.CurrentUser.Edit(config["password"].ToString(), e.Args[0]));
+
             Flags.AddCommands(group);
             Chatbot.AddCommands(group);
         }
