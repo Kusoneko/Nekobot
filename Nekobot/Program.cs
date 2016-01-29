@@ -374,12 +374,18 @@ The current topic is: {e.Channel.Topic}";
                     else
                     {
                         int few = 4;
-                        if (Helpers.HasArg(args, 1) && int.TryParse(args[0], out few))
-                            args = args.Skip(1).ToArray();
-                        if (few <= 0)
+                        if (Helpers.HasArg(args, 1))
                         {
-                            await e.Channel.SendMessage("You're silly!");
-                            return;
+                            if (int.TryParse(args[0], out few))
+                            {
+                                if (few <= 0)
+                                {
+                                    await e.Channel.SendMessage("You're silly!");
+                                    return;
+                                }
+                                args = args.Skip(1).ToArray();
+                            }
+                            else few = 4;
                         }
 
                         var search = string.Join(" ", args).TrimEnd();
