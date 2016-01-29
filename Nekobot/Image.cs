@@ -137,10 +137,13 @@ namespace Nekobot
 
         static string Folders(string folder)
         {
+            if (!System.IO.Directory.Exists(folder)) return null;
             string[] imgexts = { ".jpg", ".jpeg", ".png", ".gif", ".bmp" };
             var files = from file in System.IO.Directory.EnumerateFiles($@"{folder}", "*.*").Where(s => imgexts.Contains(System.IO.Path.GetExtension(s.ToLower()))) select new { File = file };
-            return files.ElementAt(new Random().Next(0, files.Count())).File;
+            return files.Any() ? files.ElementAt(new Random().Next(0, files.Count())).File : null;
         }
+
+        static async Task SendRandomImage(Discord.Channel c, string image, string ext) => await c.SendFile(Folders(image) ?? (image + ext));
 
         static async Task LewdSX(string chan, Discord.Channel c)
         {
@@ -198,20 +201,20 @@ namespace Nekobot
                     .Alias("worstgirl")
                     .Alias("onodera")
                     .Description("I'll upload an image of 'worst girl'. (WARNING: May cause nausea!)")
-                    .Do(e => e.Channel.SendFile("images/trash.png"));
+                    .Do(e => SendRandomImage(e.Channel, "images/trash", ".png"));
 
                 group.CreateCommand("doit")
                     .Alias("justdoit")
                     .Alias("shia")
                     .Description("DON'T LET YOUR DREAMS JUST BE DREAMS!")
-                    .Do(e => e.Channel.SendFile("images/shia.jpg"));
+                    .Do(e => SendRandomImage(e.Channel, "images/shia", ".jpg"));
 
                 group.CreateCommand("bulli")
                     .Alias("bully")
                     .Alias("dunbulli")
                     .Alias("dontbully")
                     .Description("DON'T BULLY!")
-                    .Do(e => e.Channel.SendFile("images/bulli.jpg"));
+                    .Do(e => SendRandomImage(e.Channel, "images/bulli", ".jpg"));
             }
 
             group.CreateCommand("img")
