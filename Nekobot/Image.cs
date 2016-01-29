@@ -215,6 +215,10 @@ namespace Nekobot
                     .Alias("dontbully")
                     .Description("DON'T BULLY!")
                     .Do(e => SendRandomImage(e.Channel, "images/bulli", ".jpg"));
+
+                group.CreateCommand("nofucks")
+                    .Description("When you've none to give.")
+                    .Do(e => SendRandomImage(e.Channel, "images/nofucks", ".png"));
             }
 
             group.CreateCommand("img")
