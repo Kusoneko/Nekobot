@@ -62,6 +62,8 @@ namespace Nekobot
                 await e.Channel.SendMessage(reaction);
         }
 
+        internal static TimeSpan Uptime() => DateTime.Now - System.Diagnostics.Process.GetCurrentProcess().StartTime;
+
         internal static Func<Message, DateTime> MsgTime => msg => msg.Timestamp;
 
         internal static async Task DoToMessages(Channel c, int few, Func<IOrderedEnumerable<Message>, bool, int> perform)
