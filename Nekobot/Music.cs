@@ -211,13 +211,37 @@ namespace Nekobot
                 return false;
             }
 
+            internal void ChannelUpdated(ChannelUpdatedEventArgs e)
+            {
+                var listeners = e.After.Users;
+                var listeners_count = listeners.Count();
+                if (e.Before.Users.Count() <= listeners_count) return; // If we've less listeners, a vote might have passed.
+                var needed = Math.Ceiling((float)(listeners_count-1) / 2);
+                for (int i = 0; i < votes.Length; ++i)
+                {
+                    var vote = votes[i];
+                    if (vote.Count >= needed) continue; // This may already be fulfilled, if so, don't bother.
+                    vote = vote.Where(id => listeners.Any(u => u.Id == id)).ToList();
+                    if (vote.Count >= needed)
+                    {
+                        switch(i)
+                        {
+                            case (int)Vote.Encore: DoEncore(); break;
+                            case (int)Vote.Reset: Task.Run(() => streams.Reset(e.After)); break;
+                            case (int)Vote.Skip: SkipSongs(); break;
+                        }
+                    }
+                }
+            }
+
             bool EncoreVote(Commands.CommandEventArgs e)
                 => AddVote(votes[(int)Vote.Encore], e, "replay current song", "song will be replayed", "replay");
 
+            void DoEncore() { lock (this) InsertEncore(); }
             internal void Encore(Commands.CommandEventArgs e)
             {
                 if (EncoreVote(e))
-                    lock (this) InsertEncore();
+                    DoEncore();
             }
 
             internal void Skip(Commands.CommandEventArgs e)
@@ -391,7 +415,15 @@ namespace Nekobot
         }
 
         internal static bool Get(Channel c) => c != null && streams.Has(c);
-        internal static void Load(DiscordClient c) => streams.Load(c);
+        internal static void Load(DiscordClient c)
+        {
+            streams.Load(c);
+            c.ChannelUpdated += (s, e) =>
+            {
+                if (e.Before.Type == ChannelType.Voice && playlist.ContainsKey(e.Before.Id))
+                    playlist[e.Before.Id].ChannelUpdated(e);
+            };
+        }
         internal static async Task Stop(Server s) => await streams.Stop(s);
 
         // Music-related variables
