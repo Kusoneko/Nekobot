@@ -573,6 +573,30 @@ namespace Nekobot
             }
         }
 
+        static class Local
+        {
+            public static void CreateCommand(Commands.CommandGroupBuilder group, string name)
+            {
+                CreatePLCmd(group, name, "song to find", "I'll try to add your request to the playlist!")
+                    .Do(e =>
+                    {
+                        var args = string.Join(" ", e.Args);
+                        if (args.Length == 0)
+                        {
+                            e.Channel.SendMessage("You need to provide at least a character to search for.");
+                            return;
+                        }
+                        args = args.ToLower();
+                        var file = Files().FirstOrDefault(f => System.IO.Path.GetFileNameWithoutExtension(f).ToLower().Contains(args));
+                        if (file != null)
+                        {
+                            playlist[e.User.VoiceChannel.Id].InsertFile(file, e);
+                        }
+                        e.Channel.SendMessage($"{e.User.Mention} Your request {(file != null ? "has been added to the list" : "was not found")}.");
+                    });
+            }
+        }
+
         internal static void AddCommands(Commands.CommandGroupBuilder group)
         {
             group.CreateCommand("playlist")
@@ -607,20 +631,7 @@ namespace Nekobot
 
             if (HasFolder())
             {
-                CreatePLCmd(group, "request", "song to find", "I'll try to add your request to the playlist!")
-                    .Do(e =>
-                    {
-                        var args = string.Join(" ", e.Args);
-                        if (args.Length == 0)
-                        {
-                            e.Channel.SendMessage("You need to provide at least a character to search for.");
-                            return;
-                        }
-                        args = args.ToLower();
-                        var file = Files().FirstOrDefault(f => System.IO.Path.GetFileNameWithoutExtension(f).ToLower().Contains(args));
-                        if (file != null) playlist[e.User.VoiceChannel.Id].InsertFile(file, e);
-                        e.Channel.SendMessage($"{e.User.Mention} Your request {(file != null ? "has been added to the list" : "was not found")}.");
-                    });
+                Local.CreateCommand(group, "request");
             }
 
             group.CreateCommand("skip")
