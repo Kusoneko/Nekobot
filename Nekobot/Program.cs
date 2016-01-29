@@ -50,25 +50,14 @@ namespace Nekobot
                 {
                     var version = Config.AppVersion;
                     string[] versions = version.Split('.');
-                    var rclient = Helpers.GetRestClient("https://raw.githubusercontent.com");
-                    var request = new RestRequest("Kusoneko/Nekobot/master/version.json", Method.GET);
-                    JObject result = JObject.Parse(rclient.Execute<JObject>(request).Content);
-                    string remoteversion = result["version"].ToString();
+                    string remoteversion = JObject.Parse(Helpers.GetRestClient("https://raw.githubusercontent.com").Execute<JObject>(new RestRequest("Kusoneko/Nekobot/master/version.json", Method.GET)).Content)["version"].ToString();
                     string[] remoteversions = remoteversion.Split('.');
-                    if (int.Parse(versions[0]) < int.Parse(remoteversions[0]))
-                        await e.Channel.SendMessage($"I'm currently {(int.Parse(remoteversions[0]) - int.Parse(versions[0]))} major version(s) behind. (Current version: {version}, latest version: {remoteversion})");
-                    else if (int.Parse(versions[0]) > int.Parse(remoteversions[0]))
-                        await e.Channel.SendMessage($"I'm currently {(int.Parse(versions[0]) - int.Parse(remoteversions[0]))} major version(s) ahead. (Current version: {version}, latest released version: {remoteversion})");
-                    else if (int.Parse(versions[1]) < int.Parse(remoteversions[1]))
-                        await e.Channel.SendMessage($"I'm currently {(int.Parse(remoteversions[1]) - int.Parse(versions[1]))} minor version(s) behind. (Current version: {version}, latest version: {remoteversion})");
-                    else if (int.Parse(versions[1]) > int.Parse(remoteversions[1]))
-                        await e.Channel.SendMessage($"I'm currently {(int.Parse(versions[1]) - int.Parse(remoteversions[1]))} minor version(s) ahead. (Current version: {version}, latest released version: {remoteversion})");
-                    else if (int.Parse(versions[2]) < int.Parse(remoteversions[2]))
-                        await e.Channel.SendMessage($"I'm currently {(int.Parse(remoteversions[2]) - int.Parse(versions[2]))} patch(es) behind. (Current version: {version}, latest version: {remoteversion})");
-                    else if (int.Parse(versions[2]) > int.Parse(remoteversions[2]))
-                        await e.Channel.SendMessage($"I'm currently {(int.Parse(versions[2]) - int.Parse(remoteversions[2]))} patch(es) ahead. (Current version: {version}, latest released version: {remoteversion})");
-                    else
-                        await e.Channel.SendMessage($"I'm up to date! (Current version: {version})");
+                    int diff;
+                    string section =
+                        (diff = int.Parse(versions[0]) - int.Parse(remoteversions[0])) != 0 ? $"major version{(Math.Abs(diff) == 1 ? "" : "s")}" :
+                        (diff = int.Parse(versions[1]) - int.Parse(remoteversions[1])) != 0 ? $"minor version{(Math.Abs(diff) == 1 ? "" : "s")}" :
+                        (diff = int.Parse(versions[2]) - int.Parse(remoteversions[2])) != 0 ? $"patch{(Math.Abs(diff) == 1 ? "" : "es")}" : null;
+                    await e.Channel.SendMessage($"I'm {(section == null ? $"up to date! (Current version: {version})" : $"currently {diff} {section} {(diff > 0 ? "ahead" : "behind")}. (Current version: {version}, latest {("released ")}version: {remoteversion})")}");
                 });
 
             Common.AddCommands(group);
