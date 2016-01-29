@@ -67,9 +67,8 @@ namespace Nekobot
             // Return true if we're resetting
             internal bool Cleanup()
             {
-                lock (voteskip) voteskip.Clear();
-                lock (votereset) votereset.Clear();
-                lock (voteencore) voteencore.Clear();
+                foreach (var vote in votes)
+                    lock (vote) vote.Clear();
                 skip = false;
                 if (exit)
                 {
@@ -213,7 +212,7 @@ namespace Nekobot
             }
 
             bool EncoreVote(Commands.CommandEventArgs e)
-                => AddVote(voteencore, e, "replay current song", "song will be replayed", "replay");
+                => AddVote(votes[(int)Vote.Encore], e, "replay current song", "song will be replayed", "replay");
 
             internal void Encore(Commands.CommandEventArgs e)
             {
@@ -223,12 +222,12 @@ namespace Nekobot
 
             internal void Skip(Commands.CommandEventArgs e)
             {
-                if (!skip && AddVote(voteskip, e, "skip current song", "skipping song", "skip"))
+                if (!skip && AddVote(votes[(int)Vote.Skip], e, "skip current song", "skipping song", "skip"))
                     SkipSongs();
             }
             internal async Task Reset(Commands.CommandEventArgs e)
             {
-                if (!exit && AddVote(votereset, e, "reset the stream", "resetting stream", "reset"))
+                if (!exit && AddVote(votes[(int)Vote.Reset], e, "reset the stream", "resetting stream", "reset"))
                     await streams.Reset(e.User.VoiceChannel);
             }
             internal void Pause(Commands.CommandEventArgs e)
@@ -246,7 +245,8 @@ namespace Nekobot
             }
             #endregion
 
-            List<ulong> voteskip = new List<ulong>(), votereset = new List<ulong>(), voteencore = new List<ulong>();
+            enum Vote { Skip, Reset, Encore }
+            List<ulong>[] votes = { new List<ulong>(), new List<ulong>(), new List<ulong>() };
             internal bool skip = false, exit = false, pause = false;
         }
 
