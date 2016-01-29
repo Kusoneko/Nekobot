@@ -199,7 +199,7 @@ namespace Nekobot
                 {
                     vote.Add(e.User.Id);
                     var listeners = e.User.VoiceChannel.Users.Count() - 1;
-                    var needed = Math.Ceiling((decimal)listeners / 2);
+                    var needed = Math.Ceiling((float)listeners / 2);
                     if (vote.Count == needed)
                     {
                         e.Channel.SendMessage($"{vote.Count}/{listeners} votes to {action}. 50%+ achieved, {success}...");
