@@ -269,6 +269,10 @@ namespace Nekobot
                 .Description("A great advice in any situation.")
                 .Do(async e => await e.Channel.SendMessage("https://youtu.be/xzpndHtdl9A"));
 
+            group.CreateCommand("lenny")
+                .Description("For *special* moments.")
+                .Do(async e => await e.Channel.SendMessage("( ͡° ͜ʖ ͡°)"));
+
             group.CreateCommand("say")
                 .Alias("forward")
                 .Alias("echo")
