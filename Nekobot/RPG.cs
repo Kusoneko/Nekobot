@@ -45,52 +45,39 @@ namespace Nekobot
                 .Description("I'll roll a few sided dice for a given number of times. All params are optional. (defaults: 1 *dice*, 6 *sides*, 1 *times*)")
                 .Do(async e =>
                 {
-                    bool rick = false;
-                    bool valid = true;
-                    foreach (string s in e.Args)
+                    if (e.Args.Length != 0 && e.Args[0] == "rick")
                     {
-                        int dummy;
-                        if (!int.TryParse(s, out dummy))
-                            valid = false;
-                        if (s == "rick")
-                            rick = true;
-                        if (rick || !valid)
-                            break;
-                    }
-                    if (!rick)
-                    {
-                        if (valid)
-                        {
-                            int dice = e.Args.Count() >= 1 ? int.Parse(e.Args[0]): 1;
-                            int sides = e.Args.Count() >= 2 ? int.Parse(e.Args[1]): 6;
-                            int times = e.Args.Count() >= 3 ? int.Parse(e.Args[2]): 1;
-
-                            string response = (dice <= 0 || sides <= 1 || times <= 0) ? $"{sides*times*dice}, baka!" : "";
-                            if (!response.Any())
-                            {
-                                var total = 0;
-                                Random rnd = new Random();
-                                for (int i = times; i > 0; i--)
-                                {
-                                    var subtotal = 0;
-                                    for (int j = dice; j > 0; j--)
-                                    {
-                                        var roll = rnd.Next(1, sides + 1);
-                                        if (dice > 1) response += $"{roll}{(j == 1 ? "" : ", ")}";
-                                        subtotal += roll;
-                                    }
-                                    if (times > 1) response += dice > 1 ? $" = {subtotal}.\n" : $"{subtotal}{(i == 1 ? "" : ", ")}";
-                                    total += subtotal;
-                                }
-                                response += $"{(times == 1 || dice == 1 ? "" : "Total Result")} = {total}.";
-                            }
-                            await e.Channel.SendMessage(response);
-                        }
-                        else
-                            await e.Channel.SendMessage("Arguments are not all numbers!");
-                    }
-                    else
                         await e.Channel.SendMessage("https://youtu.be/dQw4w9WgXcQ");
+                        return;
+                    }
+
+                    try
+                    {
+                        int dice = e.Args.Length >= 1 ? int.Parse(e.Args[0]): 1;
+                        int sides = e.Args.Length >= 2 ? int.Parse(e.Args[1]): 6;
+                        int times = e.Args.Length >= 3 ? int.Parse(e.Args[2]): 1;
+
+                        string response = (dice <= 0 || sides <= 1 || times <= 0) ? $"{sides*times*dice}, baka!" : "";
+                        if (!response.Any())
+                        {
+                            var total = 0;
+                            Random rnd = new Random();
+                            for (int i = times; i > 0; i--)
+                            {
+                                var subtotal = 0;
+                                for (int j = dice; j > 0; j--)
+                                {
+                                    var roll = rnd.Next(1, sides + 1);
+                                    if (dice > 1) response += $"{roll}{(j == 1 ? "" : ", ")}";
+                                    subtotal += roll;
+                                }
+                                if (times > 1) response += dice > 1 ? $" = {subtotal}.\n" : $"{subtotal}{(i == 1 ? "" : ", ")}";
+                                total += subtotal;
+                            }
+                            response += $"{(times == 1 || dice == 1 ? "" : "Total Result")} = {total}.";
+                        }
+                        await e.Channel.SendMessage(response);
+                    } catch { await e.Channel.SendMessage("Arguments are not all numbers!"); }
                 });
         }
     }
