@@ -57,7 +57,7 @@ namespace Nekobot
                         (diff = int.Parse(versions[0]) - int.Parse(remoteversions[0])) != 0 ? $"major version{(Math.Abs(diff) == 1 ? "" : "s")}" :
                         (diff = int.Parse(versions[1]) - int.Parse(remoteversions[1])) != 0 ? $"minor version{(Math.Abs(diff) == 1 ? "" : "s")}" :
                         (diff = int.Parse(versions[2]) - int.Parse(remoteversions[2])) != 0 ? $"patch{(Math.Abs(diff) == 1 ? "" : "es")}" : null;
-                    await e.Channel.SendMessage($"I'm {(section == null ? $"up to date! (Current version: {version})" : $"currently {diff} {section} {(diff > 0 ? "ahead" : "behind")}. (Current version: {version}, latest {("released ")}version: {remoteversion})")}");
+                    await e.Channel.SendMessage($"I'm {(section == null ? $"up to date! (Current version: {version})" : $"currently {Math.Abs(diff)} {section} {(diff > 0 ? "ahead" : "behind")}. (Current version: {version}, latest {("released ")}version: {remoteversion})")}");
                 });
 
             Common.AddCommands(group);
