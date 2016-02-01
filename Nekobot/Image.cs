@@ -184,11 +184,10 @@ namespace Nekobot
                     var cmd = group.CreateCommand(cmd_data != null ? cmd_data["command"].ToString() : subdir.Substring(subdir.LastIndexOf('\\')+1));
                     if (cmd_data != null)
                     {
-                        cmd.FlagNsfw(cmd_data["nsfw"].ToObject<bool>());
-                        cmd.Description(cmd_data["description"].ToString());
+                        cmd.FlagNsfw(cmd_data["nsfw"].ToObject<bool>()).Description(cmd_data["description"].ToString());
+                        foreach (var alias in cmd_data["aliases"])
+                            cmd.Alias(alias.ToString());
                     }
-                    foreach (var alias in cmd_data["aliases"])
-                        cmd.Alias(alias.ToString());
                     cmd.Do(async e =>
                         {
                             var files = from file in System.IO.Directory.EnumerateFiles($@"{subdir}", "*.*").Where(s => imgexts.Contains(System.IO.Path.GetExtension(s.ToLower()))) select new { File = file };
