@@ -135,16 +135,6 @@ namespace Nekobot
             await e.Channel.SendMessage($"Failed ten times, something must be broken with {booru}'s API.");
         }
 
-        static string Folders(string folder)
-        {
-            if (!System.IO.Directory.Exists(folder)) return null;
-            string[] imgexts = { ".jpg", ".jpeg", ".png", ".gif", ".bmp" };
-            var files = from file in System.IO.Directory.EnumerateFiles($@"{folder}", "*.*").Where(s => imgexts.Contains(System.IO.Path.GetExtension(s.ToLower()))) select new { File = file };
-            return files.Any() ? files.ElementAt(new Random().Next(0, files.Count())).File : null;
-        }
-
-        static async Task SendRandomImage(Discord.Channel c, string image, string ext) => await c.SendFile(Folders(image) ?? (image + ext));
-
         static async Task LewdSX(string chan, Discord.Channel c)
         {
             string result = Helpers.GetRestClient("https://lewdchan.com").Execute(new RestRequest($"{chan}/src/list.php", Method.GET)).Content;
@@ -161,15 +151,6 @@ namespace Nekobot
                 .FlagNsfw(true)
                 .Description($"I'll give you a random image from https://lewdchan.com/{chan}/")
                 .Do(async e => await LewdSX(chan, e.Channel));
-        }
-        static void CreateFolderCommand(Commands.CommandGroupBuilder group, string name, string type, string owner)
-        {
-            string folder = Program.config[name].ToString();
-            if (folder != "")
-                group.CreateCommand(name)
-                    .FlagNsfw(true)
-                    .Description($"I'll give you a random {type} image from {owner}'s collection")
-                    .Do(e => e.Channel.SendFile(Folders(folder)));
         }
         static void CreateBooruCommand(Commands.CommandGroupBuilder group, string booru, string alias) => CreateBooruCommand(group, booru, new[]{alias});
         static void CreateBooruCommand(Commands.CommandGroupBuilder group, string booru, string[] aliases = null)
@@ -191,34 +172,29 @@ namespace Nekobot
             CreateLewdCommand(group, "kitsune");
             CreateLewdCommand(group, "lewd");
 
-            CreateFolderCommand(group, "pitur", "lewd", "pitur");
-            CreateFolderCommand(group, "gold", "kancolle", "gold");
-            CreateFolderCommand(group, "cosplay", "cosplay", "Salvy");
-
-            if (System.IO.Directory.Exists("images"))
+            var imagedir = Program.config["images"].ToString();
+            if (imagedir == "") imagedir = "images";
+            if (System.IO.Directory.Exists(imagedir))
             {
-                group.CreateCommand("trash")
-                    .Alias("worstgirl")
-                    .Alias("onodera")
-                    .Description("I'll upload an image of 'worst girl'. (WARNING: May cause nausea!)")
-                    .Do(e => SendRandomImage(e.Channel, "images/trash", ".png"));
-
-                group.CreateCommand("doit")
-                    .Alias("justdoit")
-                    .Alias("shia")
-                    .Description("DON'T LET YOUR DREAMS JUST BE DREAMS!")
-                    .Do(e => SendRandomImage(e.Channel, "images/shia", ".jpg"));
-
-                group.CreateCommand("bulli")
-                    .Alias("bully")
-                    .Alias("dunbulli")
-                    .Alias("dontbully")
-                    .Description("DON'T BULLY!")
-                    .Do(e => SendRandomImage(e.Channel, "images/bulli", ".jpg"));
-
-                group.CreateCommand("nofucks")
-                    .Description("When you've none to give.")
-                    .Do(e => SendRandomImage(e.Channel, "images/nofucks", ".png"));
+                string[] imgexts = { ".jpg", ".jpeg", ".png", ".gif", ".bmp" };
+                foreach (var subdir in System.IO.Directory.EnumerateDirectories(imagedir))
+                {
+                    var cmd_file = subdir + "/command.json";
+                    var cmd_data = System.IO.File.Exists(cmd_file) ? JObject.Parse(System.IO.File.ReadAllText(cmd_file)) : null;
+                    var cmd = group.CreateCommand(cmd_data != null ? cmd_data["command"].ToString() : subdir.Substring(subdir.LastIndexOf('\\')+1));
+                    if (cmd_data != null)
+                    {
+                        cmd.FlagNsfw(cmd_data["nsfw"].ToObject<bool>());
+                        cmd.Description(cmd_data["description"].ToString());
+                    }
+                    foreach (var alias in cmd_data["aliases"])
+                        cmd.Alias(alias.ToString());
+                    cmd.Do(async e =>
+                        {
+                            var files = from file in System.IO.Directory.EnumerateFiles($@"{subdir}", "*.*").Where(s => imgexts.Contains(System.IO.Path.GetExtension(s.ToLower()))) select new { File = file };
+                            await e.Channel.SendFile(files.ElementAt(new Random().Next(0, files.Count())).File);
+                        });
+                }
             }
 
             group.CreateCommand("img")

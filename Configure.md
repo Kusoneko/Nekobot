@@ -20,12 +20,10 @@ You'll need to make a config.json file in the same place as the executable using
     "game" : "Happy Nekobot Fun Times",
     "musicFolder" : "",
     "musicUseSubfolders" : false,
-    "pitur" : "",
-    "gold" : "",
-    "cosplay" : ""
+    "images" : ""
 }
 ```
-Quick links to descriptions: [Credentials](#credentials) | [master](#master) | [server](#server) | [prefix, prefixprivate, prefix and mentioncommand](#prefix) | [helpmode](#helpmode) | [loglevel](#log-level) | [game](#game) | [musicFolder, and musicUseSubfolders](#music-folder) | [pitur, gold, cosplay](#image-folders)
+Quick links to descriptions: [Credentials](#credentials) | [master](#master) | [server](#server) | [prefix, prefixprivate, prefix and mentioncommand](#prefix) | [helpmode](#helpmode) | [loglevel](#log-level) | [game](#game) | [musicFolder, and musicUseSubfolders](#music-folder) | [images](#image-folder)
 
 [Further Setup Instructions](#other-setup)
 
@@ -73,8 +71,17 @@ If empty, the `request` command will be disabled, and music will only be played 
 
 The musicUseSubfolders setting is whether or not to include files buried in folders within your musicFolder.
 
-### Image Folders
-The pitur, gold and cosplay settings should be set to full paths to image folders containing whatever images you please. If they're not set, the commands will be disabled.
+### Image Folder
+Set this to a folder for which you will create subfolders for commands uploading images you wish to have. If this is an empty string, she'll look in her running directory for "images" subfolder.
+Include the file command.json (as shown below) in each subfolder to configure its command, otherwise it'll be sfw and use the subfolder name as its name.
+```javascript
+{
+  "command" : "name",
+  "aliases" : [],
+  "description" : "Some words to describe",
+  "nsfw" : false
+}
+```
 
 # Other setup
 For `ytrequest` to work with webm videos, please install the [Required codecs](https://tools.google.com/dlpage/webmmf/).
