@@ -87,6 +87,9 @@
     <Content Include="project.lock.json">
       <DependentUpon>project.json</DependentUpon>
     </Content>
+    <None Include="response_commands.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\chatter-bot-api\dotnet\ChatterBotAPI\ChatterBotAPI.csproj">

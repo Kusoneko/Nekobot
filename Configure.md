@@ -84,4 +84,9 @@ Include the file command.json (as shown below) in each subfolder to configure it
 ```
 
 # Other setup
+If you want to have custom commands that say something (or different things, randomly):
++ Create a file in Nekobot's output directory called custom\_response\_commands.json
++ Model it after the response\_commands.json already in this directory.
+If you want to add such commands to the project itself, or tweak existing ones, please contribute to the project's response\_commands.json and let us know!
+
 For `ytrequest` to work with webm videos, please install the [Required codecs](https://tools.google.com/dlpage/webmmf/).

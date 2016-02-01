@@ -1,0 +1,120 @@
+﻿{
+  "fortune": {
+    "aliases": [ ],
+    "description": "I'll give you a fortune!",
+    "nsfw": false,
+    "responses": [
+      "Don't sleep for too long, or you'll miss naptime!",
+      "Before crying over spilt milk, remember it can still be delicious without a bowl.",
+      "A bird in the paw is worth nom nom nom...",
+      "Let no surface, no matter how high or cluttered, go unexplored.",
+      "Neko never catches the laser if neko never tries.",
+      "Our greatest glory is not in never falling, but in making sure master doesn't find the mess.",
+      "A mouse shared halves the food but doubles the happiness.",
+      "There exists nary a toy as pertinent as the box from whence that toy came.",
+      "Neko will never be fed if neko does not meow all day!",
+      "Ignore physics, and physics will ignore you.",
+      "Never bite the hand that feeds you!",
+      "Before finding the red dot, you must first find yourself.",
+      "Some see the glass half empty. Some see the glass half full. Neko sees the glass and knocks it over.",
+      "Make purrs not war.",
+      "Give a neko fish and you feed them for a day; Teach a neko to fish and... mmmm fish.",
+      "Wheresoever you go, go with all of master's things.",
+      "Live your dreams every day! Why do you think neko naps so much?",
+      "The hardest thing of all is to find a black cat in a dark room, especially if there is no cat.",
+      "Meow meow meow meow, meow meow. Meow meow meow."
+    ]
+  },
+  "littany": {
+    "aliases": [ ],
+    "description": "His power divine, utterances of the finest of the imperium to motivate you on your way~",
+    "nsfw": false,
+    "responses": [
+      "Bless the Simpleton, for his mind has no room for doubt.",
+      "When purging the guilty do not spare the innocent, for in death you free them from their invertible corruption",
+      "Faith in the Emperor destroys all errors.",
+      "I am rather a Martyr forever than a coward for a second.",
+      "War is an act of violence to force the will of the Emperor.",
+      "In the hour of greatest need, our Emperor shall walk among us once more, and the stars themselves will hide.",
+      "To err is human. To correct is divine.",
+      "Better one hundred innocents burn than one heretic go free.",
+      "Strength does not come from physical capacity. It comes from an indomitable will.",
+      "The strong can never forgive. Forgiveness is the attribute of the weak.",
+      "The innocent man, the devout man, does not fear meeting his Emperor.",
+      "Redeem with Bolter. Cleanse with Flamer. Purify from Orbit.",
+      "The only thing to fear is corruption itself."
+    ]
+  },
+  "nya": {
+    "aliases": [ "nyaa", "nyan" ],
+    "description": "I'll say 'Nyaa~'",
+    "nsfw": false,
+    "responses": [
+      "Nyaa~"
+    ]
+  },
+  "poi": {
+    "aliases": [ ],
+    "description": "I'll say 'Poi!'",
+    "nsfw": false,
+    "responses": [
+      "Poi!"
+    ]
+  },
+  "aicrai": {
+    "aliases": [ "aicraievritiem", "aicraievritaim", "sadhorn", "icri" ],
+    "description": "When sad things happen...",
+    "nsfw": false,
+    "responses": [
+      "https://youtu.be/0JAn8eShOo8"
+    ]
+  },
+  "notnow": {
+    "aliases": [ "rinpls" ],
+    "description": "How to Rekt: Rin 101",
+    "nsfw": false,
+    "responses": [
+      "https://youtu.be/2BZUzJfKFwM"
+    ]
+  },
+  "uninstall": {
+    "aliases": [ ],
+    "description": "A great advice in any situation.",
+    "nsfw": false,
+    "responses": [
+      "https://youtu.be/TJB0uCERrEQ"
+    ]
+  },
+  "killyourself": {
+    "aliases": [ "kys" ],
+    "description": "Another great advice.",
+    "nsfw": false,
+    "responses": [
+      "https://youtu.be/2dbR2JZmlWo"
+    ]
+  },
+  "congratulations": {
+    "aliases": [ "congrats", "grats", "gg" ],
+    "description": "Congratulate someone for whatever reason.",
+    "nsfw": false,
+    "responses": [
+      "https://youtu.be/oyFQVZ2h0V8"
+    ]
+  },
+  "gitgud": {
+    "aliases": [ ],
+    "description": "A great advice in any situation.",
+    "nsfw": false,
+    "responses": [
+      "https://youtu.be/xzpndHtdl9A"
+    ]
+  },
+  "lenny": {
+    "aliases": [ ],
+    "description": "For *special* moments.",
+    "nsfw": false,
+    "responses": [
+      "( ͡° ͜ʖ ͡°)"
+    ]
+  }
+}

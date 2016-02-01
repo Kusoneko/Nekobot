@@ -17,6 +17,22 @@ namespace Nekobot
         static Task DoPing(int ms, Message msg)
            => msg.Edit($"{msg.RawText} ({msg.Timestamp.Millisecond - ms} milliseconds)");
 
+        static void AddResponseCommands(Commands.CommandGroupBuilder group, string file)
+        {
+            if (!System.IO.File.Exists(file)) return;
+            var json = JObject.Parse(System.IO.File.ReadAllText(file));
+            foreach (var cmdjson in json)
+            {
+                var cmd = group.CreateCommand(cmdjson.Key);
+                var val = cmdjson.Value;
+                foreach (var alias in val["aliases"]) cmd.Alias(alias.ToString());
+                cmd.Description(val["description"].ToString()).FlagNsfw(val["nsfw"].ToObject<bool>());
+                var responses = val["responses"].ToObject<string[]>();
+                if (responses.Length == 1) cmd.Do(async e => await e.Channel.SendMessage(responses[0]));
+                else cmd.Do(async e => await e.Channel.SendMessage(Helpers.Pick(responses)));
+            }
+        }
+
         internal static void AddCommands(Commands.CommandGroupBuilder group)
         {
             group.CreateCommand("ping")
@@ -56,58 +72,6 @@ namespace Nekobot
 
             Image.AddCommands(group);
 
-            group.CreateCommand("fortune")
-                .Description("I'll give you a fortune!")
-                .Do(async e =>
-                {
-                    string[] fortunes =
-                    {
-                        "Don't sleep for too long, or you'll miss naptime!",
-                        "Before crying over spilt milk, remember it can still be delicious without a bowl.",
-                        "A bird in the paw is worth nom nom nom...",
-                        "Let no surface, no matter how high or cluttered, go unexplored.",
-                        "Neko never catches the laser if neko never tries.",
-                        "Our greatest glory is not in never falling, but in making sure master doesn't find the mess.",
-                        "A mouse shared halves the food but doubles the happiness.",
-                        "There exists nary a toy as pertinent as the box from whence that toy came.",
-                        "Neko will never be fed if neko does not meow all day!",
-                        "Ignore physics, and physics will ignore you.",
-                        "Never bite the hand that feeds you!",
-                        "Before finding the red dot, you must first find yourself.",
-                        "Some see the glass half empty. Some see the glass half full. Neko sees the glass and knocks it over.",
-                        "Make purrs not war.",
-                        "Give a neko fish and you feed them for a day; Teach a neko to fish and... mmmm fish.",
-                        "Wheresoever you go, go with all of master's things.",
-                        "Live your dreams every day! Why do you think neko naps so much?",
-                        "The hardest thing of all is to find a black cat in a dark room, especially if there is no cat.",
-                        "Meow meow meow meow, meow meow. Meow meow meow."
-                    };
-                    await e.Channel.SendMessage(Helpers.Pick(fortunes));
-                });
-
-            group.CreateCommand("littany")
-                .Description("His power divine, utterances of the finest of the imperium to motivate you on your way~")
-                .Do(async e =>
-                {
-                    string[] littanies =
-                    {
-                        "Bless the Simpleton, for his mind has no room for doubt.",
-                        "When purging the guilty do not spare the innocent, for in death you free them from their invertible corruption",
-                        "Faith in the Emperor destroys all errors.",
-                        "I am rather a Martyr forever than a coward for a second.",
-                        "War is an act of violence to force the will of the Emperor.",
-                        "In the hour of greatest need, our Emperor shall walk among us once more, and the stars themselves will hide.",
-                        "To err is human. To correct is divine.",
-                        "Better one hundred innocents burn than one heretic go free.",
-                        "Strength does not come from physical capacity. It comes from an indomitable will.",
-                        "The strong can never forgive. Forgiveness is the attribute of the weak.",
-                        "The innocent man, the devout man, does not fear meeting his Emperor.",
-                        "Redeem with Bolter. Cleanse with Flamer. Purify from Orbit.",
-                        "The only thing to fear is corruption itself."
-                    };
-                    await e.Channel.SendMessage(Helpers.Pick(littanies));
-                });
-
             group.CreateCommand("quote")
                 .Description("I'll give you a random quote from https://inspiration.julxzs.website/quotes")
                 .Do(async e =>
@@ -122,6 +86,8 @@ namespace Nekobot
                 .Description("The magic eightball can answer any question!")
                 .Do(async e =>
                 {
+                    // TODO: Decide if we want to load this will all the other response commands, if so this check could be bypassed
+                    // Note: We'd also need to put all responses in asterisks.
                     if (!string.Join(" ", e.Args).EndsWith("?"))
                     {
                         await e.Channel.SendMessage("You must ask a proper question!");
@@ -139,52 +105,8 @@ namespace Nekobot
                     await e.Channel.SendMessage($"*{Helpers.Pick(eightball)}*");
                 });
 
-            group.CreateCommand("nya")
-                .Alias("nyaa")
-                .Alias("nyan")
-                .Description("I'll say 'Nyaa~'")
-                .Do(async e => await e.Channel.SendMessage("Nyaa~"));
-
-            group.CreateCommand("poi")
-                .Description("I'll say 'Poi!'")
-                .Do(async e => await e.Channel.SendMessage("Poi!"));
-
-            group.CreateCommand("aicrai")
-                .Alias("aicraievritiem")
-                .Alias("aicraievritaim")
-                .Alias("sadhorn")
-                .Alias("icri")
-                .Description("When sad things happen...")
-                .Do(async e => await e.Channel.SendMessage("https://youtu.be/0JAn8eShOo8"));
-
-            group.CreateCommand("notnow")
-                .Alias("rinpls")
-                .Description("How to Rekt: Rin 101")
-                .Do(async e => await e.Channel.SendMessage("https://youtu.be/2BZUzJfKFwM"));
-
-            group.CreateCommand("uninstall")
-                .Description("A great advice in any situation.")
-                .Do(async e => await e.Channel.SendMessage("https://youtu.be/TJB0uCERrEQ"));
-
-            group.CreateCommand("killyourself")
-                .Alias("kys")
-                .Description("Another great advice.")
-                .Do(async e => await e.Channel.SendMessage("https://youtu.be/2dbR2JZmlWo"));
-
-            group.CreateCommand("congratulations")
-                .Alias("congrats")
-                .Alias("grats")
-                .Alias("gg")
-                .Description("Congratulate someone for whatever reason.")
-                .Do(async e => await e.Channel.SendMessage("https://youtu.be/oyFQVZ2h0V8"));
-
-            group.CreateCommand("gitgud")
-                .Description("A great advice in any situation.")
-                .Do(async e => await e.Channel.SendMessage("https://youtu.be/xzpndHtdl9A"));
-
-            group.CreateCommand("lenny")
-                .Description("For *special* moments.")
-                .Do(async e => await e.Channel.SendMessage("( ͡° ͜ʖ ͡°)"));
+            AddResponseCommands(group, "response_commands.json");
+            AddResponseCommands(group, "custom_response_commands.json");
 
             group.CreateCommand("say")
                 .Alias("forward")
@@ -345,6 +267,7 @@ The current topic is: {e.Channel.Topic}";
                     await e.Channel.SendMessage($"Your lucky numbers are **{lotto[0]}, {lotto[1]}, {lotto[2]}, {lotto[3]}, {lotto[4]}, {lotto[5]}**.");
                 });
 
+            // TODO: Decide if PerformAction commands should be moved to their own json file like response_commands.json
             group.CreateCommand("pet")
                 .Alias("pets")
                 .Parameter("@User1] [@User2] [...", Commands.ParameterType.Unparsed)
