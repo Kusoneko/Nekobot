@@ -1,5 +1,6 @@
 ﻿using Discord;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using RestSharp;
@@ -36,7 +37,7 @@ namespace Nekobot
             return false;
         }
 
-        internal static System.Collections.Generic.IEnumerable<string> GraphemeClusters(string s)
+        internal static IEnumerable<string> GraphemeClusters(string s)
         {
             var enumerator = System.Globalization.StringInfo.GetTextElementEnumerator(s);
             while (enumerator.MoveNext()) yield return (string)enumerator.Current;

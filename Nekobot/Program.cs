@@ -13,12 +13,11 @@ namespace Nekobot
 {
     partial class Program
     {
+        internal static CommandService commands => client.Commands();
+
         // Commands first to help with adding new commands
         static void GenerateCommands(CommandGroupBuilder group)
         {
-            group.DefaultMusicFlag(false);
-            group.DefaultNsfwFlag(false);
-
             // User commands
             group.CreateCommand("servers")
                 .Description("I'll send you statistics about the servers, channels and users (can be spammy, goes to private).")

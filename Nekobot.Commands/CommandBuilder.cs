@@ -139,8 +139,8 @@ namespace Nekobot.Commands
         private readonly CommandService _service;
         private readonly string _prefix;
         private readonly List<IPermissionChecker> _checks;
-        private bool _defaultNsfwFlag;
-        private bool _defaultMusicFlag;
+        private bool _defaultNsfwFlag = false;
+        private bool _defaultMusicFlag = false;
         private string _category;
 
         public CommandService Service => _service;
