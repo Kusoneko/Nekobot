@@ -302,7 +302,8 @@ namespace Nekobot
                     {
                         try
                         {
-                            var outFormat = new WaveFormat(48000, 16, Program.Audio.Config.Channels);
+                            var channels = Program.Audio.Config.Channels;
+                            var outFormat = new WaveFormat(48000, 16, channels);
                             int blockSize = outFormat.AverageBytesPerSecond; // 1 second
                             byte[] buffer = new byte[blockSize];
                             string uri = await pl.CurrentUri();

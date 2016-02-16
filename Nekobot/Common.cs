@@ -50,7 +50,7 @@ namespace Nekobot
 
             group.CreateCommand("whois")
                 .Alias("getinfo")
-                .Parameter("@User1] [@User2] [...", Commands.ParameterType.Unparsed)
+                .Parameter("[@User1] [@User2] [...]", Commands.ParameterType.Unparsed)
                 .Description("I'll give you information about the mentioned user(s).")
                 .Do(async e =>
                 {
@@ -111,7 +111,7 @@ namespace Nekobot
             group.CreateCommand("say")
                 .Alias("forward")
                 .Alias("echo")
-                .Parameter("#channel or @User (or user/channel id in PMs)] [...", Commands.ParameterType.Unparsed)
+                .Parameter("[#channel or @User (or user/channel id in PMs)] text...", Commands.ParameterType.Unparsed)
                 .Description("I'll repeat what you said. (To a given user or channel)")
                 .Do(async e =>
                 {
@@ -191,7 +191,7 @@ The current topic is: {e.Channel.Topic}";
                 });
 
             group.CreateCommand("avatar")
-                .Parameter("@User1] [@User2] [...", Commands.ParameterType.Unparsed)
+                .Parameter("[@User1] [@User2] [...]", Commands.ParameterType.Unparsed)
                 .Description("I'll give you the avatars of every mentioned users.")
                 .Do(async e =>
                 {
@@ -270,13 +270,13 @@ The current topic is: {e.Channel.Topic}";
             // TODO: Decide if PerformAction commands should be moved to their own json file like response_commands.json
             group.CreateCommand("pet")
                 .Alias("pets")
-                .Parameter("@User1] [@User2] [...", Commands.ParameterType.Unparsed)
+                .Parameter("[@User1] [@User2] [...]", Commands.ParameterType.Unparsed)
                 .Description("Everyone loves being pet, right!?! Pets each *@user*. Leave empty (or mention me too) to pet me!")
                 .Do(e => Helpers.PerformAction(e, "pet", "*purrs*", false));
 
             group.CreateCommand("hug")
                 .Alias("hugs")
-                .Parameter("@User1] [@User2] [...", Commands.ParameterType.Unparsed)
+                .Parameter("[@User1] [@User2] [...]", Commands.ParameterType.Unparsed)
                 .Description("Hug someone! Hugs each *@user*. Leave empty to get a hug!")
                 .Do(e => Helpers.PerformAction(e, "hug", "<3", true));
         }

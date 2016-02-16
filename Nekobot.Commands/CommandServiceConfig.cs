@@ -2,15 +2,6 @@
 
 namespace Nekobot.Commands
 {
-    public enum HelpMode
-    {
-        /// <summary> Disable the automatic help command. </summary>
-        Disable,
-        /// <summary> Use the automatic help command and respond in the channel the command is used. </summary>
-        Public,
-        /// <summary> Use the automatic help command and respond in a private message. </summary>
-        Private
-    }
     public class CommandServiceConfig
     {
         public char? CommandChar
@@ -34,7 +25,7 @@ namespace Nekobot.Commands
         public short MentionCommandChar;
 
         public HelpMode HelpMode { get { return _helpMode; } set { SetValue(ref _helpMode, value); } }
-        private HelpMode _helpMode = HelpMode.Disable;
+        private HelpMode _helpMode = HelpMode.Disabled;
 
         //Lock
         protected bool _isLocked;

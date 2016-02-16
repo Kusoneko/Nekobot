@@ -7,18 +7,17 @@ namespace Nekobot
 {
     partial class Program
     {
-        internal static AudioService Audio => client.Audio();
+        internal static AudioService Audio => client.GetService<AudioService>();
     }
     class Voice
     {
         internal static void Startup(DiscordClient c)
         {
-            c.UsingAudio(new AudioServiceConfig
+            c.UsingAudio(x =>
             {
-                Mode = AudioMode.Outgoing,
-                EnableMultiserver = true,
-                EnableEncryption = true,
-                Bitrate = 512,
+                x.Mode = AudioMode.Outgoing;
+                x.EnableMultiserver = true;
+                x.EnableEncryption = true;
             });
 
             Music.Load(c);

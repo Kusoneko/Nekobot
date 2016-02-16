@@ -1,4 +1,5 @@
-﻿using Discord;
+﻿using System.Collections.Generic;
+using Discord;
 
 namespace Nekobot.Commands.Permissions.Userlist
 {
@@ -6,7 +7,7 @@ namespace Nekobot.Commands.Permissions.Userlist
     {
         public static DiscordClient UsingGlobalWhitelist(this DiscordClient client, params ulong[] initialUserIds)
         {
-            client.Services.Add(new WhitelistService(initialUserIds));
+            client.AddService(new WhitelistService(initialUserIds));
             return client;
         }
 
@@ -24,6 +25,25 @@ namespace Nekobot.Commands.Permissions.Userlist
         {
             service.Root.AddCheck(new BlacklistChecker(service.Client));
             return service;
+        }
+
+        public static IEnumerable<ulong> GetWhitelistedUserIds(this DiscordClient client)
+            => client.GetService<WhitelistService>().UserIds;
+        public static void WhitelistUser(this DiscordClient client, User user)
+        {
+            client.GetService<WhitelistService>().Add(user.Id);
+        }
+        public static void WhitelistUser(this DiscordClient client, ulong userId)
+        {
+            client.GetService<WhitelistService>().Add(userId);
+        }
+        public static void UnWhitelistUser(this DiscordClient client, User user)
+        {
+            client.GetService<WhitelistService>().Remove(user.Id);
+        }
+        public static void RemoveFromWhitelist(this DiscordClient client, ulong userId)
+        {
+            client.GetService<WhitelistService>().Remove(userId);
         }
     }
 }

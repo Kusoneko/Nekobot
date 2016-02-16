@@ -47,7 +47,7 @@ namespace Nekobot
                 .Description("I'll tell you the current version and check if a newer version is available.")
                 .Do(async e =>
                 {
-                    var version = Config.AppVersion;
+                    var version = Helpers.Version();
                     string[] versions = version.Split('.');
                     string remoteversion = JObject.Parse(Helpers.GetRestClient("https://raw.githubusercontent.com").Execute<JObject>(new RestRequest("Kusoneko/Nekobot/master/version.json", Method.GET)).Content)["version"].ToString();
                     string[] remoteversions = remoteversion.Split('.');
@@ -243,7 +243,7 @@ namespace Nekobot
                 .Alias("setperms")
                 .Alias("setauth")
                 .Parameter("newPermissionLevel", Commands.ParameterType.Required)
-                .Parameter("@User1] [@User2] [...", Commands.ParameterType.Unparsed)
+                .Parameter("[@User1] [@User2] [...]", Commands.ParameterType.Unparsed)
                 .MinPermissions(2)
                 .Description("I'll set the permission level of the mentioned people to the level mentioned (cannot be higher than or equal to yours).")
                 .Do(async e =>
@@ -385,8 +385,8 @@ namespace Nekobot
             LoadConfig();
 
             // Set up the events and enforce use of the command prefix
-            client.Connected += Connected;
-            client.Disconnected += Disconnected;
+            client.LoggedIn += LoggedIn;
+            //client.LoggedOut += LoggedOut;
             client.UserJoined += UserJoined;
             client.Log.Message += (s, e) => Log.Write(e);
             client.UsingPermissionLevels(Helpers.GetPermissions);
@@ -524,13 +524,14 @@ namespace Nekobot
             Music.Folder = musicFolder;
             Music.UseSubdirs = config["musicUseSubfolders"].ToObject<bool>();
 
-            client = new DiscordClient(new DiscordConfig
+            client = new DiscordClient(new DiscordConfigBuilder
             {
                 AppName = "Nekobot",
-                AppVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString(3),
+                AppVersion = Helpers.Version(),
                 AppUrl = "https://github.com/Kusoneko/Nekobot",
                 LogLevel = config["loglevel"].ToObject<LogSeverity>(),
-                UseMessageQueue = false,
+                MessageCacheSize = 1024,
+                UsePermissionsCache = true,
             });
 
             string helpmode = config["helpmode"].ToString();
@@ -540,10 +541,10 @@ namespace Nekobot
                 RequireCommandCharInPrivate = config["prefixprivate"].ToObject<bool>(),
                 RequireCommandCharInPublic = config["prefixpublic"].ToObject<bool>(),
                 MentionCommandChar = config["mentioncommand"].ToObject<short>(),
-                HelpMode = helpmode.Equals("public") ? HelpMode.Public : helpmode.Equals("private") ? HelpMode.Private : HelpMode.Disable
+                HelpMode = helpmode.Equals("public") ? HelpMode.Public : helpmode.Equals("private") ? HelpMode.Private : HelpMode.Disabled
             }, Flags.GetNsfw, Flags.GetMusic, Flags.GetIgnored);
 
-            Console.Title = $"{Config.AppName} v{Config.AppVersion} (Discord.Net v{DiscordConfig.LibVersion})";
+            Console.Title = Config.UserAgent;
         }
 
         private static void UserJoined(object sender, UserEventArgs e)
@@ -552,14 +553,14 @@ namespace Nekobot
                 e.Server.DefaultChannel.SendMessage($"Welcome to {e.Server.Name}, {e.User.Mention}! :hearts:");
         }
 
-        private static void Disconnected(object sender, DisconnectedEventArgs e)
+        /*private static void LoggedOut(object sender, DisconnectedEventArgs e)
         {
-            Log.Write(LogSeverity.Warning, "Disconnected");
-        }
+            Log.Write(LogSeverity.Warning, "Logged Out.");
+        }*/
 
-        private static void Connected(object sender, EventArgs e)
+        private static void LoggedIn(object sender, EventArgs e)
         {
-            Log.Write(LogSeverity.Warning, "Connected.");
+            Log.Write(LogSeverity.Warning, "Logged in.");
             client.SetGame(config["game"].ToString());
         }
 

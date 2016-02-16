@@ -52,6 +52,7 @@
     <Compile Include="CommandParser.cs" />
     <Compile Include="CommandService.cs" />
     <Compile Include="CommandServiceConfig.cs" />
+    <Compile Include="HelpMode.cs" />
     <Compile Include="Permissions\GenericPermissionChecker.cs" />
     <Compile Include="Permissions\IPermissionChecker.cs" />
     <Compile Include="Permissions\Levels\PermissionLevelChecker.cs" />

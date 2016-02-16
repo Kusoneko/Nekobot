@@ -56,7 +56,7 @@ namespace Nekobot.Commands
             Client = client;
             Config.Lock();
 
-            if (Config.HelpMode != HelpMode.Disable)
+            if (Config.HelpMode != HelpMode.Disabled)
             {
                 CreateCommand("help")
                     .Parameter("command", ParameterType.Multiple)
@@ -345,10 +345,10 @@ namespace Nekobot.Commands
                         output.Append($" [{param.Name}]");
                         break;
                     case ParameterType.Multiple:
-                        output.Append(" [...]");
+                        output.Append(" [{param.Name}]");
                         break;
                     case ParameterType.Unparsed:
-                        output.Append($" [{param.Name}]"); // " [--]"
+                        output.Append($" {param.Name}");
                         break;
                 }
             }

@@ -1,11 +1,13 @@
-﻿using Discord;
+﻿using System.Collections.Generic;
+using Discord;
+
 namespace Nekobot.Commands.Permissions.Userlist
 {
     public static class BlacklistExtensions
     {
         public static DiscordClient UsingGlobalBlacklist(this DiscordClient client, params ulong[] initialUserIds)
         {
-            client.Services.Add(new BlacklistService(initialUserIds));
+            client.AddService(new BlacklistService(initialUserIds));
             return client;
         }
 
@@ -23,6 +25,25 @@ namespace Nekobot.Commands.Permissions.Userlist
         {
             service.Root.AddCheck(new BlacklistChecker(service.Client));
             return service;
+        }
+
+        public static IEnumerable<ulong> GetBlacklistedUserIds(this DiscordClient client)
+            => client.GetService<BlacklistService>().UserIds;
+        public static void BlacklistUser(this DiscordClient client, User user)
+        {
+            client.GetService<BlacklistService>().Add(user.Id);
+        }
+        public static void BlacklistUser(this DiscordClient client, ulong userId)
+        {
+            client.GetService<BlacklistService>().Add(userId);
+        }
+        public static void UnBlacklistUser(this DiscordClient client, User user)
+        {
+            client.GetService<BlacklistService>().Remove(user.Id);
+        }
+        public static void UnBlacklistUser(this DiscordClient client, ulong userId)
+        {
+            client.GetService<BlacklistService>().Remove(userId);
         }
     }
 }
