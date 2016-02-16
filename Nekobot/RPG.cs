@@ -1,46 +1,10 @@
 ﻿using System;
 using System.Linq;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-using Discord;
 
 namespace Nekobot
 {
     static class RPG
     {
-        static int[] RollValues(GroupCollection groups = null)
-        {
-            int times = groups != null && groups[1].Length != 0 ? int.Parse(groups[1].Value) : 1;
-            int count = groups != null && groups[2].Length != 0 ? int.Parse(groups[2].Value) : 1;
-            int sides = groups != null && groups[3].Length != 0 ? int.Parse(groups[3].Value) : 6;
-            return new[]{ times, count, sides };
-        }
-        static async Task DoRoll(Channel channel, int[] t)
-        {
-            int times = t[0], count = t[1], sides = t[2];
-            string response = (count <= 0 || sides <= 1 || times <= 0) ? $"{sides*times*count}, baka!" : "";
-            if (!response.Any())
-            {
-                var total = 0;
-                Random rnd = new Random();
-                for (int i = times; i > 0; i--)
-                {
-                    var subtotal = 0;
-                    for (int j = count; j > 0; j--)
-                    {
-                        var roll = rnd.Next(1, sides + 1);
-                        if (count > 1) response += $"{roll}{(j == 1 ? "" : ", ")}";
-                        subtotal += roll;
-                    }
-
-                    if (times > 1) response += count > 1 ? $" = {subtotal}.\n" : $"{subtotal}{(i == 1 ? "" : ", ")}";
-                    total += subtotal;
-                }
-                response += $"{(times == 1 || count == 1 ? "" : "Total Result")} = {total}.";
-            }
-            await channel.SendMessage(response);
-        }
-
         internal static void AddCommands(Commands.CommandGroupBuilder group)
         {
             group.CreateCommand("rand")
@@ -74,32 +38,71 @@ namespace Nekobot
                     await e.Channel.SendMessage($"Your number is **{new Random().Next(min,max+1)}**.");
                 });
 
+            var RD = new RollGen.Domain.RandomDice(new Random());
             group.CreateCommand("roll")
-                .Parameter("[times] [count]d[sides]...", Commands.ParameterType.Multiple)
-                .Description("I'll roll `count` `sides` sided dice and add each `mod` to the result `times`. All params are optional. (defaults: 1 *dice*, 6 *sides*, 1 *times*)\nyou can batch roll with different params if you repeat the arguments.")
+                .Parameter("[times]t [dice expressions]", Commands.ParameterType.Unparsed)
+                .Description("I'll roll a dice expression([count]d[sides][mods...]...) as many `times` as you ask(default 1). (If empty or just `times`, will roll default: 1d6.)")
                 .Do(async e =>
                 {
                     var chan = e.Channel;
-                    if (e.Args.Length == 0) // Default roll.
-                    {
-                        await DoRoll(chan, RollValues());
-                        return;
-                    }
                     if (e.Args[0].ToLower() == "rick")
                     {
                         await chan.SendMessage("https://youtu.be/dQw4w9WgXcQ");
                         return;
                     }
-
-                    MatchCollection m = !e.Args.Any() ? null : Regex.Matches(string.Join(" ", e.Args), "(?:([0-9]*) ){0,1}([0-9]*){0,1}d([0-9]*)");
-                    if (m.Count == 0)
-                        await chan.SendMessage("Incorrect Argument Syntax!");
-                    else
+                    var args = string.Join(" ", e.Args);
+                    int times;
+                    if ((times = args.IndexOf("t")) != -1)
                     {
-                        foreach (var groups in from Match match in m select match.Groups)
-                            if (groups[0].Length != 0)
-                                await DoRoll(chan, RollValues(groups));
+                        int t = times;
+                        if (int.TryParse(args.Substring(0, t), out times))
+                        {
+                            if (times <= 0)
+                            {
+                                await chan.SendMessage($"0, baka!");
+                                return;
+                            }
+                            args = args.Substring(t+1);
+                        }
+                        else times = 1;
                     }
+                    else times = 1;
+
+                    string response = "";
+                    double? total = times > 1 ? (int?)0 : null;
+                    bool do_default = args == ""; // Default roll.
+                    for (; times != 0; --times)
+                    {
+                        double val;
+                        if (do_default)
+                        {
+                            val = RD.Roll().d6();
+                            response += $"{val} {(total == null ? "" : times == 1 ? "=" : "+")} ";
+                        }
+                        else
+                        {
+                            try
+                            {
+                                var roll = RD.RolledString(args);
+                                val = Convert.ToDouble(RD.CompiledObj(roll));
+                                response += '\n';
+                                if (roll != args) response += $"{Discord.Format.Code(roll)} = ";
+                                response += $"**{val}**.";
+                            }
+                            catch
+                            {
+                                await chan.SendMessage("Incorrect Argument Syntax!");
+                                return;
+                            }
+                        }
+                        if (total != null) total += val;
+                    }
+                    if (total != null)
+                    {
+                        if (!do_default) response += "\nTotal Result = ";
+                        response += $"**{total}**.";
+                    }
+                    await chan.SendMessage(response);
                 });
         }
     }

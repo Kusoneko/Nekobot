@@ -7,3 +7,6 @@
 [submodule "SoundCloud.NET"]
 	path = SoundCloud.NET
 	url = https://github.com/Lirusaito/SoundCloud.NET.git
+[submodule "RollGen"]
+	path = RollGen
+	url = https://github.com/Lirusaito/RollGen
