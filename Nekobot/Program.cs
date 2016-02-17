@@ -47,7 +47,7 @@ namespace Nekobot
                 .Description("I'll tell you the current version and check if a newer version is available.")
                 .Do(async e =>
                 {
-                    var version = Helpers.Version();
+                    var version = Config.AppVersion;
                     string[] versions = version.Split('.');
                     string remoteversion = JObject.Parse(Helpers.GetRestClient("https://raw.githubusercontent.com").Execute<JObject>(new RestRequest("Kusoneko/Nekobot/master/version.json", Method.GET)).Content)["version"].ToString();
                     string[] remoteversions = remoteversion.Split('.');
@@ -385,7 +385,7 @@ namespace Nekobot
             LoadConfig();
 
             // Set up the events and enforce use of the command prefix
-            client.LoggedIn += LoggedIn;
+            client.Ready += Ready;
             //client.LoggedOut += LoggedOut;
             client.UserJoined += UserJoined;
             client.Log.Message += (s, e) => Log.Write(e);
@@ -527,7 +527,7 @@ namespace Nekobot
             client = new DiscordClient(new DiscordConfigBuilder
             {
                 AppName = "Nekobot",
-                AppVersion = Helpers.Version(),
+                AppVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString(3),
                 AppUrl = "https://github.com/Kusoneko/Nekobot",
                 LogLevel = config["loglevel"].ToObject<LogSeverity>(),
                 MessageCacheSize = 1024,
@@ -558,9 +558,9 @@ namespace Nekobot
             Log.Write(LogSeverity.Warning, "Logged Out.");
         }*/
 
-        private static void LoggedIn(object sender, EventArgs e)
+        private static void Ready(object sender, EventArgs e)
         {
-            Log.Write(LogSeverity.Warning, "Logged in.");
+            Log.Write(LogSeverity.Warning, "Logged in and ready!");
             client.SetGame(config["game"].ToString());
         }
 
