@@ -181,8 +181,8 @@ namespace Nekobot
                     else
                     {
                         string message = $@"You are currently in {e.Channel.Name} (id: {e.Channel.Id})
-on server **{e.Server.Name}** (id: {e.Server.Id}) (region: {e.Server.Region})
-owned by {e.Server.Owner.Name} (id {e.Server.Owner.Id}).";
+on server **{e.Server.Name}** (id: {e.Server.Id}) (region: {e.Server.Region.Name} (id: {e.Server.Region.Id}))
+owned by {e.Server.Owner.Name} (id: {e.Server.Owner.Id}).";
                         if (e.Channel.Topic != "" || e.Channel.Topic != null)
                             message = message + $@"
 The current topic is: {e.Channel.Topic}";
