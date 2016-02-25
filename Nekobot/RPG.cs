@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using RollGen.Domain;
 
 namespace Nekobot
 {
@@ -38,7 +39,7 @@ namespace Nekobot
                     await e.Channel.SendMessage($"Your number is **{new Random().Next(min,max+1)}**.");
                 });
 
-            var RD = new RollGen.Domain.RandomDice(new Random());
+            var dd = new DomainDice(new AlbatrossExpressionEvaluator(Albatross.Expression.Parser.GetParser()), new RandomPartialRollFactory(new Random()));
             group.CreateCommand("roll")
                 .Parameter("[times]t [dice expressions]", Commands.ParameterType.Unparsed)
                 .Description("I'll roll a dice expression([count]d[sides][mods...]...) as many `times` as you ask(default 1). (If empty or just `times`, will roll default: 1d6.)")
@@ -76,15 +77,15 @@ namespace Nekobot
                         double val;
                         if (do_default)
                         {
-                            val = RD.Roll().d6();
+                            val = dd.Roll().d6();
                             response += $"{val} {(total == null ? "" : times == 1 ? "=" : "+")} ";
                         }
                         else
                         {
                             try
                             {
-                                var roll = RD.RolledString(args);
-                                val = Convert.ToDouble(RD.CompiledObj(roll));
+                                var roll = dd.RollExpression(args);
+                                val = dd.Evaluate<double>(roll);
                                 response += '\n';
                                 if (roll != args) response += $"{Discord.Format.Code(roll)} = ";
                                 response += $"**{val}**.";

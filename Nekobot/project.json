@@ -1,5 +1,6 @@
 ﻿{
   "dependencies": {
+    "Albatross.Expression": "1.1.5700.39687",
     "EntityFramework": "6.1.3",
     "Inflatable.Lastfm": "0.2.999-prerelease",
     "NAudio": "1.7.3",
