@@ -9,4 +9,4 @@
 	url = https://github.com/Lirusaito/SoundCloud.NET.git
 [submodule "RollGen"]
 	path = RollGen
-	url = https://github.com/Lirusaito/RollGen
+	url = https://github.com/DnDGen/RollGen.git
