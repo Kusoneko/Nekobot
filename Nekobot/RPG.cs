@@ -85,7 +85,7 @@ namespace Nekobot
                             {
                                 var roll = dd.RollExpression(args);
                                 val = dd.Evaluate<double>(roll);
-                                response += '\n';
+                                if (response != string.Empty) response += '\n';
                                 if (roll != args) response += $"{Discord.Format.Code(roll)} = ";
                                 response += $"**{val}**.";
                             }
