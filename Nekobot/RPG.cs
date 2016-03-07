@@ -41,7 +41,7 @@ namespace Nekobot
             var dd = new DomainDice(new AlbatrossExpressionEvaluator(Albatross.Expression.Parser.GetParser()), new RandomPartialRollFactory(new Random()));
             group.CreateCommand("roll")
                 .Parameter("[times]t [dice expressions]", Commands.ParameterType.Unparsed)
-                .Description("I'll roll a dice expression([count]d[sides][mods...]...) as many `times` as you ask(default 1). (If empty or just `times`, will roll default: 1d6.)")
+                .Description("I'll roll a dice expression([count]d[sides]k[kept][mods...]...) as many `times` as you ask(default 1). (If empty or just `times`, will roll default: 1d6.)")
                 .Do(async e =>
                 {
                     var chan = e.Channel;
@@ -83,11 +83,13 @@ namespace Nekobot
                         {
                             try
                             {
-                                var roll = dd.RollExpression(args);
-                                val = dd.Evaluate<double>(roll);
+                                var roll = dd.ReplaceRollsWithSum(args);
+                                var eval = dd.Evaluate(roll);
+                                val = dd.ChangeType<double>(eval);
                                 if (response != string.Empty) response += '\n';
-                                if (roll != args) response += $"{Discord.Format.Code(roll)} = ";
-                                response += $"**{val}**.";
+                                var str = dd.BooleanOrType<double>(eval);
+                                if (roll != str) response += $"{Discord.Format.Code(roll)} = ";
+                                response += $"**{str}**.";
                             }
                             catch
                             {
@@ -104,6 +106,11 @@ namespace Nekobot
                     }
                     await chan.SendMessage(response);
                 });
+
+            group.CreateCommand("rollsentence")
+                .Parameter("[sentence]", Commands.ParameterType.Unparsed)
+                .Description("I'll replace all instances of dice expressions wrapped like {1d4} with their resolutions. (see ` help roll` for info on dice expressions)")
+                .Do(async e => await e.Channel.SendMessage(e.Args[0] == "" ? "" : dd.ReplaceWrappedExpressions<double>(e.Args[0])));
         }
     }
 }
