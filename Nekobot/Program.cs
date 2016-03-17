@@ -412,7 +412,10 @@ namespace Nekobot
                 {
                     try
                     {
-                        await client.Connect(config["email"].ToString(), config["password"].ToString());
+                        JToken token;
+                        await (config.TryGetValue("token", out token) ?
+                            client.Connect(token.ToString()) :
+                            client.Connect(config["email"].ToString(), config["password"].ToString()));
                         break;
                     }
                     catch (Exception ex)
