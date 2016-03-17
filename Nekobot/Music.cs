@@ -278,12 +278,12 @@ namespace Nekobot
         {
             internal Stream(Channel chan, bool request) { Channel = chan; _request = request; }
 
-            static IWaveProvider Reader(string file)
+            static WaveStream Reader(string file)
             {
                 for (byte i = 3; i != 0; --i) try
                 {
                     return System.IO.Path.GetExtension(file) == ".ogg"
-                            ? (IWaveProvider)new NAudio.Vorbis.VorbisWaveReader(file)
+                            ? (WaveStream)new NAudio.Vorbis.VorbisWaveReader(file)
                             : new MediaFoundationReader(file);
                 } catch { }
                 return null;
@@ -328,6 +328,7 @@ namespace Nekobot
                                     _client.Send(buffer, 0, blockSize);
                                 }
                             }
+                            musicReader.Dispose();
                         }
                         catch (OperationCanceledException err) { Program.log.Error("Stream", err.Message); }
                     });
