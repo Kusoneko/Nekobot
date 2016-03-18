@@ -67,9 +67,10 @@ namespace Nekobot
                 builder.Append(sourceName);
                 builder.Append("] ");
             }
-            foreach (var c in text.Where(c => !char.IsControl(c))) //Strip control chars
+            foreach (var c in text)
             {
-                builder.Append(c);
+                if (!char.IsControl(c)) //Strip control chars
+                    builder.Append(c);
             }
             if (exMessage != null)
             {
