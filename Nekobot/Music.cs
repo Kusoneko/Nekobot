@@ -79,28 +79,28 @@ namespace Nekobot
                 return false;
             }
 
-            internal void SkipSongs(int count = 1)
+            internal void SkipRange(int index = 0, int count = 1)
             {
-                if (count >= Count)
-                    SkipAll();
-                else if (count > 0)
+                if (index == 0)
                 {
-                    lock (this)
+                    if (count >= Count)
                     {
-                        if (count != 1) RemoveRange(1, count - 1);
-                        skip = true; // Skip current song.
+                        SkipAll();
+                        return;
                     }
+                    // Skip current song.
+                    lock (this) skip = true;
+                    ++index;
+                    --count;
                 }
+                // TODO: If we open this up as a command function, we should bounds check more.
+                if (count > 0)
+                    lock (this)
+                        RemoveRange(index, count);
             }
 
-            internal void SkipLastSongs(int count = 1)
-            {
-                if (count >= Count)
-                    SkipAll();
-                else if (count > 0)
-                    lock (this)
-                        RemoveRange(Count - count, count);
-            }
+            internal void SkipSongs(int count = 1) => SkipRange(count: count);
+            internal void SkipLastSongs(int count = 1) => SkipRange(Count - count, count);
 
             internal void SkipAll()
             {
