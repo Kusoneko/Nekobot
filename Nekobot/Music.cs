@@ -93,6 +93,15 @@ namespace Nekobot
                 }
             }
 
+            internal void SkipLastSongs(int count = 1)
+            {
+                if (count >= Count)
+                    SkipAll();
+                else if (count > 0)
+                    lock (this)
+                        RemoveRange(Count - count, count);
+            }
+
             internal void SkipAll()
             {
                 lock(this)
@@ -696,6 +705,18 @@ namespace Nekobot
                     int count;
                     playlist[e.User.VoiceChannel.Id].SkipSongs(e.Args.Any() && int.TryParse(e.Args[0], out count) ? count : 1);
                     e.Channel.SendMessage("Forcefully skipping...");
+                });
+
+            group.CreateCommand("skiplast")
+                .MinPermissions(1)
+                .Parameter("count", Commands.ParameterType.Optional)
+                .FlagMusic(true)
+                .Description("I'll forget about the last song(s) currently in the playlist.")
+                .Do(e =>
+                {
+                    int count;
+                    playlist[e.User.VoiceChannel.Id].SkipLastSongs(e.Args.Any() && int.TryParse(e.Args[0], out count) ? count : 1);
+                    e.Channel.SendMessage("Forcefully removed songs.");
                 });
 
             group.CreateCommand("forcereset")
