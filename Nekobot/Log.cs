@@ -94,8 +94,11 @@ namespace Nekobot
         static object log = new object();
         internal static void Output(string text, ConsoleColor color)
         {
+            if (text == string.Empty) return;
+
             lock (log)
             {
+                Console.Write($"[{DateTime.Now.TimeOfDay}] ");
                 ConsoleColor c = ConsoleColor.White;
                 Console.ForegroundColor = color;
                 Console.WriteLine(text);
