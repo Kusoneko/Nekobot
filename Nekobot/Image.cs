@@ -163,7 +163,7 @@ namespace Nekobot
                 .FlagNsfw(true)
                 .Description($"I'll give you a random image from {booru} (optionally with tags)");
             if (aliases != null) foreach (var alias in aliases) cmd.Alias(alias);
-            cmd.Do(async e => await Board.Execute(booru, e));
+            cmd.Do(e => Task.Run(() => Board.Execute(booru, e)));
         }
 
         internal static void AddCommands(Commands.CommandGroupBuilder group)
