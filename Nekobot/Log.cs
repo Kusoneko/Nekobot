@@ -99,7 +99,7 @@ namespace Nekobot
             lock (log)
             {
                 Console.Write($"[{DateTime.Now.TimeOfDay}] ");
-                ConsoleColor c = ConsoleColor.White;
+                ConsoleColor c = Console.ForegroundColor;
                 Console.ForegroundColor = color;
                 Console.WriteLine(text);
                 Console.ForegroundColor = c;
