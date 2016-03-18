@@ -109,30 +109,31 @@ namespace Nekobot
                     : res["@count"].ToObject<int>();
             }
 
+            public static async Task Execute(string booru, Commands.CommandEventArgs e)
+            {
+                var tags = string.Join(" ", e.Args);
+                var board = Get(booru, tags);
+                for (int i = 10; i != 0; --i)
+                {
+                    try
+                    {
+                        int posts = board.GetPostCount();
+                        await e.Channel.SendMessage(posts == 0 ?
+                            $"There is nothing under the tag(s):\n{tags}\non {booru}. Please try something else." :
+                            board.GetImageLink(posts == 1 ? 0 : new Random().Next(1, posts - 1)));
+                        return;
+                    }
+                    catch { }
+                }
+                await e.Channel.SendMessage($"Failed ten times, something must be broken with {booru}'s API.");
+            }
+
             public string Link;
             public string Resource;
             public string Post;
             private Type _type;
             private bool _shorten;
             private RestClient _rclient;
-        }
-        static async Task Booru(string booru, Commands.CommandEventArgs e)
-        {
-            var tags = string.Join(" ", e.Args);
-            Board board = Board.Get(booru, tags);
-            for (int i = 10; i != 0; --i)
-            {
-                try
-                {
-                    int posts = board.GetPostCount();
-                    await e.Channel.SendMessage(posts == 0 ?
-                        $"There is nothing under the tag(s):\n{tags}\non {booru}. Please try something else." :
-                        board.GetImageLink(posts == 1 ? 0 : new Random().Next(1, posts - 1)));
-                    return;
-                }
-                catch { }
-            }
-            await e.Channel.SendMessage($"Failed ten times, something must be broken with {booru}'s API.");
         }
 
         static async Task LewdSX(string chan, Discord.Channel c)
@@ -162,7 +163,7 @@ namespace Nekobot
                 .FlagNsfw(true)
                 .Description($"I'll give you a random image from {booru} (optionally with tags)");
             if (aliases != null) foreach (var alias in aliases) cmd.Alias(alias);
-            cmd.Do(async e => await Booru(booru, e));
+            cmd.Do(async e => await Board.Execute(booru, e));
         }
 
         internal static void AddCommands(Commands.CommandGroupBuilder group)
