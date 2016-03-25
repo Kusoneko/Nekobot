@@ -392,7 +392,7 @@ namespace Nekobot
                 while (reader.Read())
                     channels.Add(Tuple.Create(client.GetChannel(Convert.ToUInt64(reader["channel"].ToString())), int.Parse(reader["music"].ToString())));
                 return Task.WhenAll(
-                  channels.Select(s => s.Item1.Type == ChannelType.Voice ? Task.Run(async() => await AddStream(s.Item1, s.Item2 == 2)) : null)
+                  channels.Select(s => s.Item1?.Type == ChannelType.Voice ? Task.Run(async() => await AddStream(s.Item1, s.Item2 == 2)) : null)
                   .Where(t => t != null).ToArray());
             }
 
