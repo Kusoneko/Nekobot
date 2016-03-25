@@ -55,7 +55,7 @@ namespace Nekobot
                 {
                     var default_tags = boardconf.Property("default_tags");
                     if (default_tags != null)
-                        tags += string.Join(" ", default_tags.Values());
+                        tags += ' ' + string.Join(" ", default_tags.Values());
                     if (board?._type >= Type.B) // Type A has no auth in the api.
                     {
                         var login = boardconf.Property("login");
