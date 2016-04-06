@@ -93,10 +93,12 @@ namespace Nekobot
                     ++index;
                     --count;
                 }
-                // TODO: If we open this up as a command function, we should bounds check more.
-                if (count > 0)
-                    lock (this)
-                        RemoveRange(index, count);
+                if (count <= 0 || index >= Count)
+                    return;
+                if (index+count >= Count) // Clamp to remove from index to end.
+                    count = Count-index;
+                lock (this)
+                    RemoveRange(index, count);
             }
 
             internal void SkipSongs(int count = 1) => SkipRange(count: count);
