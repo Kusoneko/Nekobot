@@ -47,19 +47,16 @@ namespace Nekobot
         {
             bool mentions_neko = e.Message.IsMentioningMe();
             string message = $"{e.User.Mention} {action}s ";
-            bool mentions_everyone = e.Message.MentionedRoles.Contains(e.Server.EveryoneRole);
+            bool mentions_everyone = !e.Channel.IsPrivate && e.Message.MentionedRoles.Contains(e.Server.EveryoneRole);
             if (mentions_everyone)
-                await e.Channel.SendMessage(message + e.Server.EveryoneRole.Mention);
+                message += e.Server.EveryoneRole.Mention;
+            else if (e.Channel.IsPrivate || e.Message.MentionedUsers.Count() == (mentions_neko ? 1 : 0))
+                message = perform_when_empty ? $"*{action}s {e.User.Mention}.*" : $"{message}{(e.Channel.IsPrivate ? e.Server.CurrentUser.Mention : "me")}.";
             else
-            {
-                if (e.Message.MentionedUsers.Count() == (mentions_neko ? 1 : 0))
-                    message = perform_when_empty ? $"*{action}s {e.User.Mention}.*" : message + e.Server.CurrentUser.Mention;
-                else
-                    foreach (User u in e.Message.MentionedUsers)
-                        message += u.Mention + ' ';
-                await e.Channel.SendMessage(message);
-            }
-            if (mentions_everyone || mentions_neko || (!perform_when_empty && !e.Message.MentionedUsers.Any()))
+                foreach (User u in e.Message.MentionedUsers)
+                    message += u.Mention + ' ';
+            await e.Channel.SendMessage(message);
+            if (e.Channel.IsPrivate ? !perform_when_empty : (mentions_everyone || mentions_neko || (!perform_when_empty && !e.Message.MentionedUsers.Any())))
                 await e.Channel.SendMessage(reaction);
         }
 
