@@ -709,6 +709,25 @@ namespace Nekobot
                     e.Channel.SendMessage("Forcefully skipping...");
                 });
 
+            group.CreateCommand("skiprange")
+                .MinPermissions(1)
+                .Parameter("index")
+                .Parameter("count")
+                .FlagMusic(true)
+                .Description("I'll forget about `count` upcoming song(s) starting at `index`.")
+                .Do(e =>
+                {
+                    int index, count;
+                    string msg;
+                    if (int.TryParse(e.Args[0], out index) && int.TryParse(e.Args[1], out count))
+                    {
+                        playlist[e.User.VoiceChannel.Id].SkipRange(index, count);
+                        msg = "Forcefully removed songs.";
+                    }
+                    else msg = "Invalid input.";
+                    e.Channel.SendMessage(msg);
+                });
+
             group.CreateCommand("skiplast")
                 .MinPermissions(1)
                 .Parameter("count", Commands.ParameterType.Optional)
