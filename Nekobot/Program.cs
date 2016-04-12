@@ -321,6 +321,12 @@ namespace Nekobot
                 .MinPermissions(4)
                 .Do(e => client.SetGame(e.Args[0])); // TODO: Store current game in database(varchar(128)) instead of config?
 
+            group.CreateCommand("setavatar")
+                .Parameter("Avatar Link")
+                .Description("I'll set my current avatar to something else.")
+                .MinPermissions(4)
+                .Do(e => client.CurrentUser.Edit(avatar: new System.IO.MemoryStream(new System.Net.WebClient().DownloadData(e.Args[0]))));
+
             group.CreateCommand("deletelast")
                 .MinPermissions(4)
                 .Parameter("few", Commands.ParameterType.Required)
