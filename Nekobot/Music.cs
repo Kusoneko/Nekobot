@@ -43,7 +43,7 @@ namespace Nekobot
 
             internal enum EType { Playlist, Request, Youtube, SoundCloud, Encore }
             internal string Uri, Requester, Ext;
-            internal EType Type;
+            EType Type;
         }
         class Playlist : List<Song>
         {
