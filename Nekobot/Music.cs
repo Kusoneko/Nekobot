@@ -16,8 +16,9 @@ namespace Nekobot
         class Song
         {
             internal Song(string uri, EType type = EType.Playlist, User requester = null, string ext = null) { Uri = uri; Type = type; Requester = requester?.Mention; Ext = ext; }
-            internal Song Encore() => new Song(Uri, IsOnline ? Type : EType.Encore, null, Ext);
-            internal Song Repeat() => new Song(Uri, IsOnline ? EType.RepeatOnline : EType.Repeat, null, Ext);
+            Song Clone(EType type) => new Song(Uri, type, ext: Ext);
+            internal Song Encore() => Clone(IsOnline ? Type : EType.Encore);
+            internal Song Repeat() => Clone(IsOnline ? EType.RepeatOnline : EType.Repeat);
 
             internal string Title()
             {
