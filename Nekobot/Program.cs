@@ -414,6 +414,7 @@ namespace Nekobot
             //DiscordClient will automatically reconnect once we've established a connection, until then we loop on our end
             client.ExecuteAndWait(async() =>
             {
+                Log.Output("Ohayou, Master-san!", ConsoleColor.Cyan);
                 while (true)
                 {
                     try
