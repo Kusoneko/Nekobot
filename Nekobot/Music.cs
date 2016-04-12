@@ -17,6 +17,7 @@ namespace Nekobot
         {
             internal Song(string uri, EType type = EType.Playlist, User requester = null, string ext = null) { Uri = uri; Type = type; Requester = requester?.Mention; Ext = ext; }
             internal Song Encore() => new Song(Uri, IsOnline ? Type : EType.Encore, null, Ext);
+            internal Song Repeat() => new Song(Uri, IsOnline ? EType.RepeatOnline : EType.Repeat, null, Ext);
 
             internal string Title()
             {
@@ -38,10 +39,10 @@ namespace Nekobot
                 return Ext;
             }
             internal string ExtTitle => $"**[{Type}{(Requester != null ? $" by {Requester}" : "")}]** {Title()}";
-            internal bool IsOnline => Type == EType.Youtube || Type == EType.SoundCloud;
-            internal bool Nonrequested => Type != EType.Playlist;
+            internal bool IsOnline => Type == EType.RepeatOnline || Type == EType.Youtube || Type == EType.SoundCloud;
+            internal bool Nonrequested => Type >= EType.Request;
 
-            internal enum EType { Playlist, Request, Youtube, SoundCloud, Encore }
+            internal enum EType { Playlist, Repeat, RepeatOnline, Request, Youtube, SoundCloud, Encore }
             internal string Uri, Requester, Ext;
             EType Type;
         }
@@ -79,7 +80,7 @@ namespace Nekobot
                     if (Any)
                     {
                         // If skip, they want us to remove the current song from the repeat queue.
-                        if (!skip && repeat) Add(this[0]);
+                        if (!skip && repeat) Add(this[0].Repeat());
                         RemoveAt(0);
                     }
                     skip = false;
