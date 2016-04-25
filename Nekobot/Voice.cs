@@ -16,7 +16,6 @@ namespace Nekobot
             c.UsingAudio(x =>
             {
                 x.Mode = AudioMode.Outgoing;
-                x.EnableMultiserver = false; // So like... this is broken again.
                 x.EnableEncryption = true;
             });
 
