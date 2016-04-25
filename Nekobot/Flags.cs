@@ -46,7 +46,7 @@ namespace Nekobot
             bool in_table = SQL.InTable(row, table, id);
             bool isIgnored = in_table && GetIgnored(row, table, id);
             await SQL.ExecuteNonQueryAsync(SQL.AddOrUpdateCommand(row, table, id, "ignored", Convert.ToInt32(!isIgnored).ToString(), in_table));
-            return $"<{symbol}{id}> is " + (!isIgnored ? "now" : "no longer") + " ignored.";
+            return $"<{(symbol == '?' ? '@' : symbol)}{id}> is " + (!isIgnored ? "now" : "no longer") + " ignored.";
         }
 
         internal static bool GetMusic(User user) => Music.Get(user.VoiceChannel);
@@ -100,8 +100,8 @@ namespace Nekobot
                         foreach (User u in e.Message.MentionedUsers)
                             reply += (reply != "" ? "\n" : "") + await SetIgnored("user", "users", u.Id, '@', perms, Helpers.GetPermissions(u, e.Channel));
                         var senpai = e.Server.GetUser(Program.masterId);
-                        /*foreach (Role r in e.Message.MentionedRoles)
-                            reply += (reply != "" ? "\n" : "") + await SetIgnored("role", "roles", r.Id, '?', perms, senpai.Roles.Contains(r) ? -2 : e.User.Roles.Contains(r) ? -1 : perms);*/
+                        foreach (Role r in e.Message.MentionedRoles)
+                            reply += (reply != "" ? "\n" : "") + await SetIgnored("role", "roles", r.Id, '?', perms, senpai.Roles.Contains(r) ? -2 : e.User.Roles.Contains(r) ? -1 : perms);
                         await e.Channel.SendMessage(reply);
                     }
                     else await e.Channel.SendMessage("You need to mention at least one user or channel!"/*or role*/);
