@@ -67,7 +67,7 @@ namespace Nekobot
                         if (u.IsBot) reply += " Also, they are a bot!";
                         reply += '\n';
                     }
-                    await e.Channel.SendMessage(reply);
+                    await e.Channel.SendMessage('\n' + reply);
                 });
 
             
