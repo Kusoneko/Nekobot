@@ -28,7 +28,7 @@ namespace Nekobot
             else e.Channel.SendMessage(failmsg ?? $"{e.User.Mention}, '{string.Join(" ", e.Args)}' isn't a valid argument. Please use on or off instead.");
         }
 
-        internal static bool CanSay(Channel c, User u) => c.IsPrivate || u.GetPermissions(c).SendMessages;
+        internal static bool CanSay(Channel c, User u) => c.IsPrivate || u.Id == Program.masterId || u.GetPermissions(c).SendMessages;
         internal static bool CanSay(ref Channel c, User u, Channel old)
         {
             if (CanSay(c, u))
