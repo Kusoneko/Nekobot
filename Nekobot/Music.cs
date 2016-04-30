@@ -463,6 +463,7 @@ namespace Nekobot
 
         static bool HasFolder() => Folder.Length != 0;
         static IEnumerable<string> Files() => System.IO.Directory.EnumerateFiles(Folder, "*.*", UseSubdirs ? System.IO.SearchOption.AllDirectories : System.IO.SearchOption.TopDirectoryOnly).Where(s => new []{ ".wma", ".aac", ".mp3", ".m4a", ".wav", ".flac", ".ogg" }.Contains(System.IO.Path.GetExtension(s)));
+        //static IEnumerable<string> PlaylistFiles() => System.IO.Directory.EnumerateFiles(Folder, "*.*", UseSubdirs ? System.IO.SearchOption.AllDirectories : System.IO.SearchOption.TopDirectoryOnly).Where(s => new[]{".pls"}.Contains(System.IO.Path.GetExtension(s)));
 
         static Commands.CommandBuilder CreatePLCmd(Commands.CommandGroupBuilder group, string name, string description, string[] aliases = null)
         {
@@ -636,9 +637,9 @@ namespace Nekobot
 
         static class Local
         {
-            public static void CreateCommand(Commands.CommandGroupBuilder group, string name)
+            public static void CreateCommand(Commands.CommandGroupBuilder group, string name/*, bool is_playlist*/)
             {
-                CreatePLCmd(group, name, "song to find", "I'll try to add your request to the playlist!")
+                CreatePLCmd(group, name, $"{(/*is_playlist ? "playlist" :*/ "song")} to find", $"I'll try to add your request to the playlist!")
                     .Do(e =>
                     {
                         var args = string.Join(" ", e.Args);
@@ -648,10 +649,12 @@ namespace Nekobot
                             return;
                         }
                         args = args.ToLower();
-                        var file = Files().FirstOrDefault(f => System.IO.Path.GetFileNameWithoutExtension(f).ToLower().Contains(args));
+                        var file = (/*is_playlist ? PlaylistFiles() :*/ Files()).FirstOrDefault(f => System.IO.Path.GetFileNameWithoutExtension(f).ToLower().Contains(args));
                         if (file != null)
                         {
-                            playlist[e.User.VoiceChannel.Id].InsertFile(file, e);
+                            /*if (is_playlist)
+                                for ()
+                            else*/ playlist[e.User.VoiceChannel.Id].InsertFile(file, e);
                         }
                         e.Channel.SendMessage($"{e.User.Mention} Your request {(file != null ? "has been added to the list" : "was not found")}.");
                     });
@@ -692,7 +695,8 @@ namespace Nekobot
 
             if (HasFolder())
             {
-                Local.CreateCommand(group, "request");
+                Local.CreateCommand(group, "request"/*, false*/);
+                //Local.CreateCommand(group, "requestpl", true);
             }
 
             group.CreateCommand("skip")
