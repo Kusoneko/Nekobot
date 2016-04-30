@@ -637,9 +637,9 @@ namespace Nekobot
 
         static class Local
         {
-            public static void CreateCommand(Commands.CommandGroupBuilder group, string name/*, bool is_playlist*/)
+            public static void CreateCommand(Commands.CommandGroupBuilder group, string name, bool all/*, bool is_playlist*/)
             {
-                CreatePLCmd(group, name, $"{(/*is_playlist ? "playlist" :*/ "song")} to find", $"I'll try to add your request to the playlist!")
+                CreatePLCmd(group, name, $"{(/*is_playlist ? "playlist" :*/ "song")}{(all ? "s" : "")} to find", $"I'll try to add {(all ? "all songs matching " : "")}your request to the playlist!")
                     .Do(e =>
                     {
                         var args = string.Join(" ", e.Args);
@@ -649,14 +649,34 @@ namespace Nekobot
                             return;
                         }
                         args = args.ToLower();
-                        var file = (/*is_playlist ? PlaylistFiles() :*/ Files()).FirstOrDefault(f => System.IO.Path.GetFileNameWithoutExtension(f).ToLower().Contains(args));
-                        if (file != null)
-                        {
-                            /*if (is_playlist)
+                        Func<string, bool> search = f => System.IO.Path.GetFileNameWithoutExtension(f).ToLower().Contains(args);
+                        long filecount = 0;
+                        var pl = playlist[e.User.VoiceChannel.Id];
+                        /*var insert_file = is_playlist ? (Action<string>)(file =>
+                            {
                                 for ()
-                            else*/ playlist[e.User.VoiceChannel.Id].InsertFile(file, e);
+                            }) :
+                            file => pl.InsertFile(file, e);*/
+                        Action<string> insert_file = file => pl.InsertFile(file, e);
+                        var songs = /*is_playlist ? PlaylistFiles() :*/ Files();
+                        if (all)
+                        {
+                            var files = songs.Where(search);
+                            foreach (var file in files)
+                                insert_file(file);
+                            filecount = files.Count();
                         }
-                        e.Channel.SendMessage($"{e.User.Mention} Your request {(file != null ? "has been added to the list" : "was not found")}.");
+                        else
+                        {
+                            var file = songs.FirstOrDefault(search);
+                            if (file != null)
+                            {
+                                insert_file(file);
+                                filecount = 1;
+                            }
+                        }
+
+                        e.Channel.SendMessage($"{e.User.Mention} {(filecount > 1 ? filecount.ToString() : "Your")} request{(filecount != 0 ? $"{(filecount == 1 ? " has" : "s have")} been added to the list" : " was not found")}.");
                     });
             }
         }
@@ -695,8 +715,10 @@ namespace Nekobot
 
             if (HasFolder())
             {
-                Local.CreateCommand(group, "request"/*, false*/);
-                //Local.CreateCommand(group, "requestpl", true);
+                Local.CreateCommand(group, "request", false/*, false*/);
+                Local.CreateCommand(group, "requestall", true/*, false*/);
+                //Local.CreateCommand(group, "requestpl", false, true);
+                //Local.CreateCommand(group, "requestplall", true, true);
             }
 
             group.CreateCommand("skip")
