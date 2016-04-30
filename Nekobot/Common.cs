@@ -54,7 +54,7 @@ namespace Nekobot
                 .Description("I'll give you information about the mentioned user(s).")
                 .Do(async e =>
                 {
-                    if (e.Args[0] == "" || !e.Message.MentionedUsers.Any()) return;
+                    if (e.Args[0] == "" || (!e.Message.MentionedUsers.Any() && !e.Message.MentionedRoles.Any())) return;
                     string reply = "";
                     bool oniicheck = e.User.Id == 63299786798796800;
                     foreach (User u in e.Message.MentionedUsers)
@@ -66,6 +66,12 @@ namespace Nekobot
                         reply += $"{(onii ? " is your onii-chan <3 and his" : "'s")} id is {u.Id}, {possessive} discriminator is {u.Discriminator} and {possessive} permission level is {Helpers.GetPermissions(u, e.Channel)}.";
                         if (u.IsBot) reply += " Also, they are a bot!";
                         reply += '\n';
+                    }
+                    foreach (Role r in e.Message.MentionedRoles)
+                    {
+                        reply += $"{r.Name} is id {r.Id}, has {r.Members.Count()} members, color is {r.Color}, perms are {r.Permissions.RawValue}, and position is {r.Position}";
+                        if (r.IsManaged) reply += "; it is managed by the server";
+                        reply += ".\n";
                     }
                     await e.Channel.SendMessage('\n' + reply);
                 });

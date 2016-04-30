@@ -29,17 +29,21 @@ namespace Nekobot
         {
             user,
             channel,
-            role
+            role,
+            everyoneRole,
+            unmentionableRole
         }
         static readonly Dictionary<EMentionType, string> mention_syms = new Dictionary<EMentionType, string>
         {
             { EMentionType.user, "@" },
             { EMentionType.channel, "#" },
-            { EMentionType.role, "@&" }
+            { EMentionType.role, "@&" },
+            { EMentionType.unmentionableRole, "" }
         };
         internal static async Task<string> SetIgnored(string row, string table, ulong id, EMentionType mention_type, int perms, int their_perms = 0)
         {
-            if (mention_type == EMentionType.role)
+            if (mention_type == EMentionType.everyoneRole) return "I can't ignore everyone!";
+            if (mention_type == EMentionType.role || mention_type == EMentionType.unmentionableRole)
             {
                 if (their_perms == -1)
                     return $"You cannot change the ignored status of your own roles.";
@@ -93,17 +97,18 @@ namespace Nekobot
                     });
                 });
 
+            Func<Role, EMentionType> mention_type = r => r.IsEveryone ? EMentionType.everyoneRole : r.IsMentionable ? EMentionType.role : EMentionType.unmentionableRole;
             // Administrator Commands
             group.CreateCommand("ignore")
                 .Parameter("channel", Commands.ParameterType.Optional)
                 .Parameter("user", Commands.ParameterType.Optional)
-                //.Parameter("role", Commands.ParameterType.Optional)
+                .Parameter("role", Commands.ParameterType.Optional)
                 .Parameter("...", Commands.ParameterType.Multiple)
                 .MinPermissions(1)
-                .Description("I'll ignore a particular channel or user"/* or role*/)
+                .Description("I'll ignore a particular channel, user or role")
                 .Do(async e =>
                 {
-                    if (e.Message.MentionedChannels.Any() || e.Message.MentionedUsers.Any() /*|| e.Message.MentionedRoles.Any()*/)
+                    if (e.Message.MentionedChannels.Any() || e.Message.MentionedUsers.Any() || e.Message.MentionedRoles.Any())
                     {
                         int perms = Helpers.GetPermissions(e.User, e.Channel);
                         string reply = "";
@@ -113,10 +118,10 @@ namespace Nekobot
                             reply += (reply != "" ? "\n" : "") + await SetIgnored("user", "users", u.Id, EMentionType.user, perms, Helpers.GetPermissions(u, e.Channel));
                         var senpai = e.Server.GetUser(Program.masterId);
                         foreach (Role r in e.Message.MentionedRoles)
-                            reply += (reply != "" ? "\n" : "") + await SetIgnored("role", "roles", r.Id, EMentionType.role, perms, senpai.Roles.Contains(r) ? -2 : e.User.Roles.Contains(r) ? -1 : perms);
+                            reply += (reply != "" ? "\n" : "") + await SetIgnored("role", "roles", r.Id, mention_type(r), perms, senpai.Roles.Contains(r) ? -2 : e.User.Roles.Contains(r) ? -1 : perms);
                         await e.Channel.SendMessage(reply);
                     }
-                    else await e.Channel.SendMessage("You need to mention at least one user or channel!"/*or role*/);
+                    else await e.Channel.SendMessage("You need to mention at least one user, channel or role!");
                 });
 
             group.CreateCommand("ignore role")
@@ -142,7 +147,7 @@ namespace Nekobot
                             else
                             {
                                 var r = roles.Single();
-                                reply += await SetIgnored("role", "roles", r.Id, EMentionType.role, perms, senpai.Roles.Contains(r) ? -2 : e.User.Roles.Contains(r) ? -1 : perms);
+                                reply += await SetIgnored("role", "roles", r.Id, mention_type(r), perms, senpai.Roles.Contains(r) ? -2 : e.User.Roles.Contains(r) ? -1 : perms);
                             }
                         }
                     }
