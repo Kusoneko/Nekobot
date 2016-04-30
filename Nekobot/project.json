@@ -7,7 +7,6 @@
     "NAudio.Vorbis": "1.0.0.0",
     "Newtonsoft.Json": "8.0.3",
     "NVorbis": "0.8.4.0",
-    "RedditSharp": "1.0.22",
     "RestSharp": "105.2.3",
     "System.Data.SQLite": "1.0.101",
     "System.Data.SQLite.Core": "1.0.101",
