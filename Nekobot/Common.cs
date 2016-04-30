@@ -60,10 +60,11 @@ namespace Nekobot
                     foreach (User u in e.Message.MentionedUsers)
                     {
                         bool onii = oniicheck && u.Id == 63296013791666176;
-                        reply += $@"
-{u.Mention}{(onii ? " is your onii-chan <3 and his" : "'s")} id is {u.Id} and {(onii ? "his" : "their")} permission level is {Helpers.GetPermissions(u, e.Channel)}.";
-			if (u.IsBot) reply += " Also, they are a bot!";
-			reply += '\n';
+                        string possessive = onii ? "his" : "their";
+                        reply += u.Mention;
+                        reply += $"{(onii ? " is your onii-chan <3 and his" : "'s")} id is {u.Id}, {possessive} discriminator is {u.Discriminator} and {possessive} permission level is {Helpers.GetPermissions(u, e.Channel)}.";
+                        if (u.IsBot) reply += " Also, they are a bot!";
+                        reply += '\n';
                     }
                     await e.Channel.SendMessage(reply);
                 });
