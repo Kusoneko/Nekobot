@@ -10,6 +10,7 @@ namespace Nekobot
     {
         static ConcurrentDictionary<ulong, ChatterBotSession> chatbots = new ConcurrentDictionary<ulong, ChatterBotSession>();
 
+        #region HasNeko
         static bool HasNeko(ref string msg, string neko)
         {
             if (msg.ToLower().IndexOf(neko.ToLower()) != -1)
@@ -19,12 +20,31 @@ namespace Nekobot
             }
             return false;
         }
+
+        static bool HasNekoEmojiOrNot(ref string msg, string neko) =>
+            HasNeko(ref msg, neko) || HasNeko(ref msg, Helpers.RemoveEmoji(neko));
+
+        static bool HasNekoNick(ref string msg, string nekonick) =>
+            !string.IsNullOrEmpty(nekonick) && HasNekoEmojiOrNot(ref msg, nekonick);
+
+        static bool HasNeko(ref string msg, User user)
+        {
+            string neko = user.Name;
+            string nekonick = user.Nickname;
+            if (HasNekoEmojiOrNot(ref msg, neko)) // Have we been mentioned by our actual name?
+            {
+                HasNekoNick(ref msg, nekonick); // Strip nick, too, just in case.
+                return true;
+            }
+            return HasNekoNick(ref msg, nekonick); // Have we been mentioned by our nick?
+        }
+        #endregion
+
         internal static async System.Threading.Tasks.Task Do(MessageEventArgs e)
         {
             if (chatbots.Count() == 0) return; // No bot sessions
             string msg = e.Message.Text;
-            string neko = e.Channel.IsPrivate ? "" : e.Server.CurrentUser.Name;
-            if (chatbots.ContainsKey(e.Channel.Id) && (e.Channel.IsPrivate || HasNeko(ref msg, neko) || HasNeko(ref msg, System.Text.RegularExpressions.Regex.Replace(neko, @"\p{Cs}", ""))))
+            if (chatbots.ContainsKey(e.Channel.Id) && (e.Channel.IsPrivate || HasNeko(ref msg, e.Server.CurrentUser)))
             {
                 string chat;
                 lock (chatbots[e.Channel.Id]) chat = chatbots[e.Channel.Id].Think(msg); // Think in order.

@@ -43,6 +43,8 @@ namespace Nekobot
             while (enumerator.MoveNext()) yield return (string)enumerator.Current;
         }
 
+        internal static string RemoveEmoji(string text) => System.Text.RegularExpressions.Regex.Replace(text, @"\p{Cs}", "");
+
         internal static async Task PerformAction(Commands.CommandEventArgs e, string action, string reaction, bool perform_when_empty)
         {
             bool mentions_neko = e.Message.IsMentioningMe();

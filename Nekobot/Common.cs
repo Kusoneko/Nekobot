@@ -61,7 +61,8 @@ namespace Nekobot
                     {
                         bool onii = oniicheck && u.Id == 63296013791666176;
                         string possessive = onii ? "his" : "their";
-                        reply += u.Mention;
+                        reply += u.Name;
+                        if (!string.IsNullOrEmpty(u.Nickname)) reply += $" (Nick: {u.Nickname})";
                         reply += $"{(onii ? " is your onii-chan <3 and his" : "'s")} id is {u.Id}, {possessive} discriminator is {u.Discriminator} and {possessive} permission level is {Helpers.GetPermissions(u, e.Channel)}.";
                         if (u.IsBot) reply += " Also, they are a bot!";
                         reply += '\n';
