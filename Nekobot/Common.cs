@@ -146,12 +146,12 @@ namespace Nekobot
                     {
                         try
                         {
-                            string chanstr = message.Split(' ').First();
-                            if (chanstr.Length+1 < message.Length)
+                            var index = message.IndexOf(' ');
+                            if (index != -1 && index+2 < message.Length)
                             {
-                                channel = await Program.GetChannel(Convert.ToUInt64(chanstr));
+                                channel = await Program.GetChannel(Convert.ToUInt64(message.Substring(0, index)));
                                 if (Helpers.CanSay(ref channel, e.User, e.Channel))
-                                    message = message.Substring(message.IndexOf(" ")+1);
+                                    message = message.Substring(index+1);
                             }
                         } catch { }
                     }
