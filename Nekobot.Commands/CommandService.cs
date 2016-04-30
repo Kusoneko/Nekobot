@@ -345,7 +345,7 @@ namespace Nekobot.Commands
                         output.Append($" [{param.Name}]");
                         break;
                     case ParameterType.Multiple:
-                        output.Append(" [{param.Name}]");
+                        output.Append($" [{param.Name}]");
                         break;
                     case ParameterType.Unparsed:
                         output.Append($" {param.Name}");
