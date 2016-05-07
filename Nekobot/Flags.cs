@@ -137,9 +137,8 @@ namespace Nekobot
                     {
                         int perms = Helpers.GetPermissions(e.User, e.Channel);
                         var senpai = e.Server.GetUser(Program.masterId);
-                        foreach (var str in e.Args[0].Split(','))
+                        Helpers.CommaSeparateRoleNames(e, async (roles, str) =>
                         {
-                            var roles = e.Server.FindRoles(str);
                             var count = roles.Count();
                             if (reply != "") reply += '\n';
                             if (count != 1)
@@ -149,7 +148,7 @@ namespace Nekobot
                                 var r = roles.Single();
                                 reply += await SetIgnored("role", "roles", r.Id, mention_type(r), perms, senpai.Roles.Contains(r) ? -2 : e.User.Roles.Contains(r) ? -1 : perms);
                             }
-                        }
+                        });
                     }
                     await e.Channel.SendMessage(reply);
                 });

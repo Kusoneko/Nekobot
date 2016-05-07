@@ -48,6 +48,12 @@ namespace Nekobot
                 .Description("I'll tell you how long I've been awake~")
                 .Do(e => e.Channel.SendMessage(Format.Code(Helpers.Uptime().ToString())));
 
+            Func<Role, string> role_info = r =>
+            {
+                string ret = $"{r.Name} is id {r.Id}, has {r.Members.Count()} members, color is {r.Color}, perms are {r.Permissions.RawValue}, and position is {r.Position}";
+                if (r.IsManaged) ret += "; it is managed by the server";
+                return $"{ret}.\n";
+            };
             group.CreateCommand("whois")
                 .Alias("getinfo")
                 .Parameter("[@User1] [@User2] [...]", Commands.ParameterType.Unparsed)
@@ -68,14 +74,26 @@ namespace Nekobot
                         reply += '\n';
                     }
                     foreach (Role r in e.Message.MentionedRoles)
-                    {
-                        reply += $"{r.Name} is id {r.Id}, has {r.Members.Count()} members, color is {r.Color}, perms are {r.Permissions.RawValue}, and position is {r.Position}";
-                        if (r.IsManaged) reply += "; it is managed by the server";
-                        reply += ".\n";
-                    }
+                        reply += role_info(r);
                     await e.Channel.SendMessage('\n' + reply);
                 });
 
+            group.CreateCommand("whois role")
+                .Alias("getinfo role")
+                .Parameter("role(s)", Commands.ParameterType.Unparsed)
+                .Description("I'll give you info on particular roles by name (comma separated)")
+                .Do(e =>
+                {
+                    string reply = "";
+                    if (e.Args[0] == "")
+                        reply = "You need to provide at least one role name!";
+                    else Helpers.CommaSeparateRoleNames(e, (roles, str) =>
+                    {
+                        foreach (var r in roles)
+                            reply += role_info(r);
+                    });
+                    e.Channel.SendMessage(reply);
+                });
             
             Music.AddCommands(group);
 

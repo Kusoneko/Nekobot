@@ -66,6 +66,12 @@ namespace Nekobot
                 await e.Channel.SendMessage(reaction);
         }
 
+        internal static void CommaSeparateRoleNames(CommandEventArgs e, Action<IEnumerable<Role>, string> perform)
+        {
+            foreach (var str in e.Args[0].Split(','))
+                perform(e.Server.FindRoles(str), str);
+        }
+
         internal static TimeSpan Uptime() => DateTime.Now - System.Diagnostics.Process.GetCurrentProcess().StartTime;
 
         internal static Func<Message, DateTime> MsgTime => msg => msg.Timestamp;
