@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using RestSharp;
+using Nekobot.Commands;
+using Newtonsoft.Json.Linq;
 
 namespace Nekobot
 {
@@ -20,7 +22,7 @@ namespace Nekobot
                 ? SQL.ReadInt(SQL.ReadUser(user.Id, "perms")) : 0;
         }
 
-        internal static void OnOffCmd(Commands.CommandEventArgs e, Action<bool> action, string failmsg = null)
+        internal static void OnOffCmd(CommandEventArgs e, Action<bool> action, string failmsg = null)
         {
             var arg = e.Args[0].ToLower();
             bool on = arg == "on";
@@ -45,7 +47,7 @@ namespace Nekobot
 
         internal static string RemoveEmoji(string text) => System.Text.RegularExpressions.Regex.Replace(text, @"\p{Cs}", "");
 
-        internal static async Task PerformAction(Commands.CommandEventArgs e, string action, string reaction, bool perform_when_empty)
+        internal static async Task PerformAction(CommandEventArgs e, string action, string reaction, bool perform_when_empty)
         {
             bool mentions_neko = e.Message.IsMentioningMe();
             string message = $"{e.User.Mention} {action}s ";
@@ -71,6 +73,16 @@ namespace Nekobot
             foreach (var str in e.Args[0].Split(','))
                 perform(e.Server.FindRoles(str), str);
         }
+
+        internal static void CreateJsonCommand(CommandGroupBuilder group, string name, JToken val, Action<CommandBuilder> cmd_specific)
+        {
+            var cmd = group.CreateCommand(name);
+            foreach (var alias in val["aliases"]) cmd.Alias(alias.ToString());
+            cmd.Description(val["description"].ToString());
+            cmd_specific(cmd);
+        }
+        internal static JObject GetJsonFileIfExists(string file)
+            => System.IO.File.Exists(file) ? JObject.Parse(System.IO.File.ReadAllText(file)) : null;
 
         internal static TimeSpan Uptime() => DateTime.Now - System.Diagnostics.Process.GetCurrentProcess().StartTime;
 

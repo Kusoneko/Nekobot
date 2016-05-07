@@ -19,17 +19,18 @@ namespace Nekobot
 
         static void AddResponseCommands(Commands.CommandGroupBuilder group, string file)
         {
-            if (!System.IO.File.Exists(file)) return;
-            var json = JObject.Parse(System.IO.File.ReadAllText(file));
+            var json = Helpers.GetJsonFileIfExists(file);
+            if (json == null) return;
             foreach (var cmdjson in json)
             {
-                var cmd = group.CreateCommand(cmdjson.Key);
                 var val = cmdjson.Value;
-                foreach (var alias in val["aliases"]) cmd.Alias(alias.ToString());
-                cmd.Description(val["description"].ToString()).FlagNsfw(val["nsfw"].ToObject<bool>());
-                var responses = val["responses"].ToObject<string[]>();
-                if (responses.Length == 1) cmd.Do(async e => await e.Channel.SendMessage(responses[0]));
-                else cmd.Do(async e => await e.Channel.SendMessage(Helpers.Pick(responses)));
+                Helpers.CreateJsonCommand(group, cmdjson.Key, val, cmd =>
+                {
+                    cmd.FlagNsfw(val["nsfw"].ToObject<bool>());
+                    var responses = val["responses"].ToObject<string[]>();
+                    if (responses.Length == 1) cmd.Do(async e => await e.Channel.SendMessage(responses[0]));
+                    else cmd.Do(async e => await e.Channel.SendMessage(Helpers.Pick(responses)));
+                });
             }
         }
 

@@ -180,19 +180,19 @@ namespace Nekobot
                 string[] imgexts = { ".jpg", ".jpeg", ".png", ".gif", ".bmp" };
                 foreach (var subdir in System.IO.Directory.EnumerateDirectories(imagedir))
                 {
-                    var cmd_file = subdir + "/command.json";
-                    var cmd_data = System.IO.File.Exists(cmd_file) ? JObject.Parse(System.IO.File.ReadAllText(cmd_file)) : null;
-                    var cmd = group.CreateCommand(cmd_data != null ? cmd_data["command"].ToString() : subdir.Substring(subdir.LastIndexOf('\\')+1));
-                    if (cmd_data != null)
-                    {
-                        cmd.FlagNsfw(cmd_data["nsfw"].ToObject<bool>()).Description(cmd_data["description"].ToString());
-                        foreach (var alias in cmd_data["aliases"])
-                            cmd.Alias(alias.ToString());
-                    }
-                    cmd.Do(async e =>
-                        {
-                            var files = from file in System.IO.Directory.EnumerateFiles($@"{subdir}", "*.*").Where(s => imgexts.Contains(System.IO.Path.GetExtension(s.ToLower()))) select new { File = file };
-                            await e.Channel.SendFile(files.ElementAt(new Random().Next(0, files.Count())).File);
+                    var cmd_data = Helpers.GetJsonFileIfExists($"{subdir}/command.json");
+                    Helpers.CreateJsonCommand(group,
+                        cmd_data != null ? cmd_data["command"].ToString() : subdir.Substring(subdir.LastIndexOf('\\') + 1),
+                        cmd_data, cmd => {
+                            if (cmd_data != null)
+                            {
+                                cmd.FlagNsfw(cmd_data["nsfw"].ToObject<bool>());
+                            }
+                            cmd.Do(async e =>
+                            {
+                                var files = from file in System.IO.Directory.EnumerateFiles($@"{subdir}", "*.*").Where(s => imgexts.Contains(System.IO.Path.GetExtension(s.ToLower()))) select new { File = file };
+                                await e.Channel.SendFile(files.ElementAt(new Random().Next(0, files.Count())).File);
+                            });
                         });
                 }
             }
