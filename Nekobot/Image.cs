@@ -238,6 +238,12 @@ namespace Nekobot
                 CreateBooruCommand(group, "sankaku", new[]{"sankakuchan", "schan"});
             //CreateBooruCommand(group, "sankakuidol", "sidol"); // Idol disables their API for some reason.
             CreateBooruCommand(group, "e621", "furry");
+
+            group.CreateCommand("meme")
+                .Parameter("Meme type (see memegen.link)")
+                .Parameter("Top/Bottom", Commands.ParameterType.Multiple)
+                .Description("http://memegen.link/xy/MakeAllTheMemes.jpg")
+                .Do(e => e.Channel.SendMessage($"http://memegen.link/{e.Args[0]}{(e.Args.Length == 1 ? "" : $"/{string.Join("-", e.Args, 1, e.Args.Length - 1).ToLower()}")}.jpg"));
         }
     }
 }
