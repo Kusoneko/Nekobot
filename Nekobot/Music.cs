@@ -5,9 +5,10 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Discord;
 using NAudio.Wave;
-using TagLib;
+using File = TagLib.File;
 using VideoLibrary;
 using Nekobot.Commands.Permissions.Levels;
+using System.IO;
 
 namespace Nekobot
 {
@@ -35,7 +36,7 @@ namespace Nekobot
                             Ext = Ext.Substring(2) + " **-** ";
                         Ext += song.Tag.Title;
                     }
-                    else Ext = System.IO.Path.GetFileNameWithoutExtension(Uri);
+                    else Ext = Path.GetFileNameWithoutExtension(Uri);
                 }
                 return Ext;
             }
@@ -54,7 +55,7 @@ namespace Nekobot
                 if (!HasFolder()) return;
                 lock (this)
                 {
-                    var files = Files();
+                    var files = Files(Folder);
                     var filecount = files.Count();
                     var maxfiles = Math.Min(filecount, 11);
                     Random rnd = new Random();
@@ -131,12 +132,13 @@ namespace Nekobot
 
             int NonrequestedIndex() => Any ? 1 + this.Skip(1).Where(song => song.Nonrequested).Count() : 0;
 
-            internal async Task<string> CurrentUri()
+            internal async Task<string> CurrentUri(Action play_gestures)
             {
                 while (!Any)
                 {
                     if (exit) return null;
-                    await Task.Delay(5000);
+                    play_gestures();
+                    await Task.Delay(1000);
                 }
                 lock (this) return this[0].Uri;
             }
@@ -309,12 +311,36 @@ namespace Nekobot
             {
                 for (byte i = 3; i != 0; --i) try
                 {
-                    return System.IO.Path.GetExtension(file) == ".ogg"
+                    return Path.GetExtension(file) == ".ogg"
                             ? (WaveStream)new NAudio.Vorbis.VorbisWaveReader(file)
                             : new MediaFoundationReader(file);
                 } catch { }
                 return null;
             }
+
+            internal void PlayUri(Discord.Audio.IAudioClient _client, string uri, Func<bool> cancel = null)
+            {
+                var musicReader = Reader(uri);
+                if (musicReader == null)
+                {
+                    Program.log.Warning("Stream", $"{uri} couldn't be read.");
+                    return;
+                }
+                var channels = Program.Audio.Config.Channels;
+                var outFormat = new WaveFormat(48000, 16, channels);
+                using (var resampler = new MediaFoundationResampler(musicReader, outFormat) { ResamplerQuality = 60 })
+                {
+                    int blockSize = outFormat.AverageBytesPerSecond; // 1 second
+                    byte[] buffer = new byte[blockSize];
+                    while (resampler.Read(buffer, 0, blockSize) > 0)
+                    {
+                        if (cancel != null && cancel()) break;
+                        _client.Send(buffer, 0, blockSize);
+                    }
+                }
+                musicReader.Dispose();
+            }
+
             internal async Task Play()
             {
                 ulong cid = Channel.Id;
@@ -322,6 +348,19 @@ namespace Nekobot
                 if (!playlist.ContainsKey(cid))
                     playlist.Add(cid, new Playlist());
                 var pl = Playlist;
+                Action play_gestures = () =>
+                {
+                    while (_gestures.Count != 0)
+                    {
+                        lock (_gestures)
+                        {
+                            var gesture = _gestures[0];
+                            _gestures.RemoveAt(0);
+                            PlayUri(_client, gesture.Uri);
+                            Playlist.pause = gesture.Paused;
+                        }
+                    }
+                };
                 while (streams.Contains(this))
                 {
                     if (!_request) pl.Initialize();
@@ -329,33 +368,23 @@ namespace Nekobot
                     {
                         try
                         {
-                            var channels = Program.Audio.Config.Channels;
-                            var outFormat = new WaveFormat(48000, 16, channels);
-                            int blockSize = outFormat.AverageBytesPerSecond; // 1 second
-                            byte[] buffer = new byte[blockSize];
-                            string uri = await pl.CurrentUri();
+                            string uri = await pl.CurrentUri(play_gestures);
                             if (uri == null) return; // Only happens if we're done here.
-                            var musicReader = Reader(uri);
-                            if (musicReader == null)
+                            PlayUri(_client, uri, () =>
                             {
-                                Program.log.Warning("Stream", $"{uri} couldn't be read.");
-                                return;
-                            }
-                            using (var resampler = new MediaFoundationResampler(musicReader, outFormat) { ResamplerQuality = 60 })
-                            {
-                                while (resampler.Read(buffer, 0, blockSize) > 0)
+                                while (pl.pause)
                                 {
-                                    while(pl.pause) await Task.Delay(500); // Play Voice.cs commands in here?
-                                    if (!streams.Contains(this) || pl.skip || pl.exit)
-                                    {
-                                        _client.Clear();
-                                        await Task.Delay(1000);
-                                        break;
-                                    }
-                                    _client.Send(buffer, 0, blockSize);
+                                    System.Threading.Thread.Sleep(500);
+                                    play_gestures();
                                 }
-                            }
-                            musicReader.Dispose();
+                                if (!streams.Contains(this) || pl.skip || pl.exit)
+                                {
+                                    _client.Clear();
+                                    System.Threading.Thread.Sleep(1000);
+                                    return true;
+                                }
+                                return false;
+                            });
                         }
                         catch (OperationCanceledException err) { Program.log.Error("Stream", err.Message); }
                     });
@@ -372,9 +401,25 @@ namespace Nekobot
                 streams.Remove(this);
             }
 
+            internal void QueueGesture(string uri)
+            {
+                lock (_gestures)
+                {
+                    _gestures.Add(new Gesture(uri, Playlist.pause));
+                    Playlist.pause = true;
+                }
+            }
+
             internal Channel Channel;
             internal Server Server => Channel.Server;
             Playlist Playlist => playlist[Channel.Id];
+            class Gesture
+            {
+                internal Gesture(string uri, bool paused) { Uri = uri; Paused = paused; }
+                internal string Uri;
+                internal bool Paused;
+            }
+            List<Gesture> _gestures = new List<Gesture>();
 
             private bool _request;
             internal bool Request
@@ -462,8 +507,8 @@ namespace Nekobot
         static Dictionary<ulong, Playlist> playlist = new Dictionary<ulong, Playlist>();
 
         static bool HasFolder() => Folder.Length != 0;
-        static IEnumerable<string> Files() => System.IO.Directory.EnumerateFiles(Folder, "*.*", UseSubdirs ? System.IO.SearchOption.AllDirectories : System.IO.SearchOption.TopDirectoryOnly).Where(s => new []{ ".wma", ".aac", ".mp3", ".m4a", ".wav", ".flac", ".ogg" }.Contains(System.IO.Path.GetExtension(s)));
-        //static IEnumerable<string> PlaylistFiles() => System.IO.Directory.EnumerateFiles(Folder, "*.*", UseSubdirs ? System.IO.SearchOption.AllDirectories : System.IO.SearchOption.TopDirectoryOnly).Where(s => new[]{".pls"}.Contains(System.IO.Path.GetExtension(s)));
+        static IEnumerable<string> Files(string folder) => Directory.EnumerateFiles(folder, "*.*", UseSubdirs ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly).Where(s => new []{ ".wma", ".aac", ".mp3", ".m4a", ".wav", ".flac", ".ogg" }.Contains(Path.GetExtension(s)));
+        //static IEnumerable<string> PlaylistFiles(string folder) => Directory.EnumerateFiles(folder, "*.*", UseSubdirs ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly).Where(s => new[]{".pls"}.Contains(Path.GetExtension(s)));
 
         static Commands.CommandBuilder CreatePLCmd(Commands.CommandGroupBuilder group, string name, string description, string[] aliases = null)
         {
@@ -592,11 +637,12 @@ namespace Nekobot
             }
         }
 
-        static class YT
+        internal static class YT
         {
             static RestSharp.RestClient rclient = Helpers.GetRestClient("http://www.youtubeinmp3.com/fetch/");
+            public static Regex regex = new Regex(@"youtu(?:be\.com\/(?:v\/|e(?:mbed)?\/|watch\?v=)|\.be\/)([\w-_]{11}\b)", RegexOptions.IgnoreCase);
 
-            class VideoData
+            public class VideoData
             {
                 public VideoData(string u, string t, string l) { Uri = u; Title = t; Link = l; }
                 public string Uri, Title, Link;
@@ -626,7 +672,7 @@ namespace Nekobot
                 CreatePLCmd(group, name, $"youtube video link(s)", $"I'll add youtube videos to the playlist", aliases)
                     .Do(e =>
                     {
-                        MatchCollection m = Regex.Matches(e.Args[0], $@"youtu(?:be\.com\/(?:v\/|e(?:mbed)?\/|watch\?v=)|\.be\/)([\w-_]{"{11}"}\b)", RegexOptions.IgnoreCase);
+                        MatchCollection m = regex.Matches(e.Args[0]);
                         if (m.Count == 0)
                             e.Channel.SendMessage($"None of {e.Args[0]} could be added to playlist because no valid youtube links were found within.");
                         else foreach (var link in from Match match in m select $"youtube.com/watch?v={match.Groups[1]}")
@@ -649,7 +695,7 @@ namespace Nekobot
                             return;
                         }
                         args = args.ToLower();
-                        Func<string, bool> search = f => System.IO.Path.GetFileNameWithoutExtension(f).ToLower().Contains(args);
+                        Func<string, bool> search = f => Path.GetFileNameWithoutExtension(f).ToLower().Contains(args);
                         long filecount = 0;
                         var pl = playlist[e.User.VoiceChannel.Id];
                         /*var insert_file = is_playlist ? (Action<string>)(file =>
@@ -658,7 +704,7 @@ namespace Nekobot
                             }) :
                             file => pl.InsertFile(file, e);*/
                         Action<string> insert_file = file => pl.InsertFile(file, e);
-                        var songs = /*is_playlist ? PlaylistFiles() :*/ Files();
+                        var songs = /*is_playlist ? PlaylistFiles(Folder) :*/ Files(Folder);
                         if (all)
                         {
                             var files = songs.Where(search);
@@ -738,6 +784,33 @@ namespace Nekobot
                 .FlagMusic(true)
                 .Do(e => playlist[e.User.VoiceChannel.Id].Encore(e));
 
+            var gestures = Program.config["gestures"].ToString();
+            if (gestures != "")
+            {
+                foreach (var gesture in Files(gestures))
+                {
+                    var file = Path.GetFileNameWithoutExtension(gesture);
+                    group.CreateCommand(file)
+                        .FlagMusic(true)
+                        .Do(e => streams.Get(e.User.VoiceChannel).QueueGesture(gesture));
+                }
+                var json = Helpers.GetJsonFileIfExists($"{gestures}/gestures.json");
+                if (json != null)
+                {
+                    foreach (var cmd_data in json)
+                    {
+                        var val = cmd_data.Value;
+                        Func<string, string> get_real_uri = uri => YT.regex.IsMatch(uri) ? YT.VideoData.Get(uri).Uri : uri;
+                        Helpers.CreateJsonCommand(group, cmd_data.Key, val, cmd =>
+                        {
+                            var uris = val["uris"].ToObject<string[]>();
+                            if (uris.Length == 1) cmd.Do(e => streams.Get(e.User.VoiceChannel).QueueGesture(get_real_uri(uris[0])));
+                            else cmd.Do(e => streams.Get(e.User.VoiceChannel).QueueGesture(get_real_uri(Helpers.Pick(uris))));
+                        });
+                    }
+                }
+            }
+
             // Moderator commands
             group.CreateCommand("forceskip")
                 .MinPermissions(1)
@@ -808,7 +881,7 @@ namespace Nekobot
             // Administrator commands
             group.CreateCommand("music")
                 .Parameter("on/off", Commands.ParameterType.Required)
-                .Description("I'll start or end a stream in a particular voice channel, which you need to be in.")
+                .Description("I'll start or end a stream in a particular voice channel, which you need to be in. (Turning this on will allow you to play gestures as well.)")
                 .MinPermissions(2)
                 .Do(e =>
                 {
@@ -842,7 +915,8 @@ namespace Nekobot
             if (HasFolder()) // Request-driven mode is always on when we don't have a folder, therefore we won't need this command.
             {
                 group.CreateCommand("music request")
-                    .Description("I'll turn request-driven streaming on in a particular voice channel, which you need to be in.")
+                    .Alias("gesture mode activate")
+                    .Description("I'll turn request-driven streaming on in a particular voice channel, which you need to be in. (This will allow you to play gestures)")
                     .MinPermissions(2)
                     .Do(e =>
                     {

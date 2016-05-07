@@ -21,10 +21,11 @@ You'll need to make a config.json file in the same place as the executable using
     "game" : "Happy Nekobot Fun Times",
     "musicFolder" : "",
     "musicUseSubfolders" : false,
+    "gestures" : "",
     "images" : ""
 }
 ```
-Quick links to descriptions: [Credentials](#credentials) | [master](#master) | [server](#server) | [prefix, prefixprivate, prefix and mentioncommand](#prefix) | [helpmode](#helpmode) | [loglevel](#log-level) | [game](#game) | [musicFolder, and musicUseSubfolders](#music-folder) | [images](#image-folder)
+Quick links to descriptions: [Credentials](#credentials) | [master](#master) | [server](#server) | [prefix, prefixprivate, prefix and mentioncommand](#prefix) | [helpmode](#helpmode) | [loglevel](#log-level) | [game](#game) | [musicFolder, and musicUseSubfolders](#music-folder) | [gestures](#gesture-folder) | [images](#image-folder)
 
 [Further Setup Instructions](#other-setup)
 
@@ -74,6 +75,20 @@ The full path to a folder containing the music files to be used for music stream
 If empty, the `request` command will be disabled, and music will only be played when a command is issued to queue music from elsewhere.
 
 The musicUseSubfolders setting is whether or not to include files buried in folders within your musicFolder.
+
+### Gestures Folder
+Set this to a folder in which you will place for sound clips for commands you wish to played by commands of their name on voice.
+If this is an empty string, this feature is turned off.
+Include the file gestures.json (as shown below) in this folder if you wish for more granular control over it, or if you want to be able to play soundclips not in this folder (or from youtube). Files in this folder should not be listed in gestures.json.
+```javascript
+{
+  "Command name here" : {
+  "aliases" : [],
+  "description" : "Some words to describe",
+  "uris" : ["filename or youtube link1", "filename or youtube link2"]
+  }
+}
+```
 
 ### Image Folder
 Set this to a folder for which you will create subfolders for commands uploading images you wish to have. If this is an empty string, she'll look in her running directory for "images" subfolder.
