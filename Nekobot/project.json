@@ -6,6 +6,7 @@
     "NAudio": "1.7.3",
     "NAudio.Vorbis": "1.0.0.0",
     "Newtonsoft.Json": "8.0.3",
+    "Ninject": "3.2.2",
     "NVorbis": "0.8.4.0",
     "RestSharp": "105.2.3",
     "System.Data.SQLite": "1.0.101",

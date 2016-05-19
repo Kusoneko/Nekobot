@@ -1,10 +1,20 @@
 ﻿using System;
-using RollGen.Domain;
+using Ninject;
+using RollGen;
 
 namespace Nekobot
 {
     static class RPG
     {
+        class DiceKernel : StandardKernel
+        {
+            public DiceKernel Init()
+            {
+                new RollGen.Domain.Ioc.RollGenModuleLoader().LoadModules(this);
+                return this;
+            }
+        }
+
         internal static void AddCommands(Commands.CommandGroupBuilder group)
         {
             group.CreateCommand("rand")
@@ -38,7 +48,7 @@ namespace Nekobot
                     await e.Channel.SendMessage($"Your number is **{new Random().Next(min,max+1)}**.");
                 });
 
-            var dd = new DomainDice(new AlbatrossExpressionEvaluator(Albatross.Expression.Parser.GetParser()), new RandomPartialRollFactory(new Random()));
+            var dd = new DiceKernel().Init().Get<Dice>();
             group.CreateCommand("roll")
                 .Parameter("[times]t [dice expressions]", Commands.ParameterType.Unparsed)
                 .Description("I'll roll a dice expression([count]d[sides]k[kept][mods...]...) as many `times` as you ask(default 1). (If empty or just `times`, will roll default: 1d6.)")
@@ -85,15 +95,15 @@ namespace Nekobot
                             {
                                 var roll = dd.ReplaceRollsWithSum(args);
                                 var eval = dd.Evaluate(roll);
-                                val = dd.ChangeType<double>(eval);
+                                val = Utils.ChangeType<double>(eval);
                                 if (response != string.Empty) response += '\n';
-                                var str = dd.BooleanOrType<double>(eval);
+                                var str = Utils.BooleanOrType<double>(eval);
                                 if (roll != str) response += $"{Discord.Format.Code(roll)} = ";
                                 response += $"**{str}**.";
                             }
-                            catch
+                            catch (Exception ex)
                             {
-                                await chan.SendMessage("Incorrect Argument Syntax!");
+                                await chan.SendMessage($"Invalid Arguments: {ex.Message}");
                                 return;
                             }
                         }

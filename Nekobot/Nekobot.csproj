@@ -108,7 +108,7 @@
       <Project>{4c109e0e-5837-4a2e-8ab4-ab1f5ceaac2d}</Project>
       <Name>Nekobot.Commands</Name>
     </ProjectReference>
-    <ProjectReference Include="..\RollGen\Domain\RollGen.Domain.csproj">
+    <ProjectReference Include="..\RollGen\RollGen.Domain\RollGen.Domain.csproj">
       <Project>{a04a2392-a66d-4fee-a931-4a17991af64c}</Project>
       <Name>RollGen.Domain</Name>
     </ProjectReference>
