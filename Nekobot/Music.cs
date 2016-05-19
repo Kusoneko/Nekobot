@@ -332,10 +332,12 @@ namespace Nekobot
                 {
                     int blockSize = outFormat.AverageBytesPerSecond; // 1 second
                     byte[] buffer = new byte[blockSize];
-                    while (resampler.Read(buffer, 0, blockSize) > 0)
+                    while (cancel == null || !cancel())
                     {
-                        if (cancel != null && cancel()) break;
+                        bool end = musicReader.Position+blockSize > musicReader.Length; // Stop at the end, work around the bug that has it Read twice.
+                        if (resampler.Read(buffer, 0, blockSize) <= 0) break; // Break on failed read.
                         _client.Send(buffer, 0, blockSize);
+                        if (end) break;
                     }
                 }
                 musicReader.Dispose();
