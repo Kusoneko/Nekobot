@@ -28,7 +28,7 @@ namespace Nekobot.Commands
         internal IEnumerable<CommandMap> Categories => _categories.Values;
 
         //Allow stuff to happen when we don't handle a command.
-        public Action<MessageEventArgs> NonCommands;
+        public event Action<MessageEventArgs> NonCommands = delegate { };
 
         public event EventHandler<CommandEventArgs> CommandExecuted = delegate { };
         public event EventHandler<CommandErrorEventArgs> CommandErrored = delegate { };
