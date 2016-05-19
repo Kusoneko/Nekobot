@@ -9,6 +9,7 @@ You'll need to make a config.json file in the same place as the executable using
     "token" : "MySuperSecretOAuth2Token",
     "SoundCloud" : {},
     "LastFM" : {},
+    "CleverBot" : {},
     "Booru" : {},
     "master" : 63296013791666176,
     "server" : "https://discord.gg/0Lv5NLFEoz3P07Aq",
@@ -38,6 +39,8 @@ The email and password lines will go away in the future, so to avoid breakage, d
 The SoundCloud line holds credentials for SoundCloud, enabling the soundcloud commands. [You'll need to register the app](https://soundcloud.com/you/apps/). At the moment all that's needed is the Client ID `"client_id" : "Put Client ID here"`
 
 The LastFM line holds credentials for LastFM. [Create an API account](http://www.last.fm/api/account/create). You'll need to add in `"apikey" : "Your API key", "apisecret" : "Your Shared secret"`.
+
+The CleverBot line holds credentials for CleverBot.io. [Create an API account](https://cleverbot.io/keys). You'll need to add in `"user" : "Your API User", "key" : "Your API Key"`.
 
 The Booru map holds submaps of information(credentials and default tags) for the boorus we connect to, this allows you to increase operability depending on the booru.
 + If you specify a `"default_tags" : []`, you'll be able to require or blacklist certain tags in booru queries.

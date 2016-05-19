@@ -364,7 +364,11 @@ namespace Nekobot
                 .Do(e => client.CurrentUser.Edit(config["password"].ToString(), e.Args[0]));
 
             Flags.AddCommands(group);
-            Chatbot.AddCommands(group);
+        }
+        // Commands that need to be done after login go in here
+        static void GenerateDelayedCommands(CommandGroupBuilder group)
+        {
+            Chatbot.AddDelayedCommands(group);
         }
 
         // Variables
@@ -404,9 +408,6 @@ namespace Nekobot
             commands.CommandExecuted += (s, e) => client.Log.Info("Command", $"{e.User.Name}: {e.Command.Text}");
 
             commands.CreateGroup("", group => GenerateCommands(group));
-            commands.NonCommands = e => Task.Run(()=>Chatbot.Do(e));
-            // Load the chatbots
-            Chatbot.Load();
 
             // Keep the window open in case of crashes elsewhere... (hopefully)
             new Thread(InputThread).Start();
@@ -435,6 +436,7 @@ namespace Nekobot
                 if (config["server"].ToString() != "")
                     (await client.GetInvite(config["server"].ToString()))?.Accept();
                 Voice.Startup(client);
+                commands.CreateGroup("", group => GenerateDelayedCommands(group));
             });
         }
 
