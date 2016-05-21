@@ -235,23 +235,21 @@ namespace Nekobot
                 return false;
             }
 
-            internal void ChannelUpdated(ChannelUpdatedEventArgs e)
+            internal void UserLeft(User u, Channel voice_channel)
             {
-                var listeners = e.After.Users;
-                var listeners_count = listeners.Count();
-                if (e.Before.Users.Count() <= listeners_count) return; // If we've less listeners, a vote might have passed.
+                var listeners_count = voice_channel.Users.Count();
+                // We've less listeners, a vote might have passed.
                 var needed = Math.Ceiling((float)(listeners_count-1) / 2);
-                for (int i = 0; i < votes.Length; ++i)
+                for (int i = 0; i < votes.Length; ++i) // Iterate through votes
                 {
                     var vote = votes[i];
                     if (vote.Count >= needed) continue; // This may already be fulfilled, if so, don't bother.
-                    vote = vote.Where(id => listeners.Any(u => u.Id == id)).ToList();
-                    if (vote.Count >= needed)
+                    if (vote.Remove(u.Id) && vote.Count >= needed)
                     {
                         switch(i)
                         {
                             case (int)Vote.Encore: DoEncore(); break;
-                            case (int)Vote.Reset: Task.Run(() => streams.Reset(e.After)); break;
+                            case (int)Vote.Reset: Task.Run(() => streams.Reset(voice_channel)); break;
                             case (int)Vote.Skip: SkipSongs(); break;
                         }
                     }
@@ -486,7 +484,7 @@ namespace Nekobot
             {
                 playlist[c.Id].Exit();
                 await Task.Delay(7500);
-                await streams.First(s => s.Channel == c).Play(); // If this throws, something has gone horribly wrong.
+                await Get(c).Play();
             }
         }
 
@@ -494,10 +492,14 @@ namespace Nekobot
         internal static void Load(DiscordClient c)
         {
             streams.Load(c);
-            c.ChannelUpdated += (s, e) =>
+            c.UserUpdated += (s, e) =>
             {
-                if (e.Before.Type == ChannelType.Voice && playlist.ContainsKey(e.Before.Id))
-                    playlist[e.Before.Id].ChannelUpdated(e);
+                if (e.Before.Id == c.CurrentUser.Id) return; // We're not handling our own updates here.
+                var old_voice = e.Before.VoiceChannel;
+                var voice = e.After.VoiceChannel;
+                if (old_voice == voice) return; // Not a voice channel change
+                if (old_voice != null && playlist.ContainsKey(old_voice.Id))
+                    playlist[old_voice.Id].UserLeft(e.Before, old_voice);
             };
         }
         internal static async Task Stop(Server s) => await streams.Stop(s);
