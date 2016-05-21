@@ -13,8 +13,9 @@ namespace Nekobot
                 SQLiteConnection.CreateFile("nekobot.db");
             connection = new SQLiteConnection("Data Source=nekobot.db;Version=3;");
             connection.Open();
-            CreateTable("users (user varchar(17), perms int, ignored int, lastfm varchar(15))");
+            CreateTable("users (user varchar(17), perms int, ignored int, lastfm varchar(15), entrance_gesture varchar(512))");
             CreateField("users", "lastfm varchar(15)");
+            CreateField("users", "entrance_gesture varchar(512)");
             CreateTable("flags (channel varchar(17), nsfw int, music int, ignored int, chatbot int)");
             CreateField("flags", "chatbot int");
             CreateTable("roles (role varchar(17), ignored int)");
@@ -28,9 +29,10 @@ namespace Nekobot
             {
                 switch(field)
                 {
-                    case "perms": return $"{newval}, 0, ''";
-                    case "ignored": return $"0, {newval}, ''";
-                    case "lastfm": return $"0, 0, {newval}";
+                    case "perms": return $"{newval}, 0, '', ''";
+                    case "ignored": return $"0, {newval}, '', ''";
+                    case "lastfm": return $"0, 0, {newval}, ''";
+                    case "entrance_gesture": return $"0, 0, '', {newval}";
                 }
             }
             else if (table == "flags")
@@ -84,8 +86,8 @@ namespace Nekobot
         static SQLiteDataReader ExecuteReader(string sql) => Command(sql).ExecuteReader();
         internal static SQLiteDataReader ExecuteReader(string value, string table, string condition)
             => ExecuteReader($"select {value} from {table} where {condition}");
-        /*internal static SQLiteDataReader ReadUsers(string condition, string value = "user")
-            => ExecuteReader(value, "users", condition);*/
+        internal static SQLiteDataReader ReadUsers(string condition, string value = "user")
+            => ExecuteReader(value, "users", condition);
         internal static SQLiteDataReader ReadChannels(string condition, string value = "channel")
             => ExecuteReader(value, "flags", condition);
         internal static SQLiteDataReader ReadRoles(string condition, string value = "role")

@@ -410,6 +410,12 @@ namespace Nekobot
                 }
             }
 
+            internal void UserEntered(User u)
+            {
+                if (EntranceGestures.ContainsKey(u.Id)) // Announce their presence, if we should
+                    QueueGesture(GetRealURI(EntranceGestures[u.Id]));
+            }
+
             internal Channel Channel;
             internal Server Server => Channel.Server;
             Playlist Playlist => playlist[Channel.Id];
@@ -449,9 +455,14 @@ namespace Nekobot
 
             internal Task Load(DiscordClient client)
             {
+                // Load the entrance gestures
+                var reader = SQL.ReadUsers("entrance_gesture<>''", "user,entrance_gesture");
+                while (reader.Read())
+                    EntranceGestures[Convert.ToUInt64(reader["user"].ToString())] = reader["entrance_gesture"].ToString();
+
                 // Load the stream channels
                 var channels = new List<Tuple<Channel,int>>();
-                var reader = SQL.ReadChannels("music<>0", "channel,music");
+                reader = SQL.ReadChannels("music<>0", "channel,music");
                 while (reader.Read())
                     channels.Add(Tuple.Create(client.GetChannel(Convert.ToUInt64(reader["channel"].ToString())), int.Parse(reader["music"].ToString())));
                 return Task.WhenAll(
@@ -500,6 +511,7 @@ namespace Nekobot
                 if (old_voice == voice) return; // Not a voice channel change
                 if (old_voice != null && playlist.ContainsKey(old_voice.Id))
                     playlist[old_voice.Id].UserLeft(e.Before, old_voice);
+                (voice == null ? null : streams.Get(voice))?.UserEntered(e.After); // This could technically be else, but for future-proofing's sake.
             };
         }
         internal static async Task Stop(Server s) => await streams.Stop(s);
@@ -509,6 +521,7 @@ namespace Nekobot
         internal static bool UseSubdirs;
         static Streams streams = new Streams();
         static Dictionary<ulong, Playlist> playlist = new Dictionary<ulong, Playlist>();
+        static Dictionary<ulong, string> EntranceGestures = new Dictionary<ulong, string>();
 
         static bool HasFolder() => Folder.Length != 0;
         static IEnumerable<string> Files(string folder) => Directory.EnumerateFiles(folder, "*.*", UseSubdirs ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly).Where(s => new []{ ".wma", ".aac", ".mp3", ".m4a", ".wav", ".flac", ".ogg" }.Contains(Path.GetExtension(s)));
@@ -731,6 +744,8 @@ namespace Nekobot
             }
         }
 
+        static string GetRealURI(string uri) => YT.regex.IsMatch(uri) ? YT.VideoData.Get(uri).Uri : uri;
+
         internal static void AddCommands(Commands.CommandGroupBuilder group)
         {
             group.CreateCommand("playlist")
@@ -804,18 +819,43 @@ namespace Nekobot
                     foreach (var cmd_data in json)
                     {
                         var val = cmd_data.Value;
-                        Func<string, string> get_real_uri = uri => YT.regex.IsMatch(uri) ? YT.VideoData.Get(uri).Uri : uri;
                         Helpers.CreateJsonCommand(group, cmd_data.Key, val, cmd =>
                         {
                             var uris = val["uris"].ToObject<string[]>();
-                            if (uris.Length == 1) cmd.Do(e => streams.Get(e.User.VoiceChannel).QueueGesture(get_real_uri(uris[0])));
-                            else cmd.Do(e => streams.Get(e.User.VoiceChannel).QueueGesture(get_real_uri(Helpers.Pick(uris))));
+                            if (uris.Length == 1) cmd.Do(e => streams.Get(e.User.VoiceChannel).QueueGesture(GetRealURI(uris[0])));
+                            else cmd.Do(e => streams.Get(e.User.VoiceChannel).QueueGesture(GetRealURI(Helpers.Pick(uris))));
                         });
                     }
                 }
             }
 
             // Moderator commands
+            group.CreateCommand("setentrancegesture")
+                .Alias("setgesture")
+                .MinPermissions(1)
+                .Parameter("<User mentions>|<entrance gesture>", Commands.ParameterType.Unparsed)
+                .Description("I'll set the gesture to play when someone enters my voice channel to whatever's after the `|`.\nHaving nothing after will reset. Gesture can be file uri or youtube link or direct media link.")
+                .Do(e =>
+                {
+                    var args = e.Args[0];
+                    var i = args.LastIndexOf('|');
+                    if (i == -1)
+                    {
+                        e.Channel.SendMessage("You need a `|` before the gesture uri");
+                        return;
+                    }
+                    ++i;
+                    var entrance_gesture = i == args.Length ? string.Empty : args.Substring(i);
+                    foreach (var u in e.Message.MentionedUsers)
+                    {
+                        if (entrance_gesture == string.Empty)
+                            EntranceGestures.Remove(u.Id);
+                        else
+                            EntranceGestures[u.Id] = entrance_gesture;
+                        Task.Run(() => SQL.AddOrUpdateUserAsync(u.Id, "entrance_gesture", $"'{entrance_gesture}'"));
+                    }
+                });
+
             group.CreateCommand("forceskip")
                 .MinPermissions(1)
                 .Parameter("count", Commands.ParameterType.Optional)
