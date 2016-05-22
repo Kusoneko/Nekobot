@@ -14,8 +14,8 @@ namespace Nekobot
     }
     static class Common
     {
-        static Task DoPing(int ms, Message msg)
-           => msg.Edit($"{msg.RawText} ({msg.Timestamp.Millisecond - ms} milliseconds)");
+        static string DoPing(Message msg)
+           => $" ({DateTime.Now.Millisecond - msg.Timestamp.Millisecond} milliseconds)";
 
         static void AddResponseCommands(Commands.CommandGroupBuilder group, string file)
         {
@@ -38,12 +38,12 @@ namespace Nekobot
         {
             group.CreateCommand("ping")
                 .Description("I'll reply with 'Pong!'")
-                .Do(async e => await DoPing(e.Message.Timestamp.Millisecond, await e.Channel.SendMessage($"{e.User.Mention}, Pong!")));
+                .Do(e => e.Channel.SendMessage($"{e.User.Mention}, Pong!{DoPing(e.Message)}"));
 
             group.CreateCommand("pong")
                 .Hide() // More of an easter egg, don't show in help.
                 .Description("I'll reply with 'Ping?'")
-                .Do(async e => await DoPing(e.Message.Timestamp.Millisecond, await e.Channel.SendMessage($"{e.User.Mention}, Ping?")));
+                .Do(e => e.Channel.SendMessage($"{e.User.Mention}, Ping?{DoPing(e.Message)}"));
 
             group.CreateCommand("uptime")
                 .Description("I'll tell you how long I've been awake~")
