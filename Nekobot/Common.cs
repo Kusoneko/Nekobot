@@ -100,6 +100,25 @@ namespace Nekobot
 
             Image.AddCommands(group);
 
+            group.CreateCommand("urban")
+                .Alias("urbandictionary")
+                .Alias("ud")
+                .Parameter("phrase", Commands.ParameterType.Unparsed)
+                .Description("I'll give you the urban dictionary de")
+                .Do(e =>
+                {
+                    var args = e.Args[0];
+                    string msg = args == string.Empty ? "I cannot lookup nothing, silly!" : null;
+                    if (msg == null)
+                    {
+                        var req = new RestRequest("define", Method.GET);
+                        req.AddQueryParameter("term", args);
+                        var resp = JObject.Parse(Helpers.GetRestClient("http://api.urbandictionary.com/v0").Execute(req).Content)["list"][0];
+                        msg = $"{resp["word"]}: {resp["definition"]}\n⬆{resp["thumbs_up"]} ⬇{resp["thumbs_down"]} <{resp["permalink"]}>```{resp["example"]}```";
+                    }
+                    e.Channel.SendMessage(msg);
+                });
+
             group.CreateCommand("quote")
                 .Description("I'll give you a random quote from https://inspiration.julxzs.website/quotes")
                 .Do(async e =>
