@@ -89,6 +89,9 @@ namespace Nekobot
         internal static bool FieldExists(string map, string property)
             => FieldExists(Program.config[map], property);
 
+        internal static JObject XmlToJson(string xml)
+            => JObject.Parse(Newtonsoft.Json.JsonConvert.SerializeXmlNode(new System.Xml.XmlDocument() { InnerXml = xml }));
+
         internal static TimeSpan Uptime() => DateTime.Now - System.Diagnostics.Process.GetCurrentProcess().StartTime;
 
         internal static Func<Message, DateTime> MsgTime => msg => msg.Timestamp;

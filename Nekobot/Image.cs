@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using System.Xml;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using RestSharp;
 
@@ -78,9 +76,7 @@ namespace Nekobot
             {
                 var content = _rclient.Execute(new RestRequest(resource, Method.GET)).Content;
                 if (json) return JObject.Parse(content.TrimStart('[').TrimEnd(']'));
-                XmlDocument xml = new XmlDocument();
-                xml.LoadXml(content);
-                return JObject.Parse(JsonConvert.SerializeXmlNode(xml))["posts"];
+                return Helpers.XmlToJson(content)["posts"];
             }
 
             private string GetFileUrl(JToken res, string prefix)
