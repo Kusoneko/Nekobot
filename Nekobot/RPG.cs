@@ -80,7 +80,7 @@ namespace Nekobot
 
                     string response = "";
                     double? total = times > 1 ? (int?)0 : null;
-                    bool do_default = args == ""; // Default roll.
+                    bool do_default = args.Length == 0; // Default roll.
                     for (; times != 0; --times)
                     {
                         double val;
@@ -96,7 +96,7 @@ namespace Nekobot
                                 var roll = dd.ReplaceRollsWithSum(args);
                                 var eval = dd.Evaluate(roll);
                                 val = Utils.ChangeType<double>(eval);
-                                if (response != string.Empty) response += '\n';
+                                if (response != "") response += '\n';
                                 var str = Utils.BooleanOrType<double>(eval);
                                 if (roll != str) response += $"{Discord.Format.Code(roll)} = ";
                                 response += $"**{str}**.";
@@ -120,7 +120,7 @@ namespace Nekobot
             group.CreateCommand("rollsentence")
                 .Parameter("[sentence]", Commands.ParameterType.Unparsed)
                 .Description("I'll replace all instances of dice expressions wrapped like {1d4} with their resolutions. (see ` help roll` for info on dice expressions)")
-                .Do(async e => await e.Channel.SendMessage(e.Args[0] == "" ? "" : dd.ReplaceWrappedExpressions<double>(e.Args[0])));
+                .Do(async e => await e.Channel.SendMessage(e.Args[0].Length == 0 ? "" : dd.ReplaceWrappedExpressions<double>(e.Args[0])));
         }
     }
 }

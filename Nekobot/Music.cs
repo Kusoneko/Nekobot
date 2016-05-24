@@ -845,10 +845,10 @@ namespace Nekobot
                         return;
                     }
                     ++i;
-                    var entrance_gesture = i == args.Length ? string.Empty : args.Substring(i);
+                    var entrance_gesture = i == args.Length ? "" : args.Substring(i);
                     foreach (var u in e.Message.MentionedUsers)
                     {
-                        if (entrance_gesture == string.Empty)
+                        if (entrance_gesture.Length == 0)
                             EntranceGestures.Remove(u.Id);
                         else
                             EntranceGestures[u.Id] = entrance_gesture;

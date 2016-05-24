@@ -126,8 +126,7 @@ namespace Nekobot
                     string message = "";
                     foreach (string s in e.Args)
                     {
-                        var request = new RestRequest($"{s}", Method.GET);
-                        var content = rclient.Execute(request).Content;
+                        var content = rclient.Execute(new RestRequest($"{s}", Method.GET)).Content;
                         if (content[0] == '<')
                         {
                             message += $@"
@@ -156,8 +155,7 @@ namespace Nekobot
                     foreach (string s in e.Args)
                     {
                         string message = "";
-                        var request = new RestRequest($"{s}", Method.GET);
-                        var content = rclient.Execute(request).Content;
+                        var content = rclient.Execute(new RestRequest($"{s}", Method.GET)).Content;
                         if (content[0] == '<')
                         {
                             message += $@"{s} doesn't exist.";
@@ -250,7 +248,7 @@ namespace Nekobot
                 {
                     int newPermLevel;
                     int eUserPerm = Helpers.GetPermissions(e.User, e.Channel);
-                    if (e.Args[1] == "" || !e.Message.MentionedUsers.Any())
+                    if (e.Args[1].Length == 0 || !e.Message.MentionedUsers.Any())
                         await e.Channel.SendMessage("You need to at least specify a permission level and mention one user.");
                     else if (!int.TryParse(e.Args[0], out newPermLevel))
                         await e.Channel.SendMessage("The first argument needs to be the new permission level.");
@@ -445,71 +443,25 @@ namespace Nekobot
             if (minutes == 0)
                 return "No time.";
 
-            int years, months, days, hours = 0;
-
-            hours = minutes / 60;
+            int hours = minutes / 60;
             minutes %= 60;
-            days = hours / 24;
+            int days = hours / 24;
             hours %= 24;
-            months = days / 30;
+            int months = days / 30;
             days %= 30;
-            years = months / 12;
+            int years = months / 12;
             months %= 12;
 
             string animeWatched = "";
+            Action<int, string, Func<string>> add_type = (num, type, func) => animeWatched += num > 0 ? $"{func()}{num} **{type}**{(num == 1 ? "" : "s")}" : "";
+            add_type(years, "year", () => "");
 
-            if (years > 0)
-            {
-                animeWatched += years;
-                if (years == 1)
-                    animeWatched += " **year**";
-                else
-                    animeWatched += " **years**";
-            }
-
-            if (months > 0)
-            {
-                if (animeWatched.Length > 0)
-                    animeWatched += ", ";
-                animeWatched += months;
-                if (months == 1)
-                    animeWatched += " **month**";
-                else
-                    animeWatched += " **months**";
-            }
-
-            if (days > 0)
-            {
-                if (animeWatched.Length > 0)
-                    animeWatched += ", ";
-                animeWatched += days;
-                if (days == 1)
-                    animeWatched += " **day**";
-                else
-                    animeWatched += " **days**";
-            }
-
-            if (hours > 0)
-            {
-                if (animeWatched.Length > 0)
-                    animeWatched += ", ";
-                animeWatched += hours;
-                if (hours == 1)
-                    animeWatched += " **hour**";
-                else
-                    animeWatched += " **hours**";
-            }
-
-            if (minutes > 0)
-            {
-                if (animeWatched.Length > 0)
-                    animeWatched += " and ";
-                animeWatched += minutes;
-                if (minutes == 1)
-                    animeWatched += " **minute**";
-                else
-                    animeWatched += " **minutes**";
-            }
+            Func<string, string> empty_if_empty = s => animeWatched.Length == 0 ? "" : s;
+            Func<string> add_comma = () => empty_if_empty(", ");
+            add_type(months, "month", add_comma);
+            add_type(days, "day", add_comma);
+            add_type(hours, "hour", add_comma);
+            add_type(minutes, "minute", () => empty_if_empty(" and "));
 
             return animeWatched;
         }

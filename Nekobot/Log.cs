@@ -94,7 +94,7 @@ namespace Nekobot
         static object log = new object();
         internal static void Output(string text, ConsoleColor color)
         {
-            if (text == string.Empty) return;
+            if (text.Length == 0) return;
 
             lock (log)
             {

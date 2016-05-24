@@ -131,7 +131,7 @@ namespace Nekobot
                 .Do(async e =>
                 {
                     string reply = "";
-                    if (e.Args[0] == "")
+                    if (e.Args[0].Length == 0)
                         reply = "You need to provide at least one role name!";
                     else
                     {

@@ -101,7 +101,7 @@ namespace Nekobot
                 var type_a = _type < Type.B;
                 var sankaku = !type_a && _type == Type.Sankaku;
                 var res = Common(!type_a && !sankaku ? "post/index.xml?limit=1" : Resource, sankaku);
-                return sankaku ? res.ToString() == "" ? 0 : 1000
+                return sankaku ? res.ToString().Length == 0 ? 0 : 1000
                     : res["@count"].ToObject<int>();
             }
 
@@ -170,7 +170,7 @@ namespace Nekobot
             CreateLewdCommand(group, "lewd");
 
             var imagedir = Program.config["images"].ToString();
-            if (imagedir == "") imagedir = "images";
+            if (imagedir.Length == 0) imagedir = "images";
             if (System.IO.Directory.Exists(imagedir))
             {
                 string[] imgexts = { ".jpg", ".jpeg", ".png", ".gif", ".bmp" };

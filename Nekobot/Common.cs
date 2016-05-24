@@ -61,7 +61,7 @@ namespace Nekobot
                 .Description("I'll give you information about the mentioned user(s).")
                 .Do(async e =>
                 {
-                    if (e.Args[0] == "" || (!e.Message.MentionedUsers.Any() && !e.Message.MentionedRoles.Any())) return;
+                    if (e.Args[0].Length == 0 || (!e.Message.MentionedUsers.Any() && !e.Message.MentionedRoles.Any())) return;
                     string reply = "";
                     bool oniicheck = e.User.Id == 63299786798796800;
                     foreach (User u in e.Message.MentionedUsers)
@@ -86,7 +86,7 @@ namespace Nekobot
                 .Do(e =>
                 {
                     string reply = "";
-                    if (e.Args[0] == "")
+                    if (e.Args[0].Length == 0)
                         reply = "You need to provide at least one role name!";
                     else Helpers.CommaSeparateRoleNames(e, (roles, str) =>
                     {
@@ -205,7 +205,7 @@ namespace Nekobot
                 {
                     Channel channel = e.Channel;
                     string message = e.Args[0];
-                    if (message == "") return; // Unparsed can be empty
+                    if (message.Length == 0) return; // Unparsed can be empty
 
                     message = e.Message.MentionedChannels.Aggregate(
                         e.Message.MentionedUsers.Aggregate(message, (m, u) => m.Replace($"@{u.Name}", u.Mention)),
@@ -283,7 +283,7 @@ The current topic is: {e.Channel.Topic}";
                 .Description("I'll give you the avatars of every mentioned users.")
                 .Do(async e =>
                 {
-                    if (e.Args[0] == "") return;
+                    if (e.Args[0].Length == 0) return;
                     foreach (User u in e.Message.MentionedUsers)
                         await e.Channel.SendMessage(u.Mention + (u.AvatarUrl == null ? " has no avatar." : $"'s avatar is: {u.AvatarUrl}"));
                 });

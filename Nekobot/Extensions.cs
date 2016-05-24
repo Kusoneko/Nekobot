@@ -1,22 +1,27 @@
 ﻿using Discord;
 using Nekobot.Commands;
+#if CompileUnused
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+#endif
 using System.Threading.Tasks;
 
 namespace Nekobot
 {
     public static class Extensions
     {
+#if CompileUnused
         public static Task Reply(this DiscordClient client, CommandEventArgs e, string text)
             => Reply(client, e.User, e.Channel, text);
+#endif
         public async static Task Reply(this DiscordClient client, User user, Channel channel, string text)
         {
             if (text != null)
                 await channel.SendMessage((!channel.IsPrivate ? $"{user.Name}: " : "") + text);
         }
+#if CompileUnused
         public static Task Reply<T>(this DiscordClient client, CommandEventArgs e, string prefix, T obj)
             => Reply(client, e.User, e.Channel, prefix, obj != null ? JsonConvert.SerializeObject(obj, Formatting.Indented) : "null");
         public static Task Reply<T>(this DiscordClient client, User user, Channel channel, string prefix, T obj)
@@ -25,17 +30,21 @@ namespace Nekobot
             => Reply(client, e.User, e.Channel, (prefix != null ? $"{Format.Bold(prefix)}:\n" : "\n") + text);
         public static Task Reply(this DiscordClient client, User user, Channel channel, string prefix, string text)
             => Reply(client, user, channel, (prefix != null ? $"{Format.Bold(prefix)}:\n" : "\n") + text);
+#endif
 
         public static Task ReplyError(this DiscordClient client, CommandEventArgs e, string text)
             => Reply(client, e.User, e.Channel, "Error: " + text);
+#if CompileUnused
         public static Task ReplyError(this DiscordClient client, User user, Channel channel, string text)
             => Reply(client, user, channel, "Error: " + text);
         public static Task ReplyError(this DiscordClient client, CommandEventArgs e, Exception ex)
             => Reply(client, e.User, e.Channel, "Error: " + ex.GetBaseException().Message);
         public static Task ReplyError(this DiscordClient client, User user, Channel channel, Exception ex)
             => Reply(client, user, channel, "Error: " + ex.GetBaseException().Message);
+#endif
     }
 
+#if CompileUnused
     internal static class InternalExtensions
     {
         public static Task<User[]> FindUsers(this DiscordClient client, CommandEventArgs e, string username, string discriminator)
@@ -45,7 +54,7 @@ namespace Nekobot
         public static async Task<User[]> FindUsers(this DiscordClient client, CommandEventArgs e, string username, string discriminator, bool singleTarget)
         {
             IEnumerable<User> users;
-            if (discriminator == "")
+            if (discriminator.Length == 0)
                 users = e.Server.FindUsers(username);
             else
             {
@@ -111,4 +120,5 @@ namespace Nekobot
             return channels.FirstOrDefault();
         }
     }
+#endif
 }
