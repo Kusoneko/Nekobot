@@ -84,6 +84,11 @@ namespace Nekobot
         internal static JObject GetJsonFileIfExists(string file)
             => System.IO.File.Exists(file) ? JObject.Parse(System.IO.File.ReadAllText(file)) : null;
 
+        internal static bool FieldExists(JToken map, string property)
+            => map.ToObject<JObject>().Property(property) != null;
+        internal static bool FieldExists(string map, string property)
+            => FieldExists(Program.config[map], property);
+
         internal static TimeSpan Uptime() => DateTime.Now - System.Diagnostics.Process.GetCurrentProcess().StartTime;
 
         internal static Func<Message, DateTime> MsgTime => msg => msg.Timestamp;

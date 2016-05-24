@@ -234,7 +234,7 @@ namespace Nekobot
             CreateBooruCommand(group, "konachan", "kona");
             CreateBooruCommand(group, "yandere");
             CreateBooruCommand(group, "lolibooru", "loli");
-            if (Program.config["Booru"].ToObject<JObject>().Property("sankaku") != null)
+            if (Helpers.FieldExists("Booru", "sankaku"))
                 CreateBooruCommand(group, "sankaku", new[]{"sankakuchan", "schan"});
             //CreateBooruCommand(group, "sankakuidol", "sidol"); // Idol disables their API for some reason.
             CreateBooruCommand(group, "e621", "furry");
