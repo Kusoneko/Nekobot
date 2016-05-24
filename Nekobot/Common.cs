@@ -100,24 +100,65 @@ namespace Nekobot
 
             Image.AddCommands(group);
 
+            Action<Commands.CommandEventArgs, Func<string, string>> lookup_cmd = (e, f) =>
+            {
+                var args = e.Args[0];
+                e.Channel.SendMessage(args.Length == 0 ? "I cannot lookup nothing, silly!" : f(args));
+            };
+
             group.CreateCommand("urban")
                 .Alias("urbandictionary")
                 .Alias("ud")
                 .Parameter("phrase", Commands.ParameterType.Unparsed)
-                .Description("I'll give you the urban dictionary de")
-                .Do(e =>
+                .Description("I'll give you the urban dictionary definition of a phrase.")
+                .Do(e => lookup_cmd(e, args =>
                 {
-                    var args = e.Args[0];
-                    string msg = args == string.Empty ? "I cannot lookup nothing, silly!" : null;
-                    if (msg == null)
+                    var req = new RestRequest("define", Method.GET);
+                    req.AddQueryParameter("term", args);
+                    var resp = JObject.Parse(Helpers.GetRestClient("http://api.urbandictionary.com/v0").Execute(req).Content)["list"][0];
+                    return $"{resp["word"]}: {resp["definition"]}\n⬆{resp["thumbs_up"]} ⬇{resp["thumbs_down"]} <{resp["permalink"]}>```{resp["example"]}```";
+                }));
+
+            if (Helpers.FieldExists("WolframAlpha", "appid"))
+            {
+                group.CreateCommand("wolfram")
+                    .Parameter("input", Commands.ParameterType.Unparsed)
+                    .Description("I'll look something up for you on ")
+                    .Do(e => lookup_cmd(e, args =>
                     {
-                        var req = new RestRequest("define", Method.GET);
-                        req.AddQueryParameter("term", args);
-                        var resp = JObject.Parse(Helpers.GetRestClient("http://api.urbandictionary.com/v0").Execute(req).Content)["list"][0];
-                        msg = $"{resp["word"]}: {resp["definition"]}\n⬆{resp["thumbs_up"]} ⬇{resp["thumbs_down"]} <{resp["permalink"]}>```{resp["example"]}```";
-                    }
-                    e.Channel.SendMessage(msg);
-                });
+                        var rc = Helpers.GetRestClient("http://api.wolframalpha.com/v2/"); // TODO: Do we want this static?
+                        rc.AddDefaultParameter("appid", Program.config["WolframAlpha"]["appid"]);
+                        var req = new RestRequest("query", Method.GET);
+                        req.AddQueryParameter("input", args);
+                        string ret = "";
+                        var json = Helpers.XmlToJson(rc.Execute(req).Content)["queryresult"];
+                        if (!json["@success"].ToObject<bool>())
+                        {
+                            const string didyoumeans = "didyoumeans";
+                            if (Helpers.FieldExists(json, didyoumeans))
+                            {
+                                ret += "Perhaps you meant";
+                                json = json[didyoumeans];
+                                int count = json["@count"].ToObject<int>();
+                                Func<JToken, string> format_suggestion = suggestion => $" `{suggestion["#text"]}`";
+                                json = json["didyoumean"];
+                                if (count == 1)
+                                    ret += format_suggestion(json);
+                                else for (int i = 0; i < count; ++i)
+                                    ret += (i == 0 ? "" : i == count-1 ? ", or " : ",")+format_suggestion(json[i]);
+                                ret += '?';
+                            }
+                            else ret = "Sorry, I couldn't find anything for your input.";
+                        }
+                        else
+                        {
+                            json = json["pod"];
+                            for (int i = 0; i != 4 && i < json.Count(); ++i) // Show the first four results
+                                ret += $"{json[i]["subpod"]["img"]["@src"]}\n";
+                        }
+                        return ret;
+                    }));
+            }
 
             group.CreateCommand("quote")
                 .Description("I'll give you a random quote from https://inspiration.julxzs.website/quotes")

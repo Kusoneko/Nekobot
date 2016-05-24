@@ -10,6 +10,7 @@ You'll need to make a config.json file in the same place as the executable using
     "SoundCloud" : {},
     "LastFM" : {},
     "CleverBot" : {},
+    "WolframAlpha" : {},
     "Booru" : {},
     "master" : 63296013791666176,
     "server" : "https://discord.gg/0Lv5NLFEoz3P07Aq",
@@ -41,6 +42,8 @@ The SoundCloud line holds credentials for SoundCloud, enabling the soundcloud co
 The LastFM line holds credentials for LastFM. [Create an API account](http://www.last.fm/api/account/create). You'll need to add in `"apikey" : "Your API key", "apisecret" : "Your Shared secret"`.
 
 The CleverBot line holds credentials for CleverBot.io. [Create an API account](https://cleverbot.io/keys). You'll need to add in `"user" : "Your API User", "key" : "Your API Key"`.
+
+The WolframAlpha line holds credentials for Wolfram Alpha [Sign up for an API account](http://developer.wolframalpha.com/portal/apisignup.html), [Get an AppId](https://developer.wolframalpha.com/portal/myapps/index.html), and add in `"appid" : "Your APPID"` to be get access to the `wolfram` command.
 
 The Booru map holds submaps of information(credentials and default tags) for the boorus we connect to, this allows you to increase operability depending on the booru.
 + If you specify a `"default_tags" : []`, you'll be able to require or blacklist certain tags in booru queries.
