@@ -236,10 +236,34 @@ namespace Nekobot
             CreateBooruCommand(group, "e621", "furry");
 
             group.CreateCommand("meme")
-                .Parameter("Meme type (see memegen.link)")
+                .Parameter("Meme type (see memelist)")
                 .Parameter("Top/Bottom", Commands.ParameterType.Multiple)
                 .Description("http://memegen.link/xy/MakeAllTheMemes.jpg")
                 .Do(e => e.Channel.SendMessage($"http://memegen.link/{e.Args[0]}{(e.Args.Length == 1 ? "" : $"/{string.Join("-", e.Args, 1, e.Args.Length - 1).ToLower()}")}.jpg"));
+
+            group.CreateCommand("meme templates")
+                .Alias("memelist")
+                .Description("See what memes are on the menu. (I'll tell you in PM)")
+                .Do(async e =>
+                {
+                    var json = JObject.Parse(Helpers.GetRestClient("http://memegen.link").Execute(new RestRequest("templates")).Content);
+                    var outputs = new List<string>();
+                    var i = -1;
+                    foreach (var pair in json)
+                    {
+                        var s = pair.Value.ToString();
+                        s = $"{pair.Key}: `{s.Substring(s.LastIndexOf('/') + 1)}`\n";
+                        if (outputs.Count == 0 || s.Length + outputs[i].Length > 2000)
+                        {
+                            outputs.Add(s);
+                            ++i;
+                        }
+                        else outputs[i] += s;
+                    }
+                    var chan = await e.User.CreatePMChannel();
+                    foreach (var output in outputs)
+                        await chan.SendMessage(output);
+                });
         }
     }
 }
