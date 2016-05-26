@@ -239,7 +239,7 @@ namespace Nekobot
                 .Parameter("Meme type (see memelist)")
                 .Parameter("Top][/Bottom", Commands.ParameterType.MultipleUnparsed)
                 .Description("http://memegen.link/xy/MakeAllTheMemes.jpg")
-                .Do(e => e.Channel.SendMessage($"http://memegen.link/{e.Args[0]}{(e.Args.Length == 1 ? "" : $"/{string.Join("-", e.Args, 1, e.Args.Length - 1).ToLower()}")}.jpg"));
+                .Do(e => e.Channel.SendMessage($"http://memegen.link/{e.Args[0]}{(e.Args.Length == 1 ? "" : $"/{Uri.EscapeDataString(string.Join("-", e.Args, 1, e.Args.Length - 1))}")}.jpg"));
 
             group.CreateCommand("meme templates")
                 .Alias("memelist")
