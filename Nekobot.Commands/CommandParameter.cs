@@ -6,8 +6,10 @@
         Required,
         /// <summary> Catches a single optional parameter. </summary>
         Optional,
-        /// <summary> Catches a zero or more optional parameters. </summary>
+        /// <summary> Catches zero or more optional parameters. </summary>
         Multiple,
+        /// <summary> Catches zero or more optional parameters, without bothering parsing quoted stuff. </summary>
+        MultipleUnparsed,
         /// <summary> Catches all remaining text as a single optional parameter. </summary>
         Unparsed
     }

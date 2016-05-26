@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 
 namespace Nekobot.Commands
 {
@@ -56,7 +57,8 @@ namespace Nekobot.Commands
             commands = map.GetCommands(); //Work our way backwards to find a command that matches our input
             return commands != null;
         }
-        private static bool IsWhiteSpace(char c) => c == ' ' || c == '\n' || c == '\r' || c == '\t';
+        private static readonly char[] _whitespace = {' ', '\n', '\r', '\t'};
+        private static bool IsWhiteSpace(char c) => _whitespace.Contains(c);
 
         //TODO: Check support for escaping
         public static CommandErrorType? ParseArgs(string input, int startPos, Command command, out string[] args)
@@ -73,12 +75,12 @@ namespace Nekobot.Commands
 
             args = null;
 
-            if (input == "")
+            if (input.Length == 0)
                 return CommandErrorType.InvalidInput;
 
             while (endPosition < inputLength)
             {
-                if (startPosition == endPosition && (parameter == null || parameter.Type != ParameterType.Multiple)) //Is first char of a new arg
+                if (startPosition == endPosition && (parameter == null || (parameter.Type != ParameterType.Multiple || parameter.Type != ParameterType.MultipleUnparsed))) //Is first char of a new arg
                 {
                     if (argList.Count >= expectedArgs.Length)
                         return CommandErrorType.BadArgCount; //Too many args
@@ -88,6 +90,11 @@ namespace Nekobot.Commands
                         argList.Add(input.Substring(startPosition));
                         break;
                     }
+                }
+                if (parameter?.Type == ParameterType.MultipleUnparsed)
+                {
+                    argList.AddRange(input.Substring(startPosition).Split(_whitespace));
+                    break;
                 }
 
                 char currentChar = input[endPosition++];
