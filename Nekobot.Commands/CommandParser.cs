@@ -80,7 +80,7 @@ namespace Nekobot.Commands
 
             while (endPosition < inputLength)
             {
-                if (startPosition == endPosition && (parameter == null || (parameter.Type != ParameterType.Multiple || parameter.Type != ParameterType.MultipleUnparsed))) //Is first char of a new arg
+                if (startPosition == endPosition && (parameter == null || (parameter.Type != ParameterType.Multiple && parameter.Type != ParameterType.MultipleUnparsed))) //Is first char of a new arg
                 {
                     if (argList.Count >= expectedArgs.Length)
                         return CommandErrorType.BadArgCount; //Too many args
