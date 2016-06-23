@@ -109,7 +109,7 @@ namespace Nekobot
         internal static void AddDelayedCommands(Commands.CommandGroupBuilder group)
         {
             var creds = Program.config["CleverBot"];
-            if (Helpers.FieldExists(creds, "user")) // no credentials
+            if (!Helpers.FieldExists(creds, "user")) // no credentials
               return;
 
             // Create the handler
