@@ -346,12 +346,13 @@ namespace Nekobot
 
                     await Helpers.DoToMessages(e.Channel, few, (msgs, has_cmd_msg) =>
                     {
-                        foreach (var msg in msgs)
-                        {
-                            Task t = msg.Delete();
-                            if ((!has_cmd_msg || e.Message.Id != msg.Id) && --few == 0) break;
-                        }
-                        return msgs.Count() - (has_cmd_msg ? 1 : 0);
+                        int bonus = has_cmd_msg ? 1 : 0;
+                        if (few < msgs.Count()) // Cut to size
+                            msgs = msgs.Take(few + bonus);
+                        int removed = msgs.Count() - bonus;
+                        few -= removed;
+                        Task.Run(() => e.Channel.DeleteMessages(msgs.ToArray()));
+                        return removed;
                     });
                 });
 
