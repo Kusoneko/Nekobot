@@ -152,9 +152,20 @@ namespace Nekobot
                         }
                         else
                         {
+                            int show = 4; // Show the first four results
                             json = json["pod"];
-                            for (int i = 0; i != 4 && i < json.Count(); ++i) // Show the first four results
-                                ret += $"{json[i]["subpod"]["img"]["@src"]}\n";
+                            for (int i = 0, count = json.Count(); show != 0 && i < count; ++i)
+                            {
+                                var pod = json[i];
+                                int numsubpods = pod["@numsubpods"].ToObject<int>();
+                                if (numsubpods == 1)
+                                {
+                                    ret += $"{pod["subpod"]["img"]["@src"]}\n";
+                                    --show;
+                                }
+                                else for (int j =0; show != 0 && j < numsubpods; ++j, --show)
+                                    ret += $"{pod["subpod"][j]["img"]["@src"]}\n";
+                            }
                         }
                         return ret;
                     }));
