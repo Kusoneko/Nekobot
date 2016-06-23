@@ -9,12 +9,12 @@
     "Ninject": "3.2.2",
     "NVorbis": "0.8.4.0",
     "RestSharp": "105.2.3",
-    "System.Data.SQLite": "1.0.101",
-    "System.Data.SQLite.Core": "1.0.101",
-    "System.Data.SQLite.EF6": "1.0.101",
-    "System.Data.SQLite.Linq": "1.0.101",
+    "System.Data.SQLite": "1.0.102",
+    "System.Data.SQLite.Core": "1.0.102",
+    "System.Data.SQLite.EF6": "1.0.102",
+    "System.Data.SQLite.Linq": "1.0.102",
     "taglib": "2.1.0.0",
-    "VideoLibrary": "1.3.3"
+    "VideoLibrary": "1.3.4"
   },
   "frameworks": {
     "net46": {}

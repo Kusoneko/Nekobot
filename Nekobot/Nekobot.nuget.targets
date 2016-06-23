@@ -4,6 +4,6 @@
     <NuGetPackageRoot>$(UserProfile)\.nuget\packages\</NuGetPackageRoot>
   </PropertyGroup>
   <ImportGroup>
-    <Import Project="$(NuGetPackageRoot)\System.Data.SQLite.Core\1.0.101\build\net46\System.Data.SQLite.Core.targets" Condition="Exists('$(NuGetPackageRoot)\System.Data.SQLite.Core\1.0.101\build\net46\System.Data.SQLite.Core.targets')" />
+    <Import Project="$(NuGetPackageRoot)\System.Data.SQLite.Core\1.0.102\build\net46\System.Data.SQLite.Core.targets" Condition="Exists('$(NuGetPackageRoot)\System.Data.SQLite.Core\1.0.102\build\net46\System.Data.SQLite.Core.targets')" />
   </ImportGroup>
 </Project>
