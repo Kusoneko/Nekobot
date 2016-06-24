@@ -806,12 +806,17 @@ namespace Nekobot
             var gestures = Program.config["gestures"].ToString();
             if (gestures != "")
             {
+                Action<Commands.CommandEventArgs, string> queue_gesture = (e, gesture) =>
+                {
+                    streams.Get(e.User.VoiceChannel).QueueGesture(gesture);
+                    e.Message.Delete();
+                };
                 foreach (var gesture in Files(gestures))
                 {
                     var file = Path.GetFileNameWithoutExtension(gesture);
                     group.CreateCommand(file)
                         .FlagMusic(true)
-                        .Do(e => streams.Get(e.User.VoiceChannel).QueueGesture(gesture));
+                        .Do(e => queue_gesture(e, gesture));
                 }
                 var json = Helpers.GetJsonFileIfExists($"{gestures}/gestures.json");
                 if (json != null)
@@ -822,8 +827,8 @@ namespace Nekobot
                         Helpers.CreateJsonCommand(group, cmd_data.Key, val, cmd =>
                         {
                             var uris = val["uris"].ToObject<string[]>();
-                            if (uris.Length == 1) cmd.Do(e => streams.Get(e.User.VoiceChannel).QueueGesture(GetRealURI(uris[0])));
-                            else cmd.Do(e => streams.Get(e.User.VoiceChannel).QueueGesture(GetRealURI(Helpers.Pick(uris))));
+                            if (uris.Length == 1) cmd.Do(e => queue_gesture(e, GetRealURI(uris[0])));
+                            else cmd.Do(e => queue_gesture(e, GetRealURI(Helpers.Pick(uris))));
                         });
                     }
                 }
