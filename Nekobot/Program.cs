@@ -218,8 +218,10 @@ namespace Nekobot
                             string joined = date.ToString("yyyy-MM-dd");
                             int followers = Convert.ToInt32(result["results"]["followers_count"]);
                             int following = Convert.ToInt32(result["results"]["following_count"]);
+                            string admin = Convert.ToBoolean(result["results"]["is_superuser"]) ? "Yes" : "No";
                             e.Channel.SendMessage($@"
 **User**: {username}
+**Player.me Staff**: {admin}
 **Avatar**: {avatar}
 **Bio**: {bio}
 **Joined on**: {joined}
