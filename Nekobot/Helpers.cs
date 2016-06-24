@@ -96,7 +96,7 @@ namespace Nekobot
 
         internal static Func<Message, DateTime> MsgTime => msg => msg.Timestamp;
 
-        internal static async Task DoToMessages(Channel c, int few, Func<IOrderedEnumerable<Message>, bool, int> perform)
+        internal static async Task DoToMessages(Channel c, int few, Func<IEnumerable<Message>, bool, int> perform)
         {
             var msgs = c.Messages.OrderByDescending(MsgTime);
             var donecount = perform(msgs, true); // Let them know this contains this message.
