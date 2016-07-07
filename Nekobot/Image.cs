@@ -38,7 +38,7 @@ namespace Nekobot
             {
                 Board board =
                 booru == "safebooru" ? A("http://safebooru.org") :
-                //booru == "gelbooru" ? A("http://gelbooru.com") :
+                booru == "gelbooru" ? A("http://gelbooru.com") :
                 booru == "rule34" ? A("http://rule34.xxx", true) :
                 booru == "konachan" ? B("http://konachan.com") :
                 booru == "yandere" ? B("https://yande.re") :
@@ -225,7 +225,7 @@ namespace Nekobot
                 });
 
             CreateBooruCommand(group, "safebooru");
-            //CreateBooruCommand(group, "gelbooru"); // Disabled without auth, which can't be done through api.
+            CreateBooruCommand(group, "gelbooru"); // Disabled without auth, which can't be done through api. (Resurrected cause API no longer requires login for now.)
             CreateBooruCommand(group, "rule34");
             CreateBooruCommand(group, "konachan", "kona");
             CreateBooruCommand(group, "yandere");
