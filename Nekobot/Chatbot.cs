@@ -134,7 +134,7 @@ namespace Nekobot
                                 if (botstatus)
                                     handler.RemoveBot(e.Channel.Id);
                                 else
-                                    handler.CreateBot(e.Server.CurrentUser.Id.ToString(), e.Channel.Id.ToString());
+                                    handler.CreateBot(group.Service.Client.CurrentUser.Id.ToString(), e.Channel.Id.ToString());
                                 e.Channel.SendMessage("The bot is now " + (!botstatus ? "on" : "off") + $" for {e.Channel}");
                                 SQL.AddOrUpdateFlag(e.Channel.Id, "chatbot", botstatus ? "-1" : "0");
                             }
