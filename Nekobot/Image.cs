@@ -178,7 +178,7 @@ namespace Nekobot
                 {
                     var cmd_data = Helpers.GetJsonFileIfExists($"{subdir}/command.json");
                     Helpers.CreateJsonCommand(group,
-                        cmd_data != null ? cmd_data["command"].ToString() : subdir.Substring(subdir.LastIndexOf('\\') + 1),
+                        cmd_data != null ? cmd_data["command"].ToString() : Helpers.FileWithoutPath(subdir),
                         cmd_data, cmd => {
                             if (cmd_data != null)
                             {

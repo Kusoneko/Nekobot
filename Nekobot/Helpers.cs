@@ -74,6 +74,8 @@ namespace Nekobot
                 perform(e.Server.FindRoles(str), str);
         }
 
+        internal static string FileWithoutPath(string fullpath) => fullpath.Substring(fullpath.LastIndexOf('\\') + 1);
+
         internal static void CreateJsonCommand(CommandGroupBuilder group, string name, JToken val, Action<CommandBuilder> cmd_specific)
         {
             var cmd = group.CreateCommand(name);
