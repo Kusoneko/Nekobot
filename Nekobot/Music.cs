@@ -524,8 +524,10 @@ namespace Nekobot
         static Dictionary<ulong, string> EntranceGestures = new Dictionary<ulong, string>();
 
         static bool HasFolder() => Folder.Length != 0;
-        static IEnumerable<string> Files(string folder) => Directory.EnumerateFiles(folder, "*.*", UseSubdirs ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly).Where(s => new []{ ".wma", ".aac", ".mp3", ".m4a", ".wav", ".flac", ".ogg" }.Contains(Path.GetExtension(s)));
-        //static IEnumerable<string> PlaylistFiles(string folder) => Directory.EnumerateFiles(folder, "*.*", UseSubdirs ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly).Where(s => new[]{".pls"}.Contains(Path.GetExtension(s)));
+        internal static SearchOption SubdirOption => UseSubdirs ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
+        static IEnumerable<string> Files(string folder) => Directory.EnumerateFiles(folder, "*.*", SubdirOption).Where(s => new []{ ".wma", ".aac", ".mp3", ".m4a", ".wav", ".flac", ".ogg" }.Contains(Path.GetExtension(s)));
+        static IEnumerable<string> Files(IEnumerable<string> folders) => folders.SelectMany(folder => Files(folder));
+        //static IEnumerable<string> PlaylistFiles(string folder) => Directory.EnumerateFiles(folder, "*.*", SubdirOption).Where(s => new[]{".pls"}.Contains(Path.GetExtension(s)));
 
         static Commands.CommandBuilder CreatePLCmd(Commands.CommandGroupBuilder group, string name, string description, string[] aliases = null)
         {
@@ -700,9 +702,14 @@ namespace Nekobot
 
         static class Local
         {
-            public static void CreateCommand(Commands.CommandGroupBuilder group, string name, bool all/*, bool is_playlist*/)
+            public enum Type : byte
             {
-                CreatePLCmd(group, name, $"{(/*is_playlist ? "playlist" :*/ "song")}{(all ? "s" : "")} to find", $"I'll try to add {(all ? "all songs matching " : "")}your request to the playlist!")
+                Single, All, Dir
+            }
+            public static void CreateCommand(Commands.CommandGroupBuilder group, string name, Type type/*, bool is_playlist*/)
+            {
+                bool bydir = type == Type.Dir;
+                CreatePLCmd(group, name, $"{(bydir ? "folder" : /*is_playlist ? "playlist" :*/ "song")}{(type >= Type.All ? "s" : "")} to find", $"I'll try to add {(type >= Type.All ? $"all songs {(bydir ? "in folders " : "")}matching " : "")}your request to the playlist!")
                     .Do(e =>
                     {
                         var args = string.Join(" ", e.Args);
@@ -712,7 +719,8 @@ namespace Nekobot
                             return;
                         }
                         args = args.ToLower();
-                        Func<string, bool> search = f => Path.GetFileNameWithoutExtension(f).ToLower().Contains(args);
+                        var search = bydir ? (Func<string, bool>)(f => Helpers.FileWithoutPath(f).ToLower().Contains(args))
+                                            : f => Path.GetFileNameWithoutExtension(f).ToLower().Contains(args);
                         long filecount = 0;
                         var pl = playlist[e.User.VoiceChannel.Id];
                         /*var insert_file = is_playlist ? (Action<string>)(file =>
@@ -721,10 +729,19 @@ namespace Nekobot
                             }) :
                             file => pl.InsertFile(file, e);*/
                         Action<string> insert_file = file => pl.InsertFile(file, e);
-                        var songs = /*is_playlist ? PlaylistFiles(Folder) :*/ Files(Folder);
-                        if (all)
+                        var folders = bydir ? Directory.GetDirectories(Folder, "*", SubdirOption).Where(search) : new[]{Folder};
+                        if (bydir)
                         {
-                            var files = songs.Where(search);
+                            if (folders.Count() == 0)
+                            {
+                                e.Channel.SendMessage("Could not find any folders by the specified name.");
+                                return;
+                            }
+                        }
+                        var songs = /*is_playlist ? PlaylistFiles(Folder) :*/ Files(folders);
+                        if (type >= Type.All)
+                        {
+                            var files = bydir ? songs : songs.Where(search);
                             foreach (var file in files)
                                 insert_file(file);
                             filecount = files.Count();
@@ -780,10 +797,12 @@ namespace Nekobot
 
             if (HasFolder())
             {
-                Local.CreateCommand(group, "request", false/*, false*/);
-                Local.CreateCommand(group, "requestall", true/*, false*/);
-                //Local.CreateCommand(group, "requestpl", false, true);
-                //Local.CreateCommand(group, "requestplall", true, true);
+                Local.CreateCommand(group, "request", Local.Type.Single/*, false*/);
+                Local.CreateCommand(group, "requestall", Local.Type.All/*, false*/);
+                Local.CreateCommand(group, "requestdir", Local.Type.Dir/*, false*/);
+                //Local.CreateCommand(group, "requestpl", Local.Type.Single, true);
+                //Local.CreateCommand(group, "requestplall", Local.Type.All, true);
+                //Local.CreateCommand(group, "requestpldir", Local.Type.Dir/*, false*/);
             }
 
             group.CreateCommand("skip")
