@@ -19,7 +19,7 @@ namespace Nekobot
             internal Song(string uri, EType type = EType.Playlist, User requester = null, string ext = null) { Uri = uri; Type = type; Requester = requester?.Mention; Ext = ext; }
             Song Clone(EType type) => new Song(Uri, type, ext: Ext);
             internal Song Encore() => Clone(IsOnline ? Type : EType.Encore);
-            internal Song Repeat() => Clone(IsOnline ? EType.RepeatOnline : EType.Repeat);
+            internal Song Repeat() => Type == EType.Encore ? null : Clone(IsOnline ? EType.RepeatOnline : EType.Repeat);
 
             internal string Title()
             {
@@ -83,7 +83,11 @@ namespace Nekobot
                     if (Any)
                     {
                         // If skip, they want us to remove the current song from the repeat queue.
-                        if (!skip && repeat) Add(this[0].Repeat());
+                        if (!skip && repeat)
+                        {
+                            var repeat = this[0].Repeat();
+                            if (repeat != null) Add(repeat);
+                        }
                         RemoveAt(0);
                     }
                     skip = false;
