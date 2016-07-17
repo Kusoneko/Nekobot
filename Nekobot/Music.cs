@@ -843,18 +843,13 @@ namespace Nekobot
                 }
                 var json = Helpers.GetJsonFileIfExists($"{gestures}/gestures.json");
                 if (json != null)
-                {
                     foreach (var cmd_data in json)
-                    {
-                        var val = cmd_data.Value;
-                        Helpers.CreateJsonCommand(group, cmd_data.Key, val, cmd =>
+                        Helpers.CreateJsonCommand(group, cmd_data, (cmd,val) =>
                         {
                             var uris = val["uris"].ToObject<string[]>();
                             if (uris.Length == 1) cmd.Do(e => queue_gesture(e, GetRealURI(uris[0])));
                             else cmd.Do(e => queue_gesture(e, GetRealURI(Helpers.Pick(uris))));
                         });
-                    }
-                }
             }
 
             // Moderator commands

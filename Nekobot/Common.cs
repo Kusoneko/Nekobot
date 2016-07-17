@@ -23,8 +23,7 @@ namespace Nekobot
             if (json == null) return;
             foreach (var cmdjson in json)
             {
-                var val = cmdjson.Value;
-                Helpers.CreateJsonCommand(group, cmdjson.Key, val, cmd =>
+                Helpers.CreateJsonCommand(group, cmdjson, (cmd,val) =>
                 {
                     cmd.FlagNsfw(val["nsfw"].ToObject<bool>());
                     var responses = val["responses"].ToObject<string[]>();

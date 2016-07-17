@@ -76,12 +76,13 @@ namespace Nekobot
 
         internal static string FileWithoutPath(string fullpath) => fullpath.Substring(fullpath.LastIndexOf('\\') + 1);
 
-        internal static void CreateJsonCommand(CommandGroupBuilder group, string name, JToken val, Action<CommandBuilder> cmd_specific)
+        internal static void CreateJsonCommand(CommandGroupBuilder group, KeyValuePair<string, JToken> cmdjson, Action<CommandBuilder, JToken> cmd_specific)
         {
-            var cmd = group.CreateCommand(name);
-            foreach (var alias in val["aliases"]) cmd.Alias(alias.ToString());
-            cmd.Description(val["description"].ToString());
-            cmd_specific(cmd);
+            var cmd = group.CreateCommand(cmdjson.Key);
+            var val = cmdjson.Value;
+            if (FieldExists(val, "aliases")) foreach (var alias in val["aliases"]) cmd.Alias(alias.ToString());
+            if (FieldExists(val, "description")) cmd.Description(val["description"].ToString());
+            cmd_specific(cmd, val);
         }
         internal static JObject GetJsonFileIfExists(string file)
             => System.IO.File.Exists(file) ? JObject.Parse(System.IO.File.ReadAllText(file)) : null;

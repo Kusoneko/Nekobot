@@ -176,20 +176,15 @@ namespace Nekobot
                 string[] imgexts = { ".jpg", ".jpeg", ".png", ".gif", ".bmp" };
                 foreach (var subdir in System.IO.Directory.EnumerateDirectories(imagedir))
                 {
-                    var cmd_data = Helpers.GetJsonFileIfExists($"{subdir}/command.json");
-                    Helpers.CreateJsonCommand(group,
-                        cmd_data != null ? cmd_data["command"].ToString() : Helpers.FileWithoutPath(subdir),
-                        cmd_data, cmd => {
-                            if (cmd_data != null)
-                            {
-                                cmd.FlagNsfw(cmd_data["nsfw"].ToObject<bool>());
-                            }
-                            cmd.Do(async e =>
-                            {
-                                var files = from file in System.IO.Directory.EnumerateFiles($@"{subdir}", "*.*").Where(s => imgexts.Contains(System.IO.Path.GetExtension(s.ToLower()))) select new { File = file };
-                                await e.Channel.SendFile(files.ElementAt(new Random().Next(0, files.Count())).File);
-                            });
-                        });
+                    var data = Helpers.GetJsonFileIfExists($"{subdir}/command.json");
+                    Func<Commands.CommandEventArgs, Task> cmd_body = async e =>
+                    {
+                        var files = from file in System.IO.Directory.EnumerateFiles($@"{subdir}", "*.*").Where(s => imgexts.Contains(System.IO.Path.GetExtension(s.ToLower()))) select new { File = file };
+                        await e.Channel.SendFile(files.ElementAt(new Random().Next(0, files.Count())).File);
+                    };
+                    if (data == null) group.CreateCommand(Helpers.FileWithoutPath(subdir)).Do(cmd_body);
+                    else Helpers.CreateJsonCommand(group, data.ToObject<Dictionary<string, JToken>>().First(), (cmd,cmd_data) =>
+                        cmd.FlagNsfw(cmd_data["nsfw"].ToObject<bool>()).Do(cmd_body));
                 }
             }
 
