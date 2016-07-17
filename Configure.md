@@ -92,10 +92,11 @@ These are commands you can add yourself, all of them that are configured via jso
   {
     "aliases" : [],
     "description" : "Some words to describe"
+    "permissions" : 0
   }
 }
 ```
-The `"aliases"` and `"description"` lines are optional.
+All default lines inside the command map are optional, all that's needed from here is the command name, obviously. Use permissions to limit a command to people you've authorized(`setauth`).
 
 ### Gestures Folder
 Set this to a folder in which you will place for sound clips for commands you wish to played by commands of their name on voice.

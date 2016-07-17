@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using RestSharp;
 using Nekobot.Commands;
+using Nekobot.Commands.Permissions.Levels;
 using Newtonsoft.Json.Linq;
 
 namespace Nekobot
@@ -82,6 +83,7 @@ namespace Nekobot
             var val = cmdjson.Value;
             if (FieldExists(val, "aliases")) foreach (var alias in val["aliases"]) cmd.Alias(alias.ToString());
             if (FieldExists(val, "description")) cmd.Description(val["description"].ToString());
+            if (FieldExists(val, "permissions")) cmd.MinPermissions(val["permissions"].ToObject<int>());
             cmd_specific(cmd, val);
         }
         internal static JObject GetJsonFileIfExists(string file)
