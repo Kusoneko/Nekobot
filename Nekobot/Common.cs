@@ -178,6 +178,8 @@ namespace Nekobot
                     await e.Channel.SendMessage($"\"{result["quote"]}\" - {result["author"]} {result["date"]}");
                 });
 
+            Google.AddCommands(group);
+
             group.CreateCommand("8ball")
                 .Parameter("question", Commands.ParameterType.Optional)
                 .Parameter("?", Commands.ParameterType.Multiple)

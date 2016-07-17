@@ -71,6 +71,7 @@
     <Compile Include="Common.cs" />
     <Compile Include="Extensions.cs" />
     <Compile Include="Flags.cs" />
+    <Compile Include="Google.cs" />
     <Compile Include="Helpers.cs" />
     <Compile Include="Image.cs" />
     <Compile Include="Log.cs" />

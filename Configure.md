@@ -11,6 +11,7 @@ You'll need to make a config.json file in the same place as the executable using
     "LastFM" : {},
     "CleverBot" : {},
     "WolframAlpha" : {},
+    "GoogleCalendar" : {},
     "Booru" : {},
     "master" : 63296013791666176,
     "server" : "https://discord.gg/0Lv5NLFEoz3P07Aq",
@@ -27,7 +28,7 @@ You'll need to make a config.json file in the same place as the executable using
     "images" : ""
 }
 ```
-Quick links to descriptions: [Credentials](#credentials) | [master](#master) | [server](#server) | [prefix, prefixprivate, prefix and mentioncommand](#prefix) | [helpmode](#helpmode) | [loglevel](#log-level) | [game](#game) | [musicFolder, and musicUseSubfolders](#music-folder) | [gestures](#gesture-folder) | [images](#image-folder)
+Quick links to descriptions: [Credentials](#credentials) | [master](#master) | [server](#server) | [prefix, prefixprivate, prefix and mentioncommand](#prefix) | [helpmode](#helpmode) | [loglevel](#log-level) | [game](#game) | [musicFolder, and musicUseSubfolders](#music-folder) | [gestures](#gesture-folder) | [images](#image-folder) | [Calendar](#google-calendar)
 
 [Further Setup Instructions](#other-setup)
 
@@ -120,6 +121,19 @@ Include the file command.json (as shown below) in each subfolder to configure it
   }
 }
 ```
+
+### Google Calendar
+[Set up an application to use with the Google Calendar API](https://console.developers.google.com/start/api?id=calendar). Once you've done that, download the json file and put it in the folder with config.json, rename it `calendar_client_secret.json`.
+For every calendar you want to have a command for, get its calendar id from [here](http://calendar.google.com/) by clicking the dropdown next to its name and selecting settings (it'll be on the Calendar Address line); unless it's your primary calendar, then you can just put primary.
+```javascript
+{
+  "Command name here" :
+  {
+    "calendarId" : "primary"
+  }
+}
+```
+You'll be prompted via a webpage on your browser, on the initial run, to grant permissions to Nekobot.
 
 ### Custom Response Commands
 If you want to have custom commands that say something (or different things, randomly):
