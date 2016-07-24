@@ -387,6 +387,7 @@ namespace Nekobot
                 {"songlist", Music.SongList},
                 {"version", () => Console.WriteLine(Config.UserAgent) },
             };
+            commands["commands"] = () => Console.WriteLine(string.Join(", ", commands.Keys));
             for (;;)
             {
                 string input = Console.ReadLine();
