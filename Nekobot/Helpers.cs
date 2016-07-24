@@ -1,6 +1,7 @@
 ﻿using Discord;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using RestSharp;
@@ -97,11 +98,16 @@ namespace Nekobot
         internal static JObject XmlToJson(string xml)
             => JObject.Parse(Newtonsoft.Json.JsonConvert.SerializeXmlNode(new System.Xml.XmlDocument() { InnerXml = xml }));
 
-        internal static TimeSpan Uptime() => DateTime.Now - System.Diagnostics.Process.GetCurrentProcess().StartTime;
+        internal static TimeSpan Uptime() => DateTime.Now - Process.GetCurrentProcess().StartTime;
 
         internal static void Restart()
         {
-            System.Diagnostics.Process.Start(System.Reflection.Assembly.GetExecutingAssembly().Location);
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = System.Reflection.Assembly.GetExecutingAssembly().Location,
+                WindowStyle = ProcessWindowStyle.Minimized,
+                UseShellExecute = true
+            });
             Environment.Exit(0);
         }
 
