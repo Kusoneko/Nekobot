@@ -181,7 +181,7 @@ namespace Nekobot
             #endregion
 
             #region Insert Wrappers
-            internal void InsertFile(string file, Commands.CommandEventArgs e)
+            internal void InsertFile(string file, Commands.CommandEventArgs e, bool single)
             {
                 lock (this)
                 {
@@ -195,7 +195,7 @@ namespace Nekobot
                             {
                                 if (EncoreVote(e)) InsertEncore();
                             }
-                            else
+                            else if (single)
                                 e.Channel.SendMessage($"{e.User.Mention} Your request is already in the playlist at {cur_i}.");
                             return;
                         }
@@ -732,7 +732,7 @@ namespace Nekobot
                                 for ()
                             }) :
                             file => pl.InsertFile(file, e);*/
-                        Action<string> insert_file = file => pl.InsertFile(file, e);
+                        Action<string> insert_file = file => pl.InsertFile(file, e, type == Type.Single);
                         var folders = bydir ? Directory.GetDirectories(Folder, "*", SubdirOption).Where(search) : new[]{Folder};
                         if (bydir)
                         {
