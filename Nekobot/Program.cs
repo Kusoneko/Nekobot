@@ -382,11 +382,19 @@ namespace Nekobot
 
         static void InputThread()
         {
+            var commands = new System.Collections.Generic.Dictionary<string, Action>
+            {
+                {"songlist", Music.SongList},
+            };
             for (;;)
             {
                 string input = Console.ReadLine();
-                if (input == "songlist")
-                    Music.SongList();
+                if (input.Length != 0)
+                {
+                    Action action;
+                    if (commands.TryGetValue(input.ToLower(), out action))
+                        action();
+                }
                 Thread.Sleep(500);
             }
         }
