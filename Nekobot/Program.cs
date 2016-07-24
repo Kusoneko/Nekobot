@@ -385,6 +385,7 @@ namespace Nekobot
             var commands = new System.Collections.Generic.Dictionary<string, Action>
             {
                 {"songlist", Music.SongList},
+                {"version", () => Console.WriteLine(Config.UserAgent) },
             };
             for (;;)
             {
