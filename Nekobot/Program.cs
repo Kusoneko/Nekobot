@@ -395,9 +395,9 @@ namespace Nekobot
             {
                 {"songlist", Music.SongList},
                 {"restart", Helpers.Restart},
-                {"version", () => Console.WriteLine(Config.UserAgent) },
+                {"version", () => Log.Output(Config.UserAgent, ConsoleColor.Blue) },
             };
-            commands["commands"] = () => Console.WriteLine(string.Join(", ", commands.Keys));
+            commands["commands"] = () => Log.Output(string.Join(", ", commands.Keys), ConsoleColor.Blue);
             for (;;)
             {
                 string input = Console.ReadLine();
