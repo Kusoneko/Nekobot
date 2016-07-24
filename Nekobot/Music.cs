@@ -181,7 +181,7 @@ namespace Nekobot
             #endregion
 
             #region Insert Wrappers
-            internal void InsertFile(string file, Commands.CommandEventArgs e, bool single)
+            internal bool InsertFile(string file, Commands.CommandEventArgs e, bool single)
             {
                 lock (this)
                 {
@@ -197,11 +197,12 @@ namespace Nekobot
                             }
                             else if (single)
                                 e.Channel.SendMessage($"{e.User.Mention} Your request is already in the playlist at {cur_i}.");
-                            return;
+                            return false;
                         }
                         RemoveAt(cur_i);
                     }
                     Insert(i, new Song(file, Song.EType.Request, e.User));
+                    return true;
                 }
             }
 
@@ -732,7 +733,8 @@ namespace Nekobot
                                 for ()
                             }) :
                             file => pl.InsertFile(file, e);*/
-                        Action<string> insert_file = file => pl.InsertFile(file, e, type == Type.Single);
+                        var single = type == Type.Single;
+                        Func<string, bool> insert_file = file => pl.InsertFile(file, e, single);
                         var folders = bydir ? Directory.GetDirectories(Folder, "*", SubdirOption).Where(search) : new[]{Folder};
                         if (bydir)
                         {
@@ -746,21 +748,16 @@ namespace Nekobot
                         if (type >= Type.All)
                         {
                             var files = bydir ? songs : songs.Where(search);
-                            foreach (var file in files)
-                                insert_file(file);
-                            filecount = files.Count();
+                            filecount = files.Count(file => insert_file(file));
                         }
                         else
                         {
                             var file = songs.FirstOrDefault(search);
-                            if (file != null)
-                            {
-                                insert_file(file);
+                            if (file != null && insert_file(file))
                                 filecount = 1;
-                            }
                         }
 
-                        e.Channel.SendMessage($"{e.User.Mention} {(filecount > 1 ? filecount.ToString() : "Your")} request{(filecount != 0 ? $"{(filecount == 1 ? " has" : "s have")} been added to the list" : " was not found")}.");
+                        e.Channel.SendMessage($"{e.User.Mention} {(filecount > 1 ? filecount.ToString() : "Your")} request{(filecount != 0 ? $"{(filecount == 1 ? " has" : "s have")} been added to the list" : " was not found (or was already on the playlist)")}.");
                     });
             }
         }
