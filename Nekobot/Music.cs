@@ -523,7 +523,9 @@ namespace Nekobot
 
         internal static void SongList()
         {
-            foreach (var pl in playlist)
+            if (!playlist.Any())
+                Log.Output("There are currently no streams.", ConsoleColor.Blue);
+            else foreach (var pl in playlist)
                 Log.Output($"Song list for {pl.Key}:\n{pl.Value.SongList(false)}\n", ConsoleColor.Blue);
         }
 
