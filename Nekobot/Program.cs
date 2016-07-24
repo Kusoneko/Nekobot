@@ -239,6 +239,15 @@ namespace Nekobot
                 .Do(e => client.GetInvite(e.Args[0])?.Result.Accept());
 
             // Administrator commands
+            group.CreateCommand("restart")
+                .Description("Restart me (if I'm misbehaving... I deserve it, sir.)")
+                .MinPermissions(2)
+                .Do(e =>
+                {
+                    e.Channel.SendMessage($"Sorry, {e.User.Nickname}, I'll try harder this time!");
+                    Helpers.Restart();
+                });
+
             group.CreateCommand("setpermissions")
                 .Alias("setperms")
                 .Alias("setauth")
@@ -385,6 +394,7 @@ namespace Nekobot
             var commands = new System.Collections.Generic.Dictionary<string, Action>
             {
                 {"songlist", Music.SongList},
+                {"restart", Helpers.Restart},
                 {"version", () => Console.WriteLine(Config.UserAgent) },
             };
             commands["commands"] = () => Console.WriteLine(string.Join(", ", commands.Keys));

@@ -99,6 +99,12 @@ namespace Nekobot
 
         internal static TimeSpan Uptime() => DateTime.Now - System.Diagnostics.Process.GetCurrentProcess().StartTime;
 
+        internal static void Restart()
+        {
+            System.Diagnostics.Process.Start(System.Reflection.Assembly.GetExecutingAssembly().Location);
+            Environment.Exit(0);
+        }
+
         internal static Func<Message, DateTime> MsgTime => msg => msg.Timestamp;
 
         internal static async Task DoToMessages(Channel c, int few, Func<IEnumerable<Message>, bool, int> perform)
