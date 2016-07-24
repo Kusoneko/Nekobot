@@ -384,7 +384,10 @@ namespace Nekobot
         {
             for (;;)
             {
-                /*string input = */Console.ReadLine();
+                string input = Console.ReadLine();
+                if (input == "songlist")
+                    Music.SongList();
+                Thread.Sleep(500);
             }
         }
 

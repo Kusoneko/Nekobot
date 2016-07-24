@@ -119,8 +119,6 @@ namespace Nekobot
                 ret += '0';
             return ret;
         }
-        internal static string ZeroPaddingAt(int i, ref string padding)
-            => (i % 10) == 0 && padding.Length > 0 ? padding = padding.Substring(1) : padding;
 
         internal static bool HasArg(string[] args, int index = 0)
             => args.Length > index && args[index] != "";

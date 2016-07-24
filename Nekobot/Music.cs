@@ -162,7 +162,7 @@ namespace Nekobot
                     return EmptyPlaylist() ?? $"There are currently {Count} songs left in the playlist.";
             }
 
-            internal string SongList()
+            internal string SongList(bool chat = true)
             {
                 lock (this)
                 {
@@ -172,8 +172,8 @@ namespace Nekobot
                     int i = -1;
                     foreach(var t in this)
                     {
-                        reply += (++i == 0) ? $"Currently playing: {t.Title()}.{(Count > 1 ? "\nNext songs:" : "")}" : $"\n{Helpers.ZeroPaddingAt(i, ref padding)}{i} - {t.ExtTitle}";
-                        if (reply.Length > 2000) return reply.Substring(0, reply.LastIndexOf('\n'));
+                        reply += (++i == 0) ? $"Currently playing: {t.Title()}.{(Count > 1 ? "\nNext songs:" : "")}" : $"\n{padding.Substring((int)Math.Log10(i))}{i} - {t.ExtTitle}";
+                        if (chat && reply.Length > 2000) return reply.Substring(0, reply.LastIndexOf('\n'));
                     }
                     return reply;
                 }
@@ -520,6 +520,12 @@ namespace Nekobot
             };
         }
         internal static async Task Stop(Server s) => await streams.Stop(s);
+
+        internal static void SongList()
+        {
+            foreach (var pl in playlist)
+                Log.Output($"Song list for {pl.Key}:\n{pl.Value.SongList(false)}\n", ConsoleColor.Blue);
+        }
 
         // Music-related variables
         internal static string Folder;
