@@ -482,8 +482,8 @@ namespace Nekobot
                     stream.Request = request;
                 else
                 {
-                    await streams.Stop(e.Server);
-                    await streams.AddStream(e.User.VoiceChannel, request);
+                    await Stop(e.Server);
+                    await AddStream(e.User.VoiceChannel, request);
                 }
             }
 
