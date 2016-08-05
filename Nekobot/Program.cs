@@ -219,6 +219,7 @@ namespace Nekobot
                             int followers = Convert.ToInt32(result["results"]["followers_count"]);
                             int following = Convert.ToInt32(result["results"]["following_count"]);
                             string admin = Convert.ToBoolean(result["results"]["is_superuser"]) ? "Yes" : "No";
+                            string slug = result["results"]["slug"].ToString();
                             e.Channel.SendMessage($@"
 **User**: {username}
 **Player.me Staff**: {admin}
@@ -226,7 +227,8 @@ namespace Nekobot
 **Bio**: {bio}
 **Joined on**: {joined}
 **Followers**: {followers}
-**Following**: {following}");
+**Following**: {following}
+**Profile page**: https://player.me/{slug}");
                         }
                     }
                 });
