@@ -218,7 +218,7 @@ namespace Nekobot
                             string joined = date.ToString("yyyy-MM-dd");
                             int followers = Convert.ToInt32(result["results"]["followers_count"]);
                             int following = Convert.ToInt32(result["results"]["following_count"]);
-                            string admin = Convert.ToBoolean(result["results"]["is_superuser"]) ? $"{Environment.NewLine}**Player.me Staff**: Yes" : "";
+                            string admin = Convert.ToBoolean(result["results"]["is_superuser"]) ? $"{Environment.NewLine}**Player.me Staff**" : "";
                             string slug = result["results"]["slug"].ToString();
                             e.Channel.SendMessage($@"
 **User**: {username}{admin}
