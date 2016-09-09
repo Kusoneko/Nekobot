@@ -246,7 +246,7 @@ namespace Nekobot
                 .MinPermissions(2)
                 .Do(e =>
                 {
-                    e.Channel.SendMessage($"Sorry, {e.User.Nickname}, I'll try harder this time!");
+                    e.Channel.SendMessage($"Sorry, {Helpers.Nickname(e.User)}, I'll try harder this time!");
                     Helpers.Restart();
                 });
 

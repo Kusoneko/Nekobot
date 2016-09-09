@@ -111,6 +111,7 @@ namespace Nekobot
             Environment.Exit(0);
         }
 
+        internal static string Nickname(User u) => string.IsNullOrEmpty(u.Nickname) ? u.Name : u.Nickname;
         internal static Func<Message, DateTime> MsgTime => msg => msg.Timestamp;
 
         internal static async Task DoToMessages(Channel c, int few, Func<IEnumerable<Message>, bool, int> perform)
