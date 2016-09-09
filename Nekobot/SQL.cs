@@ -19,6 +19,7 @@ namespace Nekobot
             CreateTable("flags (channel varchar(17), nsfw int, music int, ignored int, chatbot int)");
             CreateField("flags", "chatbot int");
             CreateTable("roles (role varchar(17), ignored int)");
+            CreateTable("servers (server varchar(17), welcome int, default_roles varchar(256))");
         }
 
         // SQL Helpers
@@ -43,6 +44,14 @@ namespace Nekobot
                     case "music": return $"0, {newval}, 0, -1";
                     case "ignored": return $"0, 0, {newval}, -1";
                     case "chatbot": return $"0, 0, 0, {newval}";
+                }
+            }
+            else if (table == "servers")
+            {
+                switch (field)
+                {
+                    case "welcome": return $"{newval}, ''";
+                    case "default_roles": return $"1, {newval}";
                 }
             }
             /*else if (table == "roles")
@@ -76,6 +85,8 @@ namespace Nekobot
             => ExecuteNonQuery(AddOrUpdateCommand(row, table, id, field, newval));
         internal static void AddOrUpdateFlag(ulong id, string field, string newval)
             => AddOrUpdate("channel", "flags", id, field, newval);
+        internal static void AddOrUpdateServer(ulong id, string field, string newval)
+            => AddOrUpdate("server", "servers", id, field, newval);
         static async Task AddOrUpdateAsync(string row, string table, ulong id, string field, string newval)
             => await ExecuteNonQueryAsync(AddOrUpdateCommand(row, table, id, field, newval));
         internal static async Task AddOrUpdateFlagAsync(ulong id, string field, string newval)
@@ -92,6 +103,8 @@ namespace Nekobot
             => ExecuteReader(value, "flags", condition);
         internal static SQLiteDataReader ReadRoles(string condition, string value = "role")
             => ExecuteReader(value, "roles", condition);
+        internal static SQLiteDataReader ReadServers(string condition, string value = "server")
+            => ExecuteReader(value, "servers", condition);
         internal static string ReadSingle(string row, string table, ulong id, string value)
         {
             var reader = ExecuteReader(value, table, $"{row} = '{id}'");
@@ -99,8 +112,9 @@ namespace Nekobot
         }
         internal static string ReadUser(ulong id, string value) => ReadSingle("user", "users", id, value);
         internal static string ReadChannel(ulong id, string value) => ReadSingle("channel", "flags", id, value);
+        internal static string ReadServer(ulong id, string value) => ReadSingle("server", "servers", id, value);
         internal static int ReadInt(string data) => data != null ? int.Parse(data) : 0;
-        internal static bool ReadBool(string data) => ReadInt(data) == 1;
+        internal static bool ReadBool(string data, bool ifnull = false) => data == null ? ifnull : int.Parse(data) == 1;
 
         // Other stuff
         internal static void CloseAndDispose()

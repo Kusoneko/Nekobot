@@ -541,8 +541,9 @@ namespace Nekobot
 
         private static void UserJoined(object sender, UserEventArgs e)
         {
-            if (!Flags.GetIgnored(e.User))
+            if (Flags.GetWelcome(e.Server) && !Flags.GetIgnored(e.User))
                 e.Server.DefaultChannel.SendMessage($"Welcome to {e.Server.Name}, {e.User.Mention}! :hearts:");
+            e.User.AddRoles(Flags.GetDefaultRoles(e.Server).Select(r => e.Server.GetRole(r)).ToArray());
         }
 
         /*private static void LoggedOut(object sender, DisconnectedEventArgs e)

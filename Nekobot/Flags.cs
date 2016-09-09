@@ -69,6 +69,14 @@ namespace Nekobot
 
         internal static bool GetNsfw(Channel chan) => SQL.ReadBool(SQL.ReadChannel(chan.Id, "nsfw"));
 
+        internal static bool GetWelcome(Server server) => SQL.ReadBool(SQL.ReadServer(server.Id, "welcome"), true);
+        internal static IEnumerable<ulong> GetDefaultRoles(Server server)
+        {
+            var arr = SQL.ReadServer(server.Id, "default_roles").Split(',');
+            return arr.Length == 1 && arr[0].Length == 0 ? new ulong[0] : arr.Select(id => ulong.Parse(id));
+        }
+        internal static void SetDefaultRoles<T>(Server server, IEnumerable<T> roles) => SQL.AddOrUpdateServer(server.Id, "default_roles", string.Join(",", roles));
+
         internal static void AddCommands(Commands.CommandGroupBuilder group)
         {
             group.CreateCommand("nsfw status")
@@ -97,6 +105,22 @@ namespace Nekobot
                     });
                 });
 
+            group.CreateCommand("welcome")
+                .Parameter("on/off", Commands.ParameterType.Required)
+                .MinPermissions(2)
+                .Description("I'll turn welcomes on this server off or on.")
+                .Do(e => Helpers.OnOffCmd(e, on =>
+                {
+                    string status = on ? "en" : "dis";
+                    if (GetWelcome(e.Server) == on)
+                        e.Channel.SendMessage($"{e.User.Mention}, Welcoming is already {status}abled, here.");
+                    else
+                    {
+                        SQL.AddOrUpdateServer(e.Server.Id, "welcome", on ? "1" : "0");
+                        e.Channel.SendMessage($"I will no{(on ? "w" : " longer")} welcome people to this server.");
+                    }
+                }));
+
             Func<Role, EMentionType> mention_type = r => r.IsEveryone ? EMentionType.everyoneRole : r.IsMentionable ? EMentionType.role : EMentionType.unmentionableRole;
             // Administrator Commands
             group.CreateCommand("ignore")
@@ -124,33 +148,93 @@ namespace Nekobot
                     else await e.Channel.SendMessage("You need to mention at least one user, channel or role!");
                 });
 
+            Action<IEnumerable<Role>, Server> add_roles = (roles,server) => SetDefaultRoles(server, roles.Select(r => r.Id).Union(GetDefaultRoles(server)));
+            group.CreateCommand("adddefaultroles")
+                .Parameter("role(s)", Commands.ParameterType.Unparsed)
+                .MinPermissions(3)
+                .Description("I'll automatically add anyone who joins the server to the roles you tell me with this command.")
+                .Do(async e =>
+                {
+                    var roles = e.Message.MentionedRoles;
+                    if (roles.Any())
+                    {
+                        add_roles(roles, e.Server);
+                        await e.Channel.SendMessage("Roles added.");
+                    }
+                    else await e.Channel.SendMessage("You need to mention at least one role.");
+                });
+
+            Action<IEnumerable<Role>, Server> rem_roles = (roles, server) => SetDefaultRoles(server, roles.Select(r => r.Id).Except(GetDefaultRoles(server)));
+            group.CreateCommand("remdefaultroles")
+                .Parameter("role(s)", Commands.ParameterType.Unparsed)
+                .MinPermissions(3)
+                .Description("I'll remove roles from those automatically assigned to anyone who joins the server.")
+                .Do(async e =>
+                {
+                    var roles = e.Message.MentionedRoles;
+                    if (roles.Any())
+                    {
+                        rem_roles(roles, e.Server);
+                        await e.Channel.SendMessage("Roles removed.");
+                    }
+                    else await e.Channel.SendMessage("You need to mention at least one role.");
+                });
+
+            Func<Commands.CommandEventArgs, Func<Role, Task<string>>, Task> rolenames_command = async (e,func) =>
+            {
+                string reply = "";
+                if (e.Args[0].Length == 0)
+                    reply = "You need to provide at least one role name!";
+                else
+                {
+                    Helpers.CommaSeparateRoleNames(e, async (roles, str) =>
+                    {
+                        var count = roles.Count();
+                        if (reply != "") reply += '\n';
+                        reply += count == 1 ? await func(roles.Single()) : $"{(count == 0 ? "No" : count.ToString())} roles found for {str}";
+                    });
+                }
+                await e.Channel.SendMessage(reply);
+            };
             group.CreateCommand("ignore role")
                 .Parameter("role(s)", Commands.ParameterType.Unparsed)
                 .MinPermissions(3)
                 .Description("I'll ignore particular roles by name (comma separated)")
                 .Do(async e =>
                 {
-                    string reply = "";
-                    if (e.Args[0].Length == 0)
-                        reply = "You need to provide at least one role name!";
-                    else
+                    int perms = Helpers.GetPermissions(e.User, e.Channel);
+                    var senpai = e.Server.GetUser(Program.masterId);
+                    await rolenames_command(e, (r) => SetIgnored("role", "roles", r.Id, mention_type(r), perms, senpai.Roles.Contains(r) ? -2 : e.User.Roles.Contains(r) ? -1 : perms));
+                });
+
+            group.CreateCommand("adddefaultrolesbyname")
+                .Parameter("role(s)", Commands.ParameterType.Unparsed)
+                .MinPermissions(3)
+                .Description("I'll automatically add anyone who joins the server to these roles (names must be comma separated).")
+                .Do(async e =>
+                {
+                    var roles = new List<Role>();
+                    await rolenames_command(e, (r) =>
                     {
-                        int perms = Helpers.GetPermissions(e.User, e.Channel);
-                        var senpai = e.Server.GetUser(Program.masterId);
-                        Helpers.CommaSeparateRoleNames(e, async (roles, str) =>
-                        {
-                            var count = roles.Count();
-                            if (reply != "") reply += '\n';
-                            if (count != 1)
-                                reply += $"{(count == 0 ? "No" : count.ToString())} roles found for {str}";
-                            else
-                            {
-                                var r = roles.Single();
-                                reply += await SetIgnored("role", "roles", r.Id, mention_type(r), perms, senpai.Roles.Contains(r) ? -2 : e.User.Roles.Contains(r) ? -1 : perms);
-                            }
-                        });
-                    }
-                    await e.Channel.SendMessage(reply);
+                        roles.Add(r);
+                        return Task.FromResult(roles.Count == 1 ? "Adding default role(s)." : string.Empty);
+                    });
+                    add_roles(roles, e.Server);
+                });
+
+            group.CreateCommand("remdefaultrolesbyname")
+                .Parameter("role(s)", Commands.ParameterType.Unparsed)
+                .MinPermissions(3)
+                .Description("I'll remove roles from those automatically assigned to anyone who joins the server. (names must be comma separated).")
+                .Do(async e =>
+                {
+                    var roles = new List<Role>();
+                    await rolenames_command(e, (r) =>
+                    {
+                        roles.Add(r);
+                        return Task.FromResult(roles.Count == 1 ? "Removing default role(s)." : string.Empty);
+                    });
+                    rem_roles(roles, e.Server);
                 });
         }
     }
