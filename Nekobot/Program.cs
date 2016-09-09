@@ -220,7 +220,7 @@ namespace Nekobot
                             int followers = results["followers_count"].ToObject<int>();
                             int following = results["following_count"].ToObject<int>();
                             string admin = results["is_superuser"].ToObject<bool>() ? $"\n**Player.me Staff**" : string.Empty;
-                            string profile = $"https://player.me/{results["slug"]}";
+                            string profile = $"<https://player.me/{results["slug"]}>";
                             e.Channel.SendMessage($@"
 **User**: {username}{admin}
 **Avatar**: {avatar}
