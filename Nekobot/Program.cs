@@ -207,19 +207,20 @@ namespace Nekobot
                     {
                         request.AddQueryParameter("login", s);
                         JObject result = JObject.Parse(rclient.Execute(request).Content);
-                        if (Convert.ToBoolean(result["success"]) == false)
+                        if (!result["success"].ToObject<bool>())
                             e.Channel.SendMessage($"{s} was not found.");
                         else
                         {
-                            string username = result["results"]["username"].ToString();
-                            string avatar = "https:" + result["results"]["avatar"]["original"].ToString();
-                            string bio = result["results"]["short_description"].ToString();
-                            DateTime date = DateTime.Parse(result["results"]["created_at"].ToString());
+                            var results = result["results"];
+                            string username = results["username"].ToString();
+                            string avatar = $"https:{results["avatar"]["original"]}";
+                            string bio = results["short_description"].ToString();
+                            DateTime date = DateTime.Parse(results["created_at"].ToString());
                             string joined = date.ToString("yyyy-MM-dd");
-                            int followers = Convert.ToInt32(result["results"]["followers_count"]);
-                            int following = Convert.ToInt32(result["results"]["following_count"]);
-                            string admin = Convert.ToBoolean(result["results"]["is_superuser"]) ? $"{Environment.NewLine}**Player.me Staff**" : "";
-                            string slug = result["results"]["slug"].ToString();
+                            int followers = results["followers_count"].ToObject<int>();
+                            int following = results["following_count"].ToObject<int>();
+                            string admin = results["is_superuser"].ToObject<bool>() ? $"\n**Player.me Staff**" : string.Empty;
+                            string profile = $"https://player.me/{results["slug"]}";
                             e.Channel.SendMessage($@"
 **User**: {username}{admin}
 **Avatar**: {avatar}
@@ -227,7 +228,7 @@ namespace Nekobot
 **Joined on**: {joined}
 **Followers**: {followers}
 **Following**: {following}
-**Profile page**: https://player.me/{slug}");
+**Profile page**: {profile}");
                         }
                     }
                 });

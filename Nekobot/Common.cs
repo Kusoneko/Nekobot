@@ -174,8 +174,8 @@ namespace Nekobot
                 .Description("I'll give you a random quote from http://baconzone.duckdns.org/quotes")
                 .Do(async e =>
                 {
-                    var result = JObject.Parse(Helpers.GetRestClient("http://baconzone.duckdns.org/").Execute<JObject>(new RestRequest("api/v1/quotes/random", Method.GET)).Content)["quotes"];
-                    await e.Channel.SendMessage($"\"{result[0]["quote"]}\" - {result[0]["author"]} {result[0]["year"]}");
+                    var result = JObject.Parse(Helpers.GetRestClient("http://baconzone.duckdns.org/").Execute<JObject>(new RestRequest("api/v1/quotes/random", Method.GET)).Content)["quotes"][0];
+                    await e.Channel.SendMessage($"\"{result["quote"]}\" - {result["author"]} {result["year"]}");
                 });
 
             Google.AddCommands(group);
