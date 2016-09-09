@@ -170,12 +170,58 @@ namespace Nekobot
                     }));
             }
 
+            var quote_site = "http://baconzone.duckdns.org/";
             group.CreateCommand("quote")
-                .Description("I'll give you a random quote from http://baconzone.duckdns.org/quotes")
+                .Description($"I'll give you a random quote from {quote_site}quotes")
                 .Do(async e =>
                 {
-                    var result = JObject.Parse(Helpers.GetRestClient("http://baconzone.duckdns.org/").Execute<JObject>(new RestRequest("api/v1/quotes/random", Method.GET)).Content)["quotes"][0];
+                    var result = JObject.Parse(Helpers.GetRestClient(quote_site).Execute<JObject>(new RestRequest("api/v1/quotes/random", Method.GET)).Content)["quotes"][0];
                     await e.Channel.SendMessage($"\"{result["quote"]}\" - {result["author"]} {result["year"]}");
+                });
+
+            Func<string, string, string, string> add_quote = (quote, author, year) =>
+            {
+                var result = JObject.Parse(Helpers.GetRestClient(quote_site)
+                    .Execute<JObject>(new RestRequest("api/v1/quotes", Method.POST)
+                        .AddParameter("quote", quote)
+                        .AddParameter("author", author)
+                        .AddParameter("year", year))
+                    .Content);
+                return result["success"].ToObject<bool>() ? "Quote added." : $"Adding quote failed: {result["data"]}";
+            };
+            group.CreateCommand("addquote")
+                .Parameter("<quote>|<author>[|year]", Commands.ParameterType.MultipleUnparsed)
+                .Description($"I'll add a quote to {quote_site}quotes")
+                .Do(async e =>
+                {
+                    var args = string.Join(" ", e.Args).Split('|');
+                    if (args.Length < 2)
+                    {
+                        await e.Channel.SendMessage("I need a quote and its author, silly!");
+                        return;
+                    }
+                    await e.Channel.SendMessage(add_quote(args[0], args[1], args.Length == 2 ? DateTime.Now.Year.ToString() : args[2]));
+                });
+            group.CreateCommand("quotemessage")
+                .Parameter("messageid", Commands.ParameterType.Required)
+                .Description($"I'll add a message from this channel as a quote on {quote_site}quotes")
+                .Do(async e =>
+                {
+                    Message message = null;
+                    Action get_msg = () => message = e.Channel.GetMessage(Convert.ToUInt64(e.Args[0]));
+                    get_msg();
+                    Func<bool> test_msg = () => string.IsNullOrEmpty(message.Text);
+                    if (test_msg()) // Empty message, try to download it.
+                    {
+                        await e.Channel.DownloadMessages();
+                        get_msg();
+                        if (test_msg()) // It's missing, report failure.
+                        {
+                            await e.Channel.SendMessage("Sorry, I couldn't find that message!");
+                            return;
+                        }
+                    }
+                    await e.Channel.SendMessage(add_quote(message.Text, Helpers.Nickname(message.User), message.Timestamp.ToShortDateString()));
                 });
 
             Google.AddCommands(group);
