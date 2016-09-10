@@ -397,6 +397,7 @@ namespace Nekobot
             {
                 {"songlist", Music.SongList},
                 {"restart", Helpers.Restart},
+                {"uptime", () => Log.Output($"Uptime: {Helpers.Uptime()}", ConsoleColor.Blue) },
                 {"version", () => Log.Output(Config.UserAgent, ConsoleColor.Blue) },
             };
             commands["commands"] = () => Log.Output(string.Join(", ", commands.Keys), ConsoleColor.Blue);
