@@ -546,7 +546,7 @@ namespace Nekobot
                 e.Server.DefaultChannel.SendMessage($"Welcome to {e.Server.Name}, {e.User.Mention}! :hearts:");
             var default_roles = Flags.GetDefaultRoles(e.Server).Select(r => e.Server.GetRole(r)).ToArray();
             if (default_roles.Length > 0)
-                e.User.AddRoles();
+                e.User.AddRoles(default_roles);
         }
 
         /*private static void LoggedOut(object sender, DisconnectedEventArgs e)
