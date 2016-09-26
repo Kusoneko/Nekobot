@@ -7,6 +7,7 @@ using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 using LastFM = IF.Lastfm.Core.Api;
 
 namespace Nekobot
@@ -390,24 +391,24 @@ namespace Nekobot
         internal static ulong masterId;
 
         internal static DiscordConfig Config => client.Config;
+        internal static Dictionary<string, Action> ConsoleCommands = new Dictionary<string, Action>
+        {
+            {"songlist", Music.SongList},
+            {"restart", Helpers.Restart},
+            {"uptime", () => Log.Output($"Uptime: {Helpers.Uptime()}", ConsoleColor.Blue) },
+            {"version", () => Log.Output(Config.UserAgent, ConsoleColor.Blue) },
+        };
 
         static void InputThread()
         {
-            var commands = new System.Collections.Generic.Dictionary<string, Action>
-            {
-                {"songlist", Music.SongList},
-                {"restart", Helpers.Restart},
-                {"uptime", () => Log.Output($"Uptime: {Helpers.Uptime()}", ConsoleColor.Blue) },
-                {"version", () => Log.Output(Config.UserAgent, ConsoleColor.Blue) },
-            };
-            commands["commands"] = () => Log.Output(string.Join(", ", commands.Keys), ConsoleColor.Blue);
+            ConsoleCommands["commands"] = () => Log.Output(string.Join(", ", ConsoleCommands.Keys), ConsoleColor.Blue);
             for (;;)
             {
                 string input = Console.ReadLine();
                 if (input.Length != 0)
                 {
                     Action action;
-                    if (commands.TryGetValue(input.ToLower(), out action))
+                    if (ConsoleCommands.TryGetValue(input.ToLower(), out action))
                         action();
                 }
                 Thread.Sleep(500);
