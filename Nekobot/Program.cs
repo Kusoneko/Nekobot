@@ -408,13 +408,13 @@ namespace Nekobot
         {
             {"songlist", Music.SongList},
             {"restart", Helpers.Restart},
-            {"uptime", () => Log.Output($"Uptime: {Helpers.Uptime()}", ConsoleColor.Blue) },
-            {"version", () => Log.Output(Config.UserAgent, ConsoleColor.Blue) },
+            {"uptime", () => Log.Output($"Uptime: {Helpers.Uptime()}")},
+            {"version", () => Log.Output(Config.UserAgent)},
         };
 
         static void InputThread()
         {
-            ConsoleCommands["commands"] = () => Log.Output(string.Join(", ", ConsoleCommands.Keys), ConsoleColor.Blue);
+            ConsoleCommands["commands"] = () => Log.Output(string.Join(", ", ConsoleCommands.Keys));
             for (;;)
             {
                 string input = Console.ReadLine();
