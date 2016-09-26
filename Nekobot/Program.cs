@@ -326,6 +326,19 @@ namespace Nekobot
                         await e.Channel.SendMessage("The parameters are invalid.");
                 });
 
+            Action<bool> make_nick_cmd = not_self =>
+            {
+                group.CreateCommand(not_self ? "nickname" : "robotnick")
+                    .MinPermissions(not_self ? 6 : 10)
+                    .Parameter("nick", Commands.ParameterType.Unparsed)
+                    .Do(async e =>
+                    {
+                        var nickname = string.Join(" ", e.Args);
+                        await (not_self ? e.User : e.Server.CurrentUser).Edit(nickname: nickname.Length == 0 ? null : nickname);
+                    });
+            };
+            make_nick_cmd(true);
+            make_nick_cmd(false);
             // Higher level admin commands
             group.CreateCommand("setgame")
                 .Parameter("Game", Commands.ParameterType.Unparsed)
