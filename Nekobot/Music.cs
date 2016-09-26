@@ -83,8 +83,10 @@ namespace Nekobot
                     if (Any)
                     {
                         // If skip, they want us to remove the current song from the repeat queue.
-                        if (!skip && repeat)
+                        if (!skip && repeat_mode != ERepeat.Off)
                         {
+                            if (repeat_mode == ERepeat.Single)
+                                return false;
                             var repeat = this[0].Repeat();
                             if (repeat != null) Add(repeat);
                         }
@@ -286,10 +288,11 @@ namespace Nekobot
                 e.Channel.SendMessage($"{(pause ? "Resum" : "Paus")}ing stream...");
                 pause = !pause;
             }
-            internal void Repeat(Commands.CommandEventArgs e)
+            internal void Repeat(Channel c, bool single)
             {
-                e.Channel.SendMessage($"Turning {(repeat ? "off" : "on")} repeat mode for stream...");
-                repeat = !repeat;
+                bool repeat = !single || repeat_mode != ERepeat.Off;
+                c.SendMessage($"Turning {(repeat ? "off" : $"on {(single ? "single" : "all")} song")} repeat mode for stream...");
+                repeat_mode = single ? ERepeat.Single : repeat ? ERepeat.Off : ERepeat.All;
             }
             internal void Exit()
             {
@@ -303,7 +306,9 @@ namespace Nekobot
 
             enum Vote { Skip, Reset, Encore }
             List<ulong>[] votes = { new List<ulong>(), new List<ulong>(), new List<ulong>() };
-            internal bool skip = false, exit = false, pause = false, repeat = false;
+            internal enum ERepeat { Off, Single, All }
+            internal ERepeat repeat_mode = ERepeat.Off;
+            internal bool skip = false, exit = false, pause = false;
         }
 
         class Stream
@@ -948,7 +953,13 @@ namespace Nekobot
                 .MinPermissions(1)
                 .FlagMusic(true)
                 .Description("I'll toggle repeat mode on the stream")
-                .Do(e => playlist[e.User.VoiceChannel.Id].Repeat(e));
+                .Do(e => playlist[e.User.VoiceChannel.Id].Repeat(e.Channel, false));
+
+            group.CreateCommand("repeat single")
+                .MinPermissions(1)
+                .FlagMusic(true)
+                .Description("I'll turn single song repeat mode on for the stream")
+                .Do(e => playlist[e.User.VoiceChannel.Id].Repeat(e.Channel, true));
 
             // Administrator commands
             group.CreateCommand("music")
