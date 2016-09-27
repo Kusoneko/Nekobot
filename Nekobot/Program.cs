@@ -404,25 +404,26 @@ namespace Nekobot
         internal static ulong masterId;
 
         internal static DiscordConfig Config => client.Config;
-        internal static Dictionary<string, Action> ConsoleCommands = new Dictionary<string, Action>
+        internal static Dictionary<string, Action<string>> ConsoleCommands = new Dictionary<string, Action<string>>
         {
-            {"songlist", Music.SongList},
-            {"restart", Helpers.Restart},
-            {"uptime", () => Log.Output($"Uptime: {Helpers.Uptime()}")},
-            {"version", () => Log.Output(Config.UserAgent)},
+            {"songlist", s => Music.SongList()},
+            {"restart", s => Helpers.Restart()},
+            {"uptime", s => Log.Output($"Uptime: {Helpers.Uptime()}")},
+            {"version", s => Log.Output(Config.UserAgent)},
         };
 
         static void InputThread()
         {
-            ConsoleCommands["commands"] = () => Log.Output(string.Join(", ", ConsoleCommands.Keys));
+            ConsoleCommands["commands"] = s => Log.Output(string.Join(", ", ConsoleCommands.Keys));
             for (;;)
             {
                 string input = Console.ReadLine();
                 if (input.Length != 0)
                 {
-                    Action action;
-                    if (ConsoleCommands.TryGetValue(input.ToLower(), out action))
-                        action();
+                    Action<string> action;
+                    var command = input.ToLower().Split(' ');
+                    if (ConsoleCommands.TryGetValue(command[0], out action))
+                        action(string.Join(" ", command.Skip(1)));
                 }
                 Thread.Sleep(500);
             }
