@@ -208,7 +208,9 @@ namespace Nekobot.Commands
 
         public Task ShowGeneralHelp(User user, Channel channel, Channel replyChannel = null)
         {
+            if (replyChannel == null) replyChannel = channel;
             StringBuilder output = new StringBuilder();
+            var tasks = new List<Task>();
             bool isFirstCategory = true;
             foreach (var category in _categories)
             {
@@ -243,6 +245,13 @@ namespace Nekobot.Commands
                         if (group.HasSubGroups)
                             output.Append("*");
                         output.Append('`');
+
+                        if (output.Length >= 1900) // Allow 100 characters to avoid going over character limit
+                        {
+                            tasks.Add(replyChannel.SendMessage(output.ToString()));
+                            output.Clear();
+                            isFirstItem = true;
+                        }
                     }
                 }
             }
@@ -262,7 +271,8 @@ namespace Nekobot.Commands
                 output.AppendLine($"`{(has_chars ? chars[0].ToString() : "")}help <command>` can tell you more about how to use a command.");
             }
 
-            return (replyChannel ?? channel).SendMessage(output.ToString());
+            tasks.Add(replyChannel.SendMessage(output.ToString()));
+            return Task.WhenAll(tasks);
         }
 
         private Task ShowCommandHelp(CommandMap map, User user, Channel channel, Channel replyChannel = null)
