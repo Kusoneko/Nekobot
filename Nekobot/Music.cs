@@ -362,13 +362,14 @@ namespace Nekobot
                 {
                     while (_gestures.Count != 0)
                     {
+                        Gesture gesture;
                         lock (_gestures)
                         {
-                            var gesture = _gestures[0];
+                            gesture = _gestures[0];
                             _gestures.RemoveAt(0);
-                            PlayUri(_client, gesture.Uri);
-                            Playlist.pause = gesture.Paused;
                         }
+                        PlayUri(_client, gesture.Uri);
+                        Playlist.pause = gesture.Paused;
                     }
                 };
                 while (streams.Contains(this))
