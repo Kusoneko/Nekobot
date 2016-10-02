@@ -290,7 +290,7 @@ namespace Nekobot
             }
             internal void Repeat(Channel c, bool single)
             {
-                bool repeat = !single || repeat_mode != ERepeat.Off;
+                bool repeat = !single && repeat_mode != ERepeat.Off;
                 c.SendMessage($"Turning {(repeat ? "off" : $"on {(single ? "single" : "all")} song")} repeat mode for stream...");
                 repeat_mode = single ? ERepeat.Single : repeat ? ERepeat.Off : ERepeat.All;
             }
