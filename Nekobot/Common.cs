@@ -114,7 +114,10 @@ namespace Nekobot
                 {
                     var req = new RestRequest("define", Method.GET);
                     req.AddQueryParameter("term", args);
-                    var resp = JObject.Parse(Helpers.GetRestClient("http://api.urbandictionary.com/v0").Execute(req).Content)["list"][0];
+                    var json = JObject.Parse(Helpers.GetRestClient("http://api.urbandictionary.com/v0").Execute(req).Content);
+                    var list = json["list"];
+                    if (!list.HasValues) return "No results found.";
+                    var resp = list[0];
                     return $"{resp["word"]}: {resp["definition"]}\n⬆{resp["thumbs_up"]} ⬇{resp["thumbs_down"]} <{resp["permalink"]}>```{resp["example"]}```";
                 }));
 
