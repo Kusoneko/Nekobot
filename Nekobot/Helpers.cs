@@ -94,6 +94,10 @@ namespace Nekobot
             => map.ToObject<JObject>().Property(property) != null;
         internal static bool FieldExists(string map, string property)
             => FieldExists(Program.config[map], property);
+        internal static T FieldExistsSafe<T>(JToken map, string property, T default_value = default(T))
+            => FieldExists(map, property) ? map[property].ToObject<T>() : default_value;
+        internal static T FieldExistsSafe<T>(string map, string property, T default_value = default(T))
+            => FieldExistsSafe(Program.config, property, default_value);
 
         internal static JObject XmlToJson(string xml)
             => JObject.Parse(Newtonsoft.Json.JsonConvert.SerializeXmlNode(new System.Xml.XmlDocument() { InnerXml = xml }));
