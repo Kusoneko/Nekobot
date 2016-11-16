@@ -27,6 +27,7 @@ namespace Nekobot
                 {
                     Helpers.CreateJsonCommand(group, calendar_cmd, (cmd, val) =>
                     {
+                        var include_desc = Helpers.FieldExistsSafe<bool>(val, "includeDescription");
                         cmd.Parameter("count or event id", ParameterType.Optional)
                         .Do(async e =>
                         {
@@ -37,12 +38,13 @@ namespace Nekobot
                             });
                             Func<Event, string> header = item =>
                               $"**{item.Summary}:**\n{(item.Start.DateTime == null ? $"All day {(item.Start.Date.Equals(DateTime.Now.ToString("yyyy-MM-dd")) ? "today" : $"on {item.Start.Date}")}" : $"{(DateTime.Now > item.Start.DateTime ? $"Happening until" : $"Will happen {item.Start.DateTime} and end at")} {item.End.DateTime}")}.\n";
+                            Func<Event, string> header_desc = item => $"{header(item)}{item.Description}";
                             int results = 1;
                             if (Helpers.HasArg(e.Args))
                                 if (!int.TryParse(e.Args[0], out results)) // Must be an event ID
                                 {
                                     var r = await service.Events.Get(val["calendarId"].ToString(), e.Args[0]).ExecuteAsync();
-                                    await e.Channel.SendMessage($"{header(r)}{r.Description}");
+                                    await e.Channel.SendMessage(header_desc(r));
                                     return;
                                 }
                             var request = service.Events.List(val["calendarId"].ToString());
@@ -53,7 +55,7 @@ namespace Nekobot
                             var events = await request.ExecuteAsync();
                             if (events.Items?.Count > 0)
                                 foreach (var item in events.Items)
-                                    await e.Channel.SendMessage($"{header(item)}ID: {item.Id}");
+                                    await e.Channel.SendMessage(include_desc ? header_desc(item) : $"{header(item)}ID: {item.Id}");
                             else await e.Channel.SendMessage("Apparently, there's nothing coming up nor taking place right now...");
                         });
                     });
