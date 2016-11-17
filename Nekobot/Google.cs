@@ -23,6 +23,11 @@ namespace Nekobot
                     credential = GoogleWebAuthorizationBroker.AuthorizeAsync(
                         GoogleClientSecrets.Load(stream).Secrets, new[]{CalendarService.Scope.CalendarReadonly}, Program.Config.AppName, CancellationToken.None).Result;
                 }
+                Func<string> timezone = () =>
+                {
+                    var offset = TimeZoneInfo.Local.BaseUtcOffset.ToString();
+                    return $"(UTC{offset.Substring(0, offset.LastIndexOf(':'))})";
+                };
                 foreach (var calendar_cmd in (JObject)Program.config["GoogleCalendar"])
                 {
                     Helpers.CreateJsonCommand(group, calendar_cmd, (cmd, val) =>
@@ -37,7 +42,7 @@ namespace Nekobot
                                 ApplicationName = Program.Config.AppName
                             });
                             Func<Event, string> header = item =>
-                              $"**{item.Summary}:**\n{(item.Start.DateTime == null ? $"All day {(item.Start.Date.Equals(DateTime.Now.ToString("yyyy-MM-dd")) ? "today" : $"on {item.Start.Date}")}" : $"{(DateTime.Now > item.Start.DateTime ? $"Happening until" : $"Will happen {item.Start.DateTime} and end at")} {item.End.DateTime}")}.\n";
+                              $"**{item.Summary}:**\n{(item.Start.DateTime == null ? $"All day {(item.Start.Date.Equals(DateTime.Now.ToString("yyyy-MM-dd")) ? "today" : $"on {item.Start.Date}")}" : $"{(DateTime.Now > item.Start.DateTime ? $"Happening until" : $"Will happen {item.Start.DateTime} and end at")} {item.End.DateTime} {timezone()}")}.\n";
                             Func<Event, string> header_desc = item => $"{header(item)}{item.Description}";
                             int results = 1;
                             if (Helpers.HasArg(e.Args))
