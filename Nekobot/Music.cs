@@ -678,7 +678,7 @@ namespace Nekobot
         internal static class YT
         {
             static RestSharp.RestClient rclient = Helpers.GetRestClient("http://www.youtubeinmp3.com/fetch/");
-            public static Regex regex = new Regex(@"youtu(?:be\.com\/(?:v\/|e(?:mbed)?\/|watch\?v=)|\.be\/)([\w-_]{11}\b)", RegexOptions.IgnoreCase);
+            public static Regex regex = new Regex(@"youtu(?:be\.com\/(?:v\/|e(?:mbed)?\/|watch\?(?:[^&]+&)*?v=)|\.be\/)([\w-_]{11}\b)", RegexOptions.IgnoreCase);
 
             public class VideoData
             {
