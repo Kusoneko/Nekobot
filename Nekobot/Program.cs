@@ -351,7 +351,7 @@ namespace Nekobot
                 .MinPermissions(4)
                 .Do(e => client.CurrentUser.Edit(avatar: new System.IO.MemoryStream(new System.Net.WebClient().DownloadData(e.Args[0]))));
 
-            group.CreateCommand("deletelast")
+            Action<string, Action<IEnumerable<Message>, CommandEventArgs>> delcmd = (s,a) => group.CreateCommand(s)
                 .MinPermissions(4)
                 .Parameter("few", Commands.ParameterType.Required)
                 .Description("I'll delete the last `few` messages, and the command message.")
@@ -370,6 +370,7 @@ namespace Nekobot
                         return;
                     }
 
+                    //bool too_old = false;
                     await Helpers.DoToMessages(e.Channel, few, (msgs, has_cmd_msg) =>
                     {
                         int bonus = has_cmd_msg ? 1 : 0;
@@ -377,10 +378,13 @@ namespace Nekobot
                             msgs = msgs.Take(few + bonus);
                         int removed = msgs.Count() - bonus;
                         few -= removed;
-                        Task.Run(() => e.Channel.DeleteMessages(msgs.ToArray()));
+                        //if (!too_old)
+                        Task.Run(() => a(msgs, e));
                         return removed;
                     });
                 });
+            delcmd("deletelast", async (msgs,e) => await e.Channel.DeleteMessages(msgs.ToArray()));
+            delcmd("deletelastold", (msgs, e) => { foreach (var m in msgs) m.Delete(); });
 
             group.CreateCommand("setname")
                 .Parameter("New name", Commands.ParameterType.Unparsed)
