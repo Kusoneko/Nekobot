@@ -1,5 +1,7 @@
-﻿using System.Collections.Concurrent;
+﻿using System;
+using System.Collections.Concurrent;
 using System.Linq;
+using System.Threading.Tasks;
 using Discord;
 using Nekobot.Commands.Permissions.Levels;
 using RestSharp;
@@ -16,12 +18,19 @@ namespace Nekobot
             readonly string _key;
             class Session
             {
-                static string BadResponse(IRestResponse response, string pre)
+                static async Task<string> AvoidBadResponse(Func<IRestResponse> response, string pre, Func<IRestResponse, string> final = null, int i = 3)
                 {
-                    string ret = null;
-                    if (response.StatusCode != System.Net.HttpStatusCode.OK)
-                        Log.Write(LogSeverity.Error, ret = (pre+response.ErrorMessage));
-                    return ret;
+                    var resp = response();
+                    Func<bool> bad = () => resp.StatusCode != System.Net.HttpStatusCode.OK;
+                    Func<string> err = () => pre + resp.ErrorMessage;
+                    while (bad() && i != 0)
+                    {
+                        Log.Write(LogSeverity.Error, err());
+                        if (--i != 0) Log.Write(LogSeverity.Error, "Retrying in ten seconds");
+                        await Task.Delay(10000);
+                        resp = response();
+                    }
+                    return bad() ? err() : final?.Invoke(resp);
                 }
 
                 internal Session(string nick, string user, string key)
@@ -29,18 +38,15 @@ namespace Nekobot
                     rc.AddDefaultParameter("user", user);
                     rc.AddDefaultParameter("key", key);
                     rc.AddDefaultParameter("nick", nick);
-                    var response = rc.Execute(new RestRequest("create", Method.POST));
-                    rc.AddDefaultParameter("nick", nick);
-                    BadResponse(response, "Creating chatbot session failed: ");
+                    AvoidBadResponse(() => rc.Execute(new RestRequest("create", Method.POST)),
+                        "Creating chatbot session failed: ").Wait();
                 }
 
-                internal string Ask(string text)
-                {
-                    var req = new RestRequest("ask", Method.POST);
-                    req.AddParameter("text", text);
-                    var response = rc.Execute(req);
-                    return BadResponse(response, "Responding to chat failed: ") ?? Newtonsoft.Json.Linq.JObject.Parse(response.Content)["response"].ToString();
-                }
+                internal async Task<string> Ask(string text) =>
+                    await AvoidBadResponse(() => rc.Execute(new RestRequest("ask", Method.POST).AddParameter("text", text)),
+                        "Responding to chat failed: ",
+                        response => Newtonsoft.Json.Linq.JObject.Parse(response.Content)["response"].ToString());
+
                 RestClient rc = Helpers.GetRestClient("https://cleverbot.io/1.0");
             }
 
@@ -74,15 +80,17 @@ namespace Nekobot
             }
             #endregion
 
-            async System.Threading.Tasks.Task Do(MessageEventArgs e)
+            async Task Do(MessageEventArgs e)
             {
                 if (chatbots.Count() == 0) return; // No bot sessions
                 string msg = e.Message.Text;
                 if (chatbots.ContainsKey(e.Channel.Id) && (e.Channel.IsPrivate || HasNeko(ref msg, e.Server.CurrentUser)))
                 {
+                    /* Ideally, we'd ask in order, but to retry, we now await, so we can't.
                     string chat;
                     lock (chatbots[e.Channel.Id]) chat = chatbots[e.Channel.Id].Ask(msg); // Ask in order.
-                    chat = System.Net.WebUtility.HtmlDecode(chat);
+                    chat = System.Net.WebUtility.HtmlDecode(chat);*/
+                    var chat = System.Net.WebUtility.HtmlDecode(await chatbots[e.Channel.Id].Ask(msg));
                     await e.Channel.SendIsTyping();
                     for (int i = 10; i != 0; --i) try { await (e.Message.IsTTS ? e.Channel.SendTTSMessage(chat) : e.Channel.SendMessage(chat)); break; }
                         catch (Discord.Net.HttpException ex) { if (i == 1) Log.Write(LogSeverity.Error, $"{ex.Message}\nCould not SendMessage to {(e.Channel.IsPrivate ? "private" : "public")} channel {e.Channel} in response to {e.User}'s message: {e.Message.Text}"); }
@@ -99,11 +107,11 @@ namespace Nekobot
                 while (reader.Read())
                     CreateBot(client_id.ToString(), reader["channel"].ToString());
                 // Register the handler
-                Program.Cmds.NonCommands += e => System.Threading.Tasks.Task.Run(() => Do(e));
+                Program.Cmds.NonCommands += e => Task.Run(() => Do(e));
             }
             internal bool HasBot(ulong id) => chatbots.ContainsKey(id);
             internal void RemoveBot(ulong id) => Helpers.Remove(chatbots, id);
-            internal void CreateBot(string client_id, string chat_id) => chatbots[System.Convert.ToUInt64(chat_id)] = new Session(client_id + chat_id, _user, _key);
+            internal void CreateBot(string client_id, string chat_id) => chatbots[Convert.ToUInt64(chat_id)] = new Session(client_id + chat_id, _user, _key);
         }
 
         internal static void AddDelayedCommands(Commands.CommandGroupBuilder group)
