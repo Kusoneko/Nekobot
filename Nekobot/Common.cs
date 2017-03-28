@@ -117,8 +117,10 @@ namespace Nekobot
                     var json = JObject.Parse(Helpers.GetRestClient("http://api.urbandictionary.com/v0").Execute(req).Content);
                     var list = json["list"];
                     if (!list.HasValues) return "No results found.";
+                    var sounds = json["sounds"];
+                    var sound = sounds.HasValues ? $"Sound: {sounds.First}" : string.Empty;
                     var resp = list[0];
-                    return $"{resp["word"]}: {resp["definition"]}\n⬆{resp["thumbs_up"]} ⬇{resp["thumbs_down"]} <{resp["permalink"]}>```{resp["example"]}```";
+                    return $"{resp["word"]}: {resp["definition"]}\n⬆{resp["thumbs_up"]} ⬇{resp["thumbs_down"]} <{resp["permalink"]}>```{resp["example"]}```{sound}";
                 }));
 
             if (Helpers.FieldExists("WolframAlpha", "appid"))
