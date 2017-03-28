@@ -141,10 +141,7 @@ namespace Nekobot
             => args.Length > index && args[index] != "";
 
         internal static void Remove<T, V>(System.Collections.Concurrent.ConcurrentDictionary<T, V> tv, T t)
-        {
-            V v;
-            tv.TryRemove(t, out v);
-        }
+            => tv.TryRemove(t, out V v);
 
         internal static string Pick(string[] quotes) => quotes[new Random().Next(0, quotes.Count())];
     }

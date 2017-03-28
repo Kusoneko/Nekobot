@@ -46,8 +46,7 @@ namespace Nekobot.Commands
             if (index != parts.Length)
             {
                 string nextPart = parts[index];
-                CommandMap nextGroup;
-                if (_items.TryGetValue(nextPart.ToLowerInvariant(), out nextGroup))
+                if (_items.TryGetValue(nextPart.ToLowerInvariant(), out var nextGroup))
                     return nextGroup.GetItem(index + 1, parts);
                 else
                     return null;
@@ -73,8 +72,7 @@ namespace Nekobot.Commands
             if (index != parts.Length)
             {
                 string nextPart = parts[index];
-                CommandMap nextGroup;
-                if (_items.TryGetValue(nextPart.ToLowerInvariant(), out nextGroup))
+                if (_items.TryGetValue(nextPart.ToLowerInvariant(), out var nextGroup))
                 {
                     var cmd = nextGroup.GetCommands(index + 1, parts);
                     if (cmd != null)
@@ -98,10 +96,9 @@ namespace Nekobot.Commands
 
             if (index != parts.Length)
             {
-                CommandMap nextGroup;
                 string name = parts[index].ToLowerInvariant();
                 string fullName = string.Join(" ", parts, 0, index + 1);
-                if (!_items.TryGetValue(name, out nextGroup))
+                if (!_items.TryGetValue(name, out var nextGroup))
                 {
                     nextGroup = new CommandMap(this, name, fullName);
                     _items.Add(name, nextGroup);

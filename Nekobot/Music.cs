@@ -331,7 +331,7 @@ namespace Nekobot
                 var musicReader = Reader(uri);
                 if (musicReader == null)
                 {
-                    Program.log.Warning("Stream", $"{uri} couldn't be read.");
+                    Program.CLog.Warning("Stream", $"{uri} couldn't be read.");
                     return;
                 }
                 var channels = Program.Audio.Config.Channels;
@@ -397,7 +397,7 @@ namespace Nekobot
                                 return false;
                             });
                         }
-                        catch (OperationCanceledException err) { Program.log.Error("Stream", err.Message); }
+                        catch (OperationCanceledException err) { Program.CLog.Error("Stream", err.Message); }
                     });
                     _client.Wait(); // Prevent endless queueing which would eventually eat up all the ram
                     if (pl.Cleanup()) break;
@@ -897,8 +897,7 @@ namespace Nekobot
                 .Description("I'll skip the currently playing song(s).")
                 .Do(e =>
                 {
-                    int count;
-                    playlist[e.User.VoiceChannel.Id].SkipSongs(e.Args.Any() && int.TryParse(e.Args[0], out count) ? count : 1);
+                    playlist[e.User.VoiceChannel.Id].SkipSongs(e.Args.Any() && int.TryParse(e.Args[0], out int count) ? count : 1);
                     e.Channel.SendMessage("Forcefully skipping...");
                 });
 
@@ -910,9 +909,8 @@ namespace Nekobot
                 .Description("I'll forget about `count` upcoming song(s) starting at `index`.")
                 .Do(e =>
                 {
-                    int index, count;
                     string msg;
-                    if (int.TryParse(e.Args[0], out index) && int.TryParse(e.Args[1], out count))
+                    if (int.TryParse(e.Args[0], out int index) && int.TryParse(e.Args[1], out int count))
                     {
                         playlist[e.User.VoiceChannel.Id].SkipRange(index, count);
                         msg = "Forcefully removed songs.";
@@ -928,8 +926,7 @@ namespace Nekobot
                 .Description("I'll forget about the last song(s) currently in the playlist.")
                 .Do(e =>
                 {
-                    int count;
-                    playlist[e.User.VoiceChannel.Id].SkipLastSongs(e.Args.Any() && int.TryParse(e.Args[0], out count) ? count : 1);
+                    playlist[e.User.VoiceChannel.Id].SkipLastSongs(e.Args.Any() && int.TryParse(e.Args[0], out int count) ? count : 1);
                     e.Channel.SendMessage("Forcefully removed songs.");
                 });
 

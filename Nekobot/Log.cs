@@ -8,7 +8,7 @@ namespace Nekobot
 {
     partial class Program
     {
-        internal static LogManager log => client.Log;
+        internal static LogManager CLog => client.Log;
     }
     class Log
     {

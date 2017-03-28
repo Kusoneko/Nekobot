@@ -136,9 +136,7 @@ namespace Nekobot.Commands
                 }
 
                 //Parse command
-                IEnumerable<Command> commands;
-                int argPos;
-                CommandParser.ParseCommand(msg, _map, out commands, out argPos);                
+                CommandParser.ParseCommand(msg, _map, out var commands, out int argPos);                
                 if (commands == null)
                 {
                     CommandEventArgs errorArgs = new CommandEventArgs(e.Message, null, null);
@@ -151,8 +149,7 @@ namespace Nekobot.Commands
                     foreach (var command in commands)
                     {
                         //Parse arguments
-                        string[] args;
-                        var error = CommandParser.ParseArgs(msg, argPos, command, out args);
+                        var error = CommandParser.ParseArgs(msg, argPos, command, out var args);
                         if (error != null)
                         {
                             if (error == CommandErrorType.BadArgCount)
@@ -168,8 +165,7 @@ namespace Nekobot.Commands
                         var eventArgs = new CommandEventArgs(e.Message, command, args);
 
                         // Check permissions
-                        string errorText;
-                        if (!command.CanRun(eventArgs.User, eventArgs.Channel, out errorText))
+                        if (!command.CanRun(eventArgs.User, eventArgs.Channel, out var errorText))
                         {
                             OnCommandError(CommandErrorType.BadPermissions, eventArgs, errorText != null ? new Exception(errorText) : null);
                             return;
@@ -217,8 +213,7 @@ namespace Nekobot.Commands
                 bool isFirstItem = true;
                 foreach (var group in category.Value.SubGroups)
                 {
-                    string error;
-                    if (group.IsVisible && (group.HasSubGroups || group.HasNonAliases) && group.CanRun(user, channel, out error))
+                    if (group.IsVisible && (group.HasSubGroups || group.HasNonAliases) && group.CanRun(user, channel, out var error))
                     {
                         if (isFirstItem)
                         {
@@ -332,9 +327,8 @@ namespace Nekobot.Commands
         }
         public Task ShowCommandHelp(Command command, User user, Channel channel, Channel replyChannel = null)
         {
-            StringBuilder output = new StringBuilder();
-            string error;
-            if (!command.CanRun(user, channel, out error))
+            var output = new StringBuilder();
+            if (!command.CanRun(user, channel, out var error))
                 output.AppendLine(error ?? "You do not have permission to access this command.");
             else
                 ShowCommandHelpInternal(command, user, channel, output);
@@ -387,9 +381,8 @@ namespace Nekobot.Commands
             _allCommands.Add(command);
 
             //Get category
-            CommandMap category;
             string categoryName = command.Category ?? "";
-            if (!_categories.TryGetValue(categoryName, out category))
+            if (!_categories.TryGetValue(categoryName, out var category))
             {
                 category = new CommandMap();
                 _categories.Add(categoryName, category);
