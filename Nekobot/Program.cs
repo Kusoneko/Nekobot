@@ -16,6 +16,20 @@ namespace Nekobot
     {
         internal static CommandService Cmds => client.Commands();
 
+        static string VersionCheck()
+        {
+            var version = Config.AppVersion;
+            var versions = version.Split('.');
+            var remoteversion = JObject.Parse(Helpers.GetRestClient("https://raw.githubusercontent.com").Execute<JObject>(new RestRequest("Kusoneko/Nekobot/master/version.json", Method.GET)).Content)["version"].ToString();
+            var remoteversions = remoteversion.Split('.');
+            int diff;
+            string section =
+                (diff = int.Parse(versions[0]) - int.Parse(remoteversions[0])) != 0 ? $"major version{(Math.Abs(diff) == 1 ? "" : "s")}" :
+                (diff = int.Parse(versions[1]) - int.Parse(remoteversions[1])) != 0 ? $"minor version{(Math.Abs(diff) == 1 ? "" : "s")}" :
+                (diff = int.Parse(versions[2]) - int.Parse(remoteversions[2])) != 0 ? $"patch{(Math.Abs(diff) == 1 ? "" : "es")}" : null;
+            return $"I'm {(section == null ? $"up to date! (Current version: {version})" : $"currently {Math.Abs(diff)} {section} {(diff > 0 ? "ahead" : "behind")}. (Current version: {version}, latest {("released ")}version: {remoteversion})")}";
+        }
+
         // Commands first to help with adding new commands
         static void GenerateCommands(CommandGroupBuilder group)
         {
@@ -33,7 +47,7 @@ namespace Nekobot
                         {
                             var index = output.Length == 2000 ? 0 : output.LastIndexOf('\n');
                             await e.User.SendMessage(Format.Code(index == 0 ? output : output.Substring(0, index)));
-                            output = index == 0 ? "" : output.Substring(index+1);
+                            output = index == 0 ? "" : output.Substring(index + 1);
                         }
                         else output += '\n';
                     }
@@ -46,19 +60,7 @@ namespace Nekobot
 
             group.CreateCommand("version")
                 .Description("I'll tell you the current version and check if a newer version is available.")
-                .Do(async e =>
-                {
-                    var version = Config.AppVersion;
-                    string[] versions = version.Split('.');
-                    string remoteversion = JObject.Parse(Helpers.GetRestClient("https://raw.githubusercontent.com").Execute<JObject>(new RestRequest("Kusoneko/Nekobot/master/version.json", Method.GET)).Content)["version"].ToString();
-                    string[] remoteversions = remoteversion.Split('.');
-                    int diff;
-                    string section =
-                        (diff = int.Parse(versions[0]) - int.Parse(remoteversions[0])) != 0 ? $"major version{(Math.Abs(diff) == 1 ? "" : "s")}" :
-                        (diff = int.Parse(versions[1]) - int.Parse(remoteversions[1])) != 0 ? $"minor version{(Math.Abs(diff) == 1 ? "" : "s")}" :
-                        (diff = int.Parse(versions[2]) - int.Parse(remoteversions[2])) != 0 ? $"patch{(Math.Abs(diff) == 1 ? "" : "es")}" : null;
-                    await e.Channel.SendMessage($"I'm {(section == null ? $"up to date! (Current version: {version})" : $"currently {Math.Abs(diff)} {section} {(diff > 0 ? "ahead" : "behind")}. (Current version: {version}, latest {("released ")}version: {remoteversion})")}");
-                });
+                .Do(async e => await e.Channel.SendMessage(VersionCheck()));
 
             Common.AddCommands(group);
 
@@ -460,6 +462,7 @@ namespace Nekobot
             client.ExecuteAndWait(async() =>
             {
                 Log.Output("Ohayou, Master-san!", ConsoleColor.Cyan);
+                Log.Output(VersionCheck(), ConsoleColor.Cyan);
                 while (true)
                 {
                     try
