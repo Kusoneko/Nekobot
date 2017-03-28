@@ -1,4 +1,5 @@
 ﻿using System;
+using Albatross.Expression;
 using Ninject;
 using RollGen;
 
@@ -10,7 +11,7 @@ namespace Nekobot
         {
             public DiceKernel Init()
             {
-                new RollGen.Domain.Ioc.RollGenModuleLoader().LoadModules(this);
+                new RollGen.Domain.IoC.RollGenModuleLoader().LoadModules(this);
                 return this;
             }
         }
@@ -25,8 +26,7 @@ namespace Nekobot
                 {
                     foreach (string s in e.Args)
                     {
-                        int dummy = 0;
-                        if (!int.TryParse(s, out dummy))
+                        if (!int.TryParse(s, out int dummy))
                         {
                             await e.Channel.SendMessage($"{s} is not a number!");
                             return;
@@ -48,7 +48,8 @@ namespace Nekobot
                     await e.Channel.SendMessage($"Your number is **{new Random().Next(min,max+1)}**.");
                 });
 
-            var dd = new DiceKernel().Init().Get<Dice>();
+            var dk = new DiceKernel().Init();
+            var dd = dk.Get<IDice>();
             group.CreateCommand("roll")
                 .Parameter("[times]t [dice expressions]", Commands.ParameterType.Unparsed)
                 .Description("I'll roll a dice expression([count]d[sides]k[kept][mods...]...) as many `times` as you ask(default 1). (If empty or just `times`, will roll default: 1d6.)")
@@ -86,15 +87,15 @@ namespace Nekobot
                         double val;
                         if (do_default)
                         {
-                            val = dd.Roll().d6();
+                            val = dd.Roll().D6().AsSum();
                             response += $"{val} {(total == null ? "" : times == 1 ? "=" : "+")} ";
                         }
                         else
                         {
                             try
                             {
-                                var roll = dd.ReplaceRollsWithSum(args);
-                                var eval = dd.Evaluate(roll);
+                                var roll = dd.ReplaceRollsWithSumExpression(args);
+                                var eval = dk.Get<IParser>().Compile(roll).EvalValue(null);
                                 val = Utils.ChangeType<double>(eval);
                                 if (response != "") response += '\n';
                                 var str = Utils.BooleanOrType<double>(eval);
