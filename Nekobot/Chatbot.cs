@@ -99,7 +99,7 @@ namespace Nekobot
                 while (reader.Read())
                     CreateBot(client_id.ToString(), reader["channel"].ToString());
                 // Register the handler
-                Program.commands.NonCommands += e => System.Threading.Tasks.Task.Run(() => Do(e));
+                Program.Cmds.NonCommands += e => System.Threading.Tasks.Task.Run(() => Do(e));
             }
             internal bool HasBot(ulong id) => chatbots.ContainsKey(id);
             internal void RemoveBot(ulong id) => Helpers.Remove(chatbots, id);

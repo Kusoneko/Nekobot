@@ -14,7 +14,7 @@ namespace Nekobot
 {
     partial class Program
     {
-        internal static CommandService commands => client.Commands();
+        internal static CommandService Cmds => client.Commands();
 
         // Commands first to help with adding new commands
         static void GenerateCommands(CommandGroupBuilder group)
@@ -260,11 +260,10 @@ namespace Nekobot
                 .Description("I'll set the permission level of the mentioned people to the level mentioned (cannot be higher than or equal to yours).")
                 .Do(async e =>
                 {
-                    int newPermLevel;
                     int eUserPerm = Helpers.GetPermissions(e.User, e.Channel);
                     if (e.Args[1].Length == 0 || !e.Message.MentionedUsers.Any())
                         await e.Channel.SendMessage("You need to at least specify a permission level and mention one user.");
-                    else if (!int.TryParse(e.Args[0], out newPermLevel))
+                    else if (!int.TryParse(e.Args[0], out int newPermLevel))
                         await e.Channel.SendMessage("The first argument needs to be the new permission level.");
                     else if (eUserPerm <= newPermLevel)
                         await e.Channel.SendMessage("You can only set permission level to lower than your own.");
@@ -420,9 +419,8 @@ namespace Nekobot
                 string input = Console.ReadLine();
                 if (input.Length != 0)
                 {
-                    Action<string> action;
                     var command = input.ToLower().Split(' ');
-                    if (ConsoleCommands.TryGetValue(command[0], out action))
+                    if (ConsoleCommands.TryGetValue(command[0], out Action<string> action))
                         action(string.Join(" ", command.Skip(1)));
                 }
                 Thread.Sleep(500);
@@ -462,8 +460,7 @@ namespace Nekobot
                 {
                     try
                     {
-                        JToken token;
-                        await (config.TryGetValue("token", out token) ?
+                        await (config.TryGetValue("token", out JToken token) ?
                             client.Connect(token.ToString(), TokenType.Bot) :
                             client.Connect(config["email"].ToString(), config["password"].ToString()));
                         break;
