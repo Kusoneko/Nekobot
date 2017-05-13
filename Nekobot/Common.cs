@@ -175,7 +175,7 @@ namespace Nekobot
                     }));
             }
 
-            var quote_site = "http://baconzone.duckdns.org/";
+            var quote_site = "http://bacon.mlgdoor.uk/";
             group.CreateCommand("quote")
                 .Description($"I'll give you a random quote from {quote_site}quotes")
                 .Do(async e =>
