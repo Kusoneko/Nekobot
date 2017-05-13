@@ -69,7 +69,12 @@ namespace Nekobot
 
         internal static bool GetNsfw(Channel chan) => SQL.ReadBool(SQL.ReadChannel(chan.Id, "nsfw"));
 
-        internal static bool GetWelcome(Server server) => SQL.ReadBool(SQL.ReadServer(server.Id, "welcome"), true);
+        private static string GetAnnounceChan(Server s, string id) => SQL.ReadServer(s.Id, id);
+        private static bool GetServerAnnounce(Server s, string b) => SQL.ReadBool(SQL.ReadServer(s.Id, b), true);
+        internal static string GetWelcomeChan(Server s) => GetAnnounceChan(s, "welcomechannel");
+        internal static bool GetWelcome(Server s, Channel c = null) => GetServerAnnounce(s, "welcome") && (c == null || GetWelcomeChan(s) == c.Id.ToString());
+        internal static string GetLeftChan(Server s) => GetAnnounceChan(s, "leftchannel");
+        internal static bool GetLeft(Server s, Channel c = null) => GetServerAnnounce(s, "sayleft") && (c == null || GetLeftChan(s) == c.Id.ToString());
         internal static IEnumerable<ulong> GetDefaultRoles(Server server)
         {
             var arr = SQL.ReadServer(server.Id, "default_roles").Split(',');
@@ -105,19 +110,41 @@ namespace Nekobot
                     });
                 });
 
+            // TODO: clean up welcome and sayleft to be the same function via strings and lambdas.
             group.CreateCommand("welcome")
                 .Parameter("on/off", Commands.ParameterType.Required)
+                .Parameter("channel", Commands.ParameterType.Optional)
                 .MinPermissions(2)
-                .Description("I'll turn welcomes on this server off or on.")
+                .Description("I'll turn welcomes on this server off or on (in a given channel).")
                 .Do(e => Helpers.OnOffCmd(e, on =>
                 {
                     string status = on ? "en" : "dis";
-                    if (GetWelcome(e.Server) == on)
+                    Channel c = e.Message.MentionedChannels.FirstOrDefault() ?? e.Channel;
+                    if (GetWelcome(e.Server, c) == on)
                         e.Channel.SendMessage($"{e.User.Mention}, Welcoming is already {status}abled, here.");
                     else
                     {
                         SQL.AddOrUpdateServer(e.Server.Id, "welcome", on ? "1" : "0");
-                        e.Channel.SendMessage($"I will no{(on ? "w" : " longer")} welcome people to this server.");
+                        e.Channel.SendMessage($"I will no{(on ? "w" : " longer")} welcome people to this server{(on ? $" in {c.Mention}" : "")}.");
+                    }
+                }));
+
+            group.CreateCommand("sayleft")
+                .Parameter("on/off", Commands.ParameterType.Required)
+                .Parameter("channel", Commands.ParameterType.Optional)
+                .MinPermissions(2)
+                .Description("I'll turn leave announcements on this server off or on (in a given channel).")
+                .Do(e => Helpers.OnOffCmd(e, on =>
+                {
+                    string status = on ? "en" : "dis";
+                    Channel c = e.Message.MentionedChannels.FirstOrDefault() ?? e.Channel;
+                    if (GetLeft(e.Server, c) == on)
+                        e.Channel.SendMessage($"{e.User.Mention}, Announcing people who leave is already {status}abled, here.");
+                    else
+                    {
+                        SQL.AddOrUpdateServer(e.Server.Id, "sayleft", on ? "1" : "0");
+                        SQL.AddOrUpdateServer(e.Server.Id, "leftchannel", on ? c.Id.ToString() : "");
+                        e.Channel.SendMessage($"I will no{(on ? "w" : " longer")} announce when people leave this server{(on ? $" in {c.Mention}" : "")}.");
                     }
                 }));
 

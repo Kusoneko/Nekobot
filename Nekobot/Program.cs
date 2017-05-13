@@ -444,6 +444,7 @@ namespace Nekobot
             client.Ready += Ready;
             //client.LoggedOut += LoggedOut;
             client.UserJoined += UserJoined;
+            client.UserLeft += UserLeft;
             client.Log.Message += (s, e) => Log.Write(e);
             client.UsingPermissionLevels(Helpers.GetPermissions);
             //Display errors that occur when a user tries to run a command
@@ -559,10 +560,24 @@ namespace Nekobot
             Console.Title = Config.UserAgent;
         }
 
+        private static void UserLeft(object sender, UserEventArgs e)
+        {
+            if (Flags.GetLeft(e.Server))
+            {
+                var c_str = Flags.GetLeftChan(e.Server);
+                var c = c_str.Length == 0 ? e.Server.DefaultChannel : e.Server.GetChannel(ulong.Parse(c_str));
+                c.SendMessage($"{e.User.Name} has left. ({(string.IsNullOrEmpty(e.User.Nickname) ? "" : "nick: {e.User.Nickname}, ")}id: {e.User.Id})");
+            }
+        }
+
         private static void UserJoined(object sender, UserEventArgs e)
         {
             if (Flags.GetWelcome(e.Server) && !Flags.GetIgnored(e.User))
-                e.Server.DefaultChannel.SendMessage($"Welcome to {e.Server.Name}, {e.User.Mention}! :hearts:");
+            {
+                var c_str = Flags.GetWelcomeChan(e.Server);
+                var c = c_str.Length == 0 ? e.Server.DefaultChannel : e.Server.GetChannel(ulong.Parse(c_str));
+                c.SendMessage($"Welcome to {e.Server.Name}, {e.User.Mention}! :hearts:");
+            }
             var default_roles = Flags.GetDefaultRoles(e.Server).Select(r => e.Server.GetRole(r)).ToArray();
             if (default_roles.Length > 0)
                 e.User.AddRoles(default_roles);

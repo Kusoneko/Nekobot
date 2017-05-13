@@ -19,7 +19,10 @@ namespace Nekobot
             CreateTable("flags (channel varchar(17), nsfw int, music int, ignored int, chatbot int)");
             CreateField("flags", "chatbot int");
             CreateTable("roles (role varchar(17), ignored int)");
-            CreateTable("servers (server varchar(17), welcome int, default_roles varchar(256))");
+            CreateTable("servers (server varchar(17), welcome int, default_roles varchar(256), welcomechannel varchar(17), sayleft int, leftchannel varchar(17))");
+            CreateField("servers", "welcomechannel varchar(17)");
+            CreateField("servers", "sayleft int");
+            CreateField("servers", "leftchannel varchar(17)");
         }
 
         // SQL Helpers
@@ -50,8 +53,11 @@ namespace Nekobot
             {
                 switch (field)
                 {
-                    case "welcome": return $"{newval}, ''";
-                    case "default_roles": return $"1, {newval}";
+                    case "welcome": return $"{newval}, '', '', 0, ''";
+                    case "default_roles": return $"1, {newval}, '', 0, ''";
+                    case "welcomechannel": return $"1, '', {newval}, 0, ''";
+                    case "sayleft": return $"1, '', '', {newval}, ''";
+                    case "leftchannel": return $"1, '', '', 0, {newval}";
                 }
             }
             /*else if (table == "roles")
