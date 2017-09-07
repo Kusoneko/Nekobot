@@ -55,7 +55,7 @@ namespace Nekobot.Commands
             _checks = checks;
         }
 
-        internal bool CanRun(User user, Channel channel, out string error)
+        internal bool CanRun(IUser user, IMessageChannel channel, out string error)
         {
             for (int i = 0; i < _checks.Length; i++)
             {

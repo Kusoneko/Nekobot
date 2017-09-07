@@ -2,32 +2,23 @@
 using System.Threading.Tasks;
 using Discord;
 using Discord.Audio;
+using Discord.WebSocket;
 
 namespace Nekobot
 {
-    partial class Program
-    {
-        internal static AudioService Audio => client.GetService<AudioService>();
-    }
     class Voice
     {
-        internal static void Startup(DiscordClient c)
+        internal static async Task Startup(DiscordSocketClient c)
         {
-            c.UsingAudio(x =>
-            {
-                x.Mode = AudioMode.Outgoing;
-                x.EnableEncryption = true;
-            });
-
-            Music.Load(c);
+            await Music.Load(c);
         }
 
-        internal static async Task<IAudioClient> JoinServer(Channel c)
+        internal static async Task<IAudioClient> JoinServer(IVoiceChannel c)
         {
-            try { return await Program.Audio.Join(c); }
+            try { return await c.ConnectAsync(); }
             catch (Exception e)
             {
-                Program.CLog.Error("Voice", "Join Server Error: " + e.Message);
+                await Log.Write(LogSeverity.Error, "Join Server Error", e, "Voice");
                 return null;
             }
         }

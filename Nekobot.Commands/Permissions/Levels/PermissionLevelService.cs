@@ -3,22 +3,22 @@ using Discord;
 
 namespace Nekobot.Commands.Permissions.Levels
 {
-    public class PermissionLevelService : IService
+    public class PermissionLevelService
     {
-        private readonly Func<User, Channel, int> _getPermissionsFunc;
+        private readonly Func<IUser, IMessageChannel, int> _getPermissionsFunc;
 
-        private DiscordClient _client;
-        public DiscordClient Client => _client;
+        private IDiscordClient _client;
+        public IDiscordClient Client => _client;
 
-        public PermissionLevelService(Func<User, Channel, int> getPermissionsFunc)
+        public PermissionLevelService(Func<IUser, IMessageChannel, int> getPermissionsFunc)
         {
             _getPermissionsFunc = getPermissionsFunc;
         }
 
-        public void Install(DiscordClient client)
+        public void Install(IDiscordClient client)
         {
             _client = client;
         }
-        public int GetPermissionLevel(User user, Channel channel) => _getPermissionsFunc(user, channel);
+        public int GetPermissionLevel(IUser user, IMessageChannel channel) => _getPermissionsFunc(user, channel);
     }
 }

@@ -5,16 +5,17 @@ using System.Threading.Tasks;
 using Discord;
 using Newtonsoft.Json.Linq;
 using RestSharp;
+using Discord.WebSocket;
 
 namespace Nekobot
 {
     partial class Program
     {
-        internal static async Task<Channel> GetChannel(ulong id) => client.GetChannel(id) ?? await client.CreatePrivateChannel(id);
+        internal static async Task<IMessageChannel> GetChannel(ulong id) => (IMessageChannel)client.GetChannel(id) ?? await client.GetDMChannelAsync(id);
     }
     static class Common
     {
-        static string DoPing(Message msg)
+        static string DoPing(IMessage msg)
            => $" ({DateTime.Now.Millisecond - msg.Timestamp.Millisecond} milliseconds)";
 
         static void AddResponseCommands(Commands.CommandGroupBuilder group, string file)
@@ -27,8 +28,8 @@ namespace Nekobot
                 {
                     cmd.FlagNsfw(val["nsfw"].ToObject<bool>());
                     var responses = val["responses"].ToObject<string[]>();
-                    if (responses.Length == 1) cmd.Do(async e => await e.Channel.SendMessage(responses[0]));
-                    else cmd.Do(async e => await e.Channel.SendMessage(Helpers.Pick(responses)));
+                    if (responses.Length == 1) cmd.Do(async e => await e.Channel.SendMessageAsync(responses[0]));
+                    else cmd.Do(async e => await e.Channel.SendMessageAsync(Helpers.Pick(responses)));
                 });
             }
         }
@@ -37,18 +38,18 @@ namespace Nekobot
         {
             group.CreateCommand("ping")
                 .Description("I'll reply with 'Pong!'")
-                .Do(e => e.Channel.SendMessage($"{e.User.Mention}, Pong!{DoPing(e.Message)}"));
+                .Do(e => e.Channel.SendMessageAsync($"{e.User.Mention}, Pong!{DoPing(e.Message)}"));
 
             group.CreateCommand("pong")
                 .Hide() // More of an easter egg, don't show in help.
                 .Description("I'll reply with 'Ping?'")
-                .Do(e => e.Channel.SendMessage($"{e.User.Mention}, Ping?{DoPing(e.Message)}"));
+                .Do(e => e.Channel.SendMessageAsync($"{e.User.Mention}, Ping?{DoPing(e.Message)}"));
 
             group.CreateCommand("uptime")
                 .Description("I'll tell you how long I've been awake~")
-                .Do(e => e.Channel.SendMessage(Format.Code(Helpers.Uptime().ToString())));
+                .Do(e => e.Channel.SendMessageAsync(Format.Code(Helpers.Uptime().ToString())));
 
-            Func<Role, string> role_info = r =>
+            Func<SocketRole, string> role_info = r =>
             {
                 string ret = $"{r.Name} is id {r.Id}, has {r.Members.Count()} members, color is {r.Color}, perms are {r.Permissions.RawValue}, and position is {r.Position}";
                 if (r.IsManaged) ret += "; it is managed by the server";
@@ -60,22 +61,29 @@ namespace Nekobot
                 .Description("I'll give you information about the mentioned user(s).")
                 .Do(async e =>
                 {
-                    if (e.Args[0].Length == 0 || (!e.Message.MentionedUsers.Any() && !e.Message.MentionedRoles.Any())) return;
+                    if (e.Args[0].Length == 0 || (!e.Message.MentionedUserIds.Any() && !e.Message.MentionedRoleIds.Any())) return;
                     string reply = "";
                     bool oniicheck = e.User.Id == 63299786798796800;
-                    foreach (User u in e.Message.MentionedUsers)
+                    foreach (var t in e.Message.Tags)
                     {
-                        bool onii = oniicheck && u.Id == 63296013791666176;
-                        string possessive = onii ? "his" : "their";
-                        reply += u.Name;
-                        if (!string.IsNullOrEmpty(u.Nickname)) reply += $" (Nick: {u.Nickname})";
-                        reply += $"{(onii ? " is your onii-chan <3 and his" : "'s")} id is {u.Id}, {possessive} discriminator is {u.Discriminator} and {possessive} permission level is {Helpers.GetPermissions(u, e.Channel)}.";
-                        if (u.IsBot) reply += " Also, they are a bot!";
-                        reply += '\n';
+                        switch (t.Type)
+                        {
+                            case TagType.RoleMention:
+                                reply += role_info(t.Value as SocketRole);
+                                break;
+                            case TagType.UserMention:
+                                var u = t.Value as IGuildUser;
+                                bool onii = oniicheck && u.Id == 63296013791666176;
+                                string possessive = onii ? "his" : "their";
+                                reply += u.Username;
+                                if (!string.IsNullOrEmpty(u.Nickname)) reply += $" (Nick: {u.Nickname})";
+                                reply += $"{(onii ? " is your onii-chan <3 and his" : "'s")} id is {u.Id}, {possessive} discriminator is {u.Discriminator} and {possessive} permission level is {Helpers.GetPermissions(u, e.Channel)}.";
+                                if (u.IsBot) reply += " Also, they are a bot!";
+                                reply += '\n';
+                                break;
+                        }
                     }
-                    foreach (Role r in e.Message.MentionedRoles)
-                        reply += role_info(r);
-                    await e.Channel.SendMessage('\n' + reply);
+                    await e.Channel.SendMessageAsync('\n' + reply);
                 });
 
             group.CreateCommand("whois role")
@@ -92,7 +100,7 @@ namespace Nekobot
                         foreach (var r in roles)
                             reply += role_info(r);
                     });
-                    e.Channel.SendMessage(reply);
+                    e.Channel.SendMessageAsync(reply);
                 });
             
             Music.AddCommands(group);
@@ -102,7 +110,7 @@ namespace Nekobot
             Action<Commands.CommandEventArgs, Func<string, string>> lookup_cmd = (e, f) =>
             {
                 var args = e.Args[0];
-                e.Channel.SendMessage(args.Length == 0 ? "I cannot lookup nothing, silly!" : f(args));
+                e.Channel.SendMessageAsync(args.Length == 0 ? "I cannot lookup nothing, silly!" : f(args));
             };
 
             group.CreateCommand("urban")
@@ -181,7 +189,7 @@ namespace Nekobot
                 .Do(async e =>
                 {
                     var result = JObject.Parse(Helpers.GetRestClient(quote_site).Execute<JObject>(new RestRequest("api/v1/quotes/random", Method.GET)).Content)["quotes"][0];
-                    await e.Channel.SendMessage($"\"{result["quote"]}\" - {result["author"]} {result["year"]}");
+                    await e.Channel.SendMessageAsync($"\"{result["quote"]}\" - {result["author"]} {result["year"]}");
                 });
 
             Func<string, string, string, string> add_quote = (quote, author, year) =>
@@ -202,31 +210,23 @@ namespace Nekobot
                     var args = string.Join(" ", e.Args).Split('|');
                     if (args.Length < 2)
                     {
-                        await e.Channel.SendMessage("I need a quote and its author, silly!");
+                        await e.Channel.SendMessageAsync("I need a quote and its author, silly!");
                         return;
                     }
-                    await e.Channel.SendMessage(add_quote(args[0], args[1], args.Length == 2 ? DateTime.Now.Year.ToString() : args[2]));
+                    await e.Channel.SendMessageAsync(add_quote(args[0], args[1], args.Length == 2 ? DateTime.Now.Year.ToString() : args[2]));
                 });
             group.CreateCommand("quotemessage")
                 .Parameter("messageid", Commands.ParameterType.Required)
                 .Description($"I'll add a message from this channel as a quote on {quote_site}quotes")
                 .Do(async e =>
                 {
-                    Message message = null;
-                    Action get_msg = () => message = e.Channel.GetMessage(Convert.ToUInt64(e.Args[0]));
-                    get_msg();
-                    Func<bool> test_msg = () => string.IsNullOrEmpty(message.Text);
-                    if (test_msg()) // Empty message, try to download it.
+                    IMessage message = await e.Channel.GetMessageAsync(Convert.ToUInt64(e.Args[0]));
+                    if (message == null) // It's missing, report failure.
                     {
-                        await e.Channel.DownloadMessages();
-                        get_msg();
-                        if (test_msg()) // It's missing, report failure.
-                        {
-                            await e.Channel.SendMessage("Sorry, I couldn't find that message!");
-                            return;
-                        }
+                        await e.Channel.SendMessageAsync("Sorry, I couldn't find that message!");
+                        return;
                     }
-                    await e.Channel.SendMessage(add_quote(message.Text, Helpers.Nickname(message.User), message.Timestamp.ToShortDateString()));
+                    await e.Channel.SendMessageAsync(add_quote(message.Content, Helpers.Nickname(message.Author as SocketGuildUser), message.Timestamp.Date.ToShortDateString()));
                 });
 
             Google.AddCommands(group);
@@ -241,7 +241,7 @@ namespace Nekobot
                     // Note: We'd also need to put all responses in asterisks.
                     if (!string.Join(" ", e.Args).EndsWith("?"))
                     {
-                        await e.Channel.SendMessage("You must ask a proper question!");
+                        await e.Channel.SendMessageAsync("You must ask a proper question!");
                         return;
                     }
                     string[] eightball =
@@ -253,7 +253,7 @@ namespace Nekobot
                         "Don't count on it.", "My reply is no.", "My sources say no.", "Outlook not so good.",
                         "Very doubtful.", "Nyas.", "Why not?", "zzzzz...", "No."
                     };
-                    await e.Channel.SendMessage($"*{Helpers.Pick(eightball)}*");
+                    await e.Channel.SendMessageAsync($"*{Helpers.Pick(eightball)}*");
                 });
 
             AddResponseCommands(group, "response_commands.json");
@@ -266,31 +266,38 @@ namespace Nekobot
                 .Description("I'll repeat what you said. (To a given user or channel)")
                 .Do(async e =>
                 {
-                    Channel channel = e.Channel;
+                    IMessageChannel channel = e.Channel;
                     string message = e.Args[0];
                     if (message.Length == 0) return; // Unparsed can be empty
 
+                    /* Liru Note: I don't think we have to do this anymore.
                     message = e.Message.MentionedChannels.Aggregate(
                         e.Message.MentionedUsers.Aggregate(message, (m, u) => m.Replace($"@{u.Name}", u.Mention)),
                         (m, c) => m.Replace($"#{c.Name}", c.Mention));
+                        */
 
-                    bool usermention = e.Message.MentionedUsers.Count() > (e.Message.IsMentioningMe() ? 1 : 0) && message.StartsWith("<@");
-                    if (usermention || (e.Message.MentionedChannels.Any() && message.StartsWith("<#")))
+                    if (message.StartsWith("<@") || message.StartsWith("<#"))
                     {
-                        int index = message.IndexOf(">");
-                        if (index+2 < message.Length)
+                        bool selfmention = e.Message.MentionedUserIds.Contains(Program.Self.Id);
+                        var tag = e.Message.Tags.Skip(selfmention ? 1 : 0).FirstOrDefault();
+                        var usermention = tag.Type == TagType.UserMention;
+                        if (tag != null && (usermention || tag.Type == TagType.ChannelMention))
                         {
-                            ulong mentionid = Convert.ToUInt64(message.Substring(2, index-2));
-                            if (mentionid != e.Server.CurrentUser.Id)
+                            // FIXME: This will fail in some cases, like mentioning a channel way later... we should check the mention is directly after, aside from spacing
+                            int index = message.IndexOf('>', selfmention ? message.IndexOf('>') : 0);
+                            if (index+2 < message.Length)
                             {
-                                channel = usermention ? await e.Message.MentionedUsers.First(u => u.Id == mentionid).CreatePMChannel()
-                                    : e.Message.MentionedChannels.First(c => c.Id == mentionid);
-                                if (Helpers.CanSay(ref channel, e.User, e.Channel))
-                                    message = message.Substring(index + 2);
+                                ulong mentionid = Convert.ToUInt64(message.Substring(2, index-2));
+                                if (mentionid != Program.client.CurrentUser.Id)
+                                {
+                                    channel = usermention ? await (tag.Value as IUser).GetOrCreateDMChannelAsync() : tag.Value as IMessageChannel;
+                                    if (Helpers.CanSay(ref channel, (IGuildUser)channel.GetUserAsync(e.User.Id), e.Channel))
+                                        message = message.Substring(index + 2);
+                                }
                             }
                         }
                     }
-                    else if (channel.IsPrivate)
+                    else if (channel is IPrivateChannel)
                     {
                         try
                         {
@@ -298,13 +305,13 @@ namespace Nekobot
                             if (index != -1 && index+2 < message.Length)
                             {
                                 channel = await Program.GetChannel(Convert.ToUInt64(message.Substring(0, index)));
-                                if (Helpers.CanSay(ref channel, e.User, e.Channel))
+                                if (Helpers.CanSay(ref channel, (IGuildUser)channel.GetUserAsync(e.User.Id), e.Channel))
                                     message = message.Substring(index+1);
                             }
                         } catch { }
                     }
                     if (message.TrimEnd() != "")
-                        await channel.SendMessage(message);
+                        await channel.SendMessageAsync(message);
                 });
 
             group.CreateCommand("reverse")
@@ -316,7 +323,7 @@ namespace Nekobot
                 {
                     var text = e.Args[0];
                     if (text.Length != 0)
-                        await e.Channel.SendMessage(string.Join("", Helpers.GraphemeClusters(text).Reverse().ToArray()));
+                        await e.Channel.SendMessageAsync(string.Join("", Helpers.GraphemeClusters(text).Reverse().ToArray()));
                 });
 
             group.CreateCommand("whereami")
@@ -327,17 +334,19 @@ namespace Nekobot
                 .Description("I'll tell you information about the channel and server you're asking me this from.")
                 .Do(async e =>
                 {
-                    if (e.Channel.IsPrivate)
-                        await e.Channel.SendMessage("You're in a private message with me, baka.");
+                    if (e.Channel is IPrivateChannel)
+                        await e.Channel.SendMessageAsync("You're in a private message with me, baka.");
                     else
                     {
+                        var owner = await e.Server.GetOwnerAsync();
+                        var chan = e.Channel as ITextChannel;
                         string message = $@"You are currently in {e.Channel.Name} (id: {e.Channel.Id})
-on server **{e.Server.Name}** (id: {e.Server.Id}) (region: {e.Server.Region.Name} (id: {e.Server.Region.Id}))
-owned by {e.Server.Owner.Name} (id: {e.Server.Owner.Id}).";
-                        if (e.Channel.Topic != "" || e.Channel.Topic != null)
+on server **{e.Server.Name}** (id: {e.Server.Id}) (region: {Program.client.GetVoiceRegion(e.Server.VoiceRegionId).Name} (id: {e.Server.VoiceRegionId}))
+owned by {owner.Nickname ?? owner.Username} (id: {e.Server.OwnerId}).";
+                        if (!string.IsNullOrEmpty(chan.Topic))
                             message = message + $@"
-The current topic is: {e.Channel.Topic}";
-                        await e.Channel.SendMessage(message);
+The current topic is: {chan.Topic}";
+                        await e.Channel.SendMessageAsync(message);
                     }
                 });
 
@@ -347,8 +356,13 @@ The current topic is: {e.Channel.Topic}";
                 .Do(async e =>
                 {
                     if (e.Args[0].Length == 0) return;
-                    foreach (User u in e.Message.MentionedUsers)
-                        await e.Channel.SendMessage(u.Mention + (u.AvatarUrl == null ? " has no avatar." : $"'s avatar is: {u.AvatarUrl}"));
+                    foreach (var t in e.Message.Tags)
+                        if (t.Type == TagType.UserMention)
+                        {
+                            var u = t.Value as IUser;
+                            var url = u.GetAvatarUrl();
+                            await e.Channel.SendMessageAsync(u.Mention + (url == null ? " has no avatar." : $"'s avatar is: {url}"));
+                        }
                 });
 
             group.CreateCommand("lastlog")
@@ -359,7 +373,7 @@ The current topic is: {e.Channel.Topic}";
                 {
                     var args = e.Args;
                     if (!Helpers.HasArg(args))
-                        await e.Channel.SendMessage("Just read the last messages yourself, baka!");
+                        await e.Channel.SendMessageAsync("Just read the last messages yourself, baka!");
                     else
                     {
                         int few = 4;
@@ -369,7 +383,7 @@ The current topic is: {e.Channel.Topic}";
                             {
                                 if (few <= 0)
                                 {
-                                    await e.Channel.SendMessage("You're silly!");
+                                    await e.Channel.SendMessageAsync("You're silly!");
                                     return;
                                 }
                                 args = args.Skip(1).ToArray();
@@ -378,25 +392,25 @@ The current topic is: {e.Channel.Topic}";
                         }
 
                         var search = string.Join(" ", args).TrimEnd();
-                        var found = new List<Message>();
-                        await Helpers.DoToMessages(e.Channel, few, (msgs, has_cmd_msg) =>
+                        var found = new List<IMessage>();
+                        await Helpers.DoToMessages((e.Channel as SocketTextChannel), few, (msgs, has_cmd_msg) =>
                         {
-                            found.AddRange(has_cmd_msg ? msgs.Where(s => s.Id != e.Message.Id && s.Text.Contains(search)) : msgs.Where(s => s.Text.Contains(search)));
+                            found.AddRange(has_cmd_msg ? msgs.Where(s => s.Id != e.Message.Id && s.Content.Contains(search)) : msgs.Where(s => s.Content.Contains(search)));
                             return found.Count();
                         });
 
                         if ((few = Math.Min(found.Count(), few)) == 0)
-                            await e.Channel.SendMessage("None found...");
+                            await e.Channel.SendMessageAsync("None found...");
                         else foreach (var msg in found.Take(few))
                         {
-                            var extradata = $"[{msg.Timestamp}]{msg.User.Name}:";
+                            var extradata = $"[{msg.Timestamp}]{msg.Author.Username}:";
                             // If the message would reach the max if we add extra data, send that separate.
-                            if (msg.RawText.Length + extradata.Length >= 1999)
+                            if (msg.Content.Length + extradata.Length >= 1999)
                             {
-                                await e.Channel.SendMessage(extradata);
-                                await e.Channel.SendMessage(msg.RawText);
+                                await e.Channel.SendMessageAsync(extradata);
+                                await e.Channel.SendMessageAsync(msg.Content);
                             }
-                            else await e.Channel.SendMessage($"{extradata} {msg.RawText}");
+                            else await e.Channel.SendMessageAsync($"{extradata} {msg.Content}");
                         }
                     }
                 });
@@ -415,7 +429,7 @@ The current topic is: {e.Channel.Topic}";
                         if (!lotto.Contains(number))
                             lotto.Add(number);
                     }
-                    await e.Channel.SendMessage($"Your lucky numbers are **{lotto[0]}, {lotto[1]}, {lotto[2]}, {lotto[3]}, {lotto[4]}, {lotto[5]}**.");
+                    await e.Channel.SendMessageAsync($"Your lucky numbers are **{lotto[0]}, {lotto[1]}, {lotto[2]}, {lotto[3]}, {lotto[4]}, {lotto[5]}**.");
                 });
 
             // TODO: Decide if PerformAction commands should be moved to their own json file like response_commands.json

@@ -93,13 +93,32 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Discord.Net\src\Discord.Net.Audio.Net45\Discord.Net.Audio.csproj">
-      <Project>{7bfef748-b934-4621-9b11-6302e3a9f6b3}</Project>
-      <Name>Discord.Net.Audio</Name>
+    <Content Include="07a563046816ad752d5191286986ef52_tTP_icon.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <BootstrapperPackage Include=".NETFramework,Version=v4.5.2">
+      <Visible>False</Visible>
+      <ProductName>Microsoft .NET Framework 4.5.2 %28x86 and x64%29</ProductName>
+      <Install>true</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.3.5.SP1">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5 SP1</ProductName>
+      <Install>false</Install>
+    </BootstrapperPackage>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Discord.Net\src\Discord.Net.Core\Discord.Net.Core.csproj">
+      <Project>{3e085ad0-5c56-4f86-a78c-319caed3386e}</Project>
+      <Name>Discord.Net.Core</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Discord.Net\src\Discord.Net.Net45\Discord.Net.csproj">
-      <Project>{8d71a857-879a-4a10-859e-5ff824ed6688}</Project>
-      <Name>Discord.Net</Name>
+    <ProjectReference Include="..\Discord.Net\src\Discord.Net.Rest\Discord.Net.Rest.csproj">
+      <Project>{5f359d8b-e61a-4a57-ac3e-819d3af29c07}</Project>
+      <Name>Discord.Net.Rest</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Discord.Net\src\Discord.Net.WebSocket\Discord.Net.WebSocket.csproj">
+      <Project>{33c5fdc8-86dc-4a0c-9598-0dfc1d159df8}</Project>
+      <Name>Discord.Net.WebSocket</Name>
     </ProjectReference>
     <ProjectReference Include="..\Nekobot.Commands\Nekobot.Commands.csproj">
       <Project>{4c109e0e-5837-4a2e-8ab4-ab1f5ceaac2d}</Project>
@@ -117,21 +136,6 @@
       <Project>{17333ae0-a1eb-4b40-8865-8261c690814c}</Project>
       <Name>SoundCloud.NET</Name>
     </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="07a563046816ad752d5191286986ef52_tTP_icon.ico" />
-  </ItemGroup>
-  <ItemGroup>
-    <BootstrapperPackage Include=".NETFramework,Version=v4.5.2">
-      <Visible>False</Visible>
-      <ProductName>Microsoft .NET Framework 4.5.2 %28x86 and x64%29</ProductName>
-      <Install>true</Install>
-    </BootstrapperPackage>
-    <BootstrapperPackage Include="Microsoft.Net.Framework.3.5.SP1">
-      <Visible>False</Visible>
-      <ProductName>.NET Framework 3.5 SP1</ProductName>
-      <Install>false</Install>
-    </BootstrapperPackage>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>

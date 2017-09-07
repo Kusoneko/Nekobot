@@ -114,14 +114,14 @@ namespace Nekobot
                     try
                     {
                         int posts = board.GetPostCount();
-                        await e.Channel.SendMessage(posts == 0 ?
+                        await e.Channel.SendMessageAsync(posts == 0 ?
                             $"There is nothing under the tag(s):\n{tags}\non {booru}. Please try something else." :
                             board.GetImageLink(posts == 1 ? 0 : new Random().Next(1, posts - 1)));
                         return;
                     }
                     catch { }
                 }
-                await e.Channel.SendMessage($"Failed ten times, something must be broken with {booru}'s API.");
+                await e.Channel.SendMessageAsync($"Failed ten times, something must be broken with {booru}'s API.");
             }
 
             public string Link;
@@ -132,14 +132,14 @@ namespace Nekobot
             private RestClient _rclient;
         }
 
-        static async Task LewdSX(string chan, Discord.Channel c)
+        static async Task LewdSX(string chan, Discord.IMessageChannel c)
         {
             string result = Helpers.GetRestClient("https://lewdchan.com").Execute(new RestRequest($"{chan}/src/list.php", Method.GET)).Content;
             List<string> list = result.Split(new[]{ Environment.NewLine }, StringSplitOptions.None).ToList();
             Regex re = new Regex(@"([^\s]+(\.(jpg|jpeg|png|gif|bmp)))");
             foreach (Match m in re.Matches(result))
                 list.Add(m.Value);
-            await c.SendMessage($"https://lewdchan.com/{chan}/src/{list[new Random().Next(0, list.Count())]}");
+            await c.SendMessageAsync($"https://lewdchan.com/{chan}/src/{list[new Random().Next(0, list.Count())]}");
         }
 
 #if lewdchanexisted
@@ -166,7 +166,7 @@ namespace Nekobot
 
         internal static void AddCommands(Commands.CommandGroupBuilder group)
         {
-#if lewdchanexisted
+#if false
             CreateLewdCommand(group, "neko");
             CreateLewdCommand(group, "qt");
             CreateLewdCommand(group, "kitsune");
@@ -184,7 +184,7 @@ namespace Nekobot
                     Func<Commands.CommandEventArgs, Task> cmd_body = async e =>
                     {
                         var files = from file in System.IO.Directory.EnumerateFiles($@"{subdir}", "*.*").Where(s => imgexts.Contains(System.IO.Path.GetExtension(s.ToLower()))) select new { File = file };
-                        await e.Channel.SendFile(files.ElementAt(new Random().Next(0, files.Count())).File);
+                        await e.Channel.SendFileAsync(files.ElementAt(new Random().Next(0, files.Count())).File);
                     };
                     if (data == null) group.CreateCommand(Helpers.FileWithoutPath(subdir)).Do(cmd_body);
                     else Helpers.CreateJsonCommand(group, data.ToObject<Dictionary<string, JToken>>().First(), (cmd,cmd_data) =>
@@ -205,7 +205,7 @@ namespace Nekobot
                     List<string> images = new List<string>();
                     foreach (var element in result["responseData"]["results"])
                         images.Add(element["unescapedUrl"].ToString());
-                    e.Channel.SendMessage(images[rnd.Next(images.Count())].ToString());
+                    e.Channel.SendMessageAsync(images[rnd.Next(images.Count())].ToString());
                 });
 
             group.CreateCommand("imgur")
@@ -218,9 +218,9 @@ namespace Nekobot
                         var result = JObject.Parse(Helpers.GetRestClient("http://imgur.com/r/").Execute(new RestRequest($"{e.Args[0]}/top/day.json", Method.GET)).Content)["data"].First;
                         for (var i = new Random().Next(result.Parent.Count - 1); i != 0; --i, result = result.Next);
                         var part = $"imgur.com/{result["hash"]}";
-                        e.Channel.SendMessage($"**http://{part}** http://i.{part}{result["ext"]}");
+                        e.Channel.SendMessageAsync($"**http://{part}** http://i.{part}{result["ext"]}");
                     }
-                    catch { e.Channel.SendMessage("Imgur says nope~"); }
+                    catch { e.Channel.SendMessageAsync("Imgur says nope~"); }
                 });
 
             CreateBooruCommand(group, "safebooru");
@@ -238,7 +238,7 @@ namespace Nekobot
                 .Parameter("Meme type (see memelist)")
                 .Parameter("Top][/Bottom", Commands.ParameterType.MultipleUnparsed)
                 .Description("http://memegen.link/xy/MakeAllTheMemes.jpg")
-                .Do(e => e.Channel.SendMessage($"http://memegen.link/{e.Args[0]}{(e.Args.Length == 1 ? "" : $"/{Uri.EscapeDataString(string.Join("-", e.Args, 1, e.Args.Length - 1))}")}.jpg"));
+                .Do(e => e.Channel.SendMessageAsync($"http://memegen.link/{e.Args[0]}{(e.Args.Length == 1 ? "" : $"/{Uri.EscapeDataString(string.Join("-", e.Args, 1, e.Args.Length - 1))}")}.jpg"));
 
             group.CreateCommand("meme templates")
                 .Alias("memelist")
@@ -259,9 +259,9 @@ namespace Nekobot
                         }
                         else outputs[i] += s;
                     }
-                    var chan = await e.User.CreatePMChannel();
+                    var chan = await e.User.GetOrCreateDMChannelAsync();
                     foreach (var output in outputs)
-                        await chan.SendMessage(output);
+                        await chan.SendMessageAsync(output);
                 });
         }
     }

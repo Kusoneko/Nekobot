@@ -9,16 +9,18 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using LastFM = IF.Lastfm.Core.Api;
+using Discord.WebSocket;
 
 namespace Nekobot
 {
     partial class Program
     {
-        internal static CommandService Cmds => client.Commands();
+        public static readonly string AppName = "Nekobot";
+        public static readonly string AppVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString(3);
 
         static string VersionCheck()
         {
-            var version = Config.AppVersion;
+            var version = AppVersion;
             var versions = version.Split('.');
             var remoteversion = JObject.Parse(Helpers.GetRestClient("https://raw.githubusercontent.com").Execute<JObject>(new RestRequest("Kusoneko/Nekobot/master/version.json", Method.GET)).Content)["version"].ToString();
             var remoteversions = remoteversion.Split('.');
@@ -40,27 +42,27 @@ namespace Nekobot
                 .Do(async e =>
                 {
                     var output = "";
-                    foreach (var server in client.Servers)
+                    foreach (var server in client.Guilds)
                     {
                         output += $"{server.Name}: {server.TextChannels.Count()} text & {server.VoiceChannels.Count()} voice channels, {server.Users.Count()} users. ID: {server.Id}";
                         if (output.Length >= 2000)
                         {
                             var index = output.Length == 2000 ? 0 : output.LastIndexOf('\n');
-                            await e.User.SendMessage(Format.Code(index == 0 ? output : output.Substring(0, index)));
+                            await e.User.SendMessageAsync(Format.Code(index == 0 ? output : output.Substring(0, index)));
                             output = index == 0 ? "" : output.Substring(index + 1);
                         }
                         else output += '\n';
                     }
-                    if (output.Any()) await e.User.SendMessage(Format.Code(output));
+                    if (output.Any()) await e.User.SendMessageAsync(Format.Code(output));
                 });
 
             group.CreateCommand("status")
                 .Description("I'll tell you some useful stats about myself.")
-                .Do(async e => await e.Channel.SendMessage($"I'm connected to {client.Servers.Count()} servers, which have a total of {client.Servers.SelectMany(x => x.TextChannels).Count()} text and {client.Servers.SelectMany(x => x.VoiceChannels).Count()} voice channels, and see a total of {client.Servers.SelectMany(x => x.Users).Distinct().Count()} different users.\n{Format.Code($"Uptime: {Helpers.Uptime()}\n{Console.Title}")}"));
+                .Do(async e => await e.Channel.SendMessageAsync($"I'm connected to {client.Guilds.Count()} servers, which have a total of {client.Guilds.SelectMany(x => x.TextChannels).Count()} text and {client.Guilds.SelectMany(x => x.VoiceChannels).Count()} voice channels, and see a total of {client.Guilds.SelectMany(x => x.Users).Distinct().Count()} different users.\n{Format.Code($"Uptime: {Helpers.Uptime()}\n{Console.Title}")}"));
 
             group.CreateCommand("version")
                 .Description("I'll tell you the current version and check if a newer version is available.")
-                .Do(async e => await e.Channel.SendMessage(VersionCheck()));
+                .Do(async e => await e.Channel.SendMessageAsync(VersionCheck()));
 
             Common.AddCommands(group);
 
@@ -77,7 +79,7 @@ namespace Nekobot
                     {
                         request.AddQueryParameter("login", s);
                         JObject result = JObject.Parse(rclient.Execute(request).Content);
-                        await e.Channel.SendMessage(s + (result["success"].ToObject<bool>() == false
+                        await e.Channel.SendMessageAsync(s + (result["success"].ToObject<bool>() == false
                             ? " was not found." : $"'s avatar: https:{result["results"]["avatar"]["original"]}"));
                     }
                 });
@@ -91,15 +93,15 @@ namespace Nekobot
                     .Do(async e =>
                     {
                         var api = new LastFM.UserApi(lfclient.Auth, lfclient.HttpClient);
-                        var users = e.Args[0].Any() ? e.Message.MentionedUsers.Any() ? e.Message.MentionedUsers : null : new[]{e.User};
+                        var users = e.Args[0].Any() ? e.Message.MentionedUserIds.Any() ? e.Message.Tags.Where(x => x.Type == TagType.UserMention).Select(x => x.Value as IUser) : null : new[]{e.User};
                         var response = "";
                         if (users == null)
                             response = await GetLastScrobble(api, Tuple.Create(e.Args[0], e.Args[0], false));
-                        else foreach (var user in (from u in users select Tuple.Create(SQL.ReadUser(u.Id, "lastfm"), u.Name, u == e.User)))
+                        else foreach (var user in (from u in users select Tuple.Create(SQL.ReadUser(u.Id, "lastfm"), u.Username, u == e.User)))
                             response += (user.Item1 != null ? await GetLastScrobble(api, user)
                                     : $"I don't know {(user.Item3 ? "your" : $"{user.Item2}'s")} lastfm yet{(user.Item3 ? ", please use the `setlastfm <username>` command" : "")}"
                                 ) + ".\n";
-                        await e.Channel.SendMessage(response);
+                        await e.Channel.SendMessageAsync(response);
                     });
 
                 group.CreateCommand("setlastfm")
@@ -112,9 +114,9 @@ namespace Nekobot
                         {
                             lastfm = $"'{lastfm}'";
                             await SQL.AddOrUpdateUserAsync(e.User.Id, "lastfm", lastfm);
-                            await e.Channel.SendMessage($"I'll remember your lastfm is {lastfm} now, {e.User.Name}.");
+                            await e.Channel.SendMessageAsync($"I'll remember your lastfm is {lastfm} now, {e.User.Username}.");
                         }
-                        else await e.Channel.SendMessage($"'{lastfm}' is not a valid lastfm username.");
+                        else await e.Channel.SendMessageAsync($"'{lastfm}' is not a valid lastfm username.");
                     });
             }
 
@@ -144,7 +146,7 @@ namespace Nekobot
 {username}'s avatar: {avatar}";
                         }
                     }
-                    e.Channel.SendMessage(message);
+                    e.Channel.SendMessageAsync(message);
                 });
 
             group.CreateCommand("hb")
@@ -193,7 +195,7 @@ namespace Nekobot
                             message += $@"
 **Hummingbird page**: {userurl}";
                         }
-                        e.Channel.SendMessage(message);
+                        e.Channel.SendMessageAsync(message);
                     }
                 });
 
@@ -211,7 +213,7 @@ namespace Nekobot
                         request.AddQueryParameter("login", s);
                         JObject result = JObject.Parse(rclient.Execute(request).Content);
                         if (!result["success"].ToObject<bool>())
-                            e.Channel.SendMessage($"{s} was not found.");
+                            e.Channel.SendMessageAsync($"{s} was not found.");
                         else
                         {
                             var results = result["results"];
@@ -224,7 +226,7 @@ namespace Nekobot
                             int following = results["following_count"].ToObject<int>();
                             string admin = results["is_superuser"].ToObject<bool>() ? $"\n**Player.me Staff**" : string.Empty;
                             string profile = $"<https://player.me/{results["slug"]}>";
-                            e.Channel.SendMessage($@"
+                            e.Channel.SendMessageAsync($@"
 **User**: {username}{admin}
 **Avatar**: {avatar}
 **Bio**: {bio}
@@ -236,20 +238,13 @@ namespace Nekobot
                     }
                 });
 
-            // Moderator commands
-            group.CreateCommand("invite")
-                .Parameter("invite code or link", Commands.ParameterType.Required)
-                .MinPermissions(1)
-                .Description("I'll join a new server using the provided invite code or link.")
-                .Do(e => client.GetInvite(e.Args[0])?.Result.Accept());
-
             // Administrator commands
             group.CreateCommand("restart")
                 .Description("Restart me (if I'm misbehaving... I deserve it, sir.)")
                 .MinPermissions(2)
                 .Do(e =>
                 {
-                    e.Channel.SendMessage($"Sorry, {Helpers.Nickname(e.User)}, I'll try harder this time!");
+                    e.Channel.SendMessageAsync($"Sorry, {Helpers.Nickname(e.User as SocketGuildUser)}, I'll try harder this time!");
                     Helpers.Restart();
                 });
 
@@ -263,31 +258,31 @@ namespace Nekobot
                 .Do(async e =>
                 {
                     int eUserPerm = Helpers.GetPermissions(e.User, e.Channel);
-                    if (e.Args[1].Length == 0 || !e.Message.MentionedUsers.Any())
-                        await e.Channel.SendMessage("You need to at least specify a permission level and mention one user.");
+                    if (e.Args[1].Length == 0 || !e.Message.MentionedUserIds.Any())
+                        await e.Channel.SendMessageAsync("You need to at least specify a permission level and mention one user.");
                     else if (!int.TryParse(e.Args[0], out int newPermLevel))
-                        await e.Channel.SendMessage("The first argument needs to be the new permission level.");
+                        await e.Channel.SendMessageAsync("The first argument needs to be the new permission level.");
                     else if (eUserPerm <= newPermLevel)
-                        await e.Channel.SendMessage("You can only set permission level to lower than your own.");
+                        await e.Channel.SendMessageAsync("You can only set permission level to lower than your own.");
                     else
                     {
                         string reply = "";
-                        foreach (User u in e.Message.MentionedUsers)
+                        foreach (var u in e.Message.MentionedUserIds)
                         {
                             int oldPerm = Helpers.GetPermissions(u, e.Channel);
                             if (oldPerm >= eUserPerm)
                             {
-                                reply += $"{u.Mention}'s permission level is no less than yours, you are not allowed to change it.";
+                                reply += $"<@{u}>'s permission level is no less than yours, you are not allowed to change it.";
                                 continue;
                             }
                             bool change_needed = oldPerm != newPermLevel;
                             if (change_needed)
-                                await SQL.AddOrUpdateUserAsync(u.Id, "perms", newPermLevel.ToString());
+                                await SQL.AddOrUpdateUserAsync(u, "perms", newPermLevel.ToString());
                             if (reply != "")
                                 reply += '\n';
-                            reply += $"{u.Mention}'s permission level is "+(change_needed ? "now" : "already at")+$" {newPermLevel}.";
+                            reply += $"<@{u}>'s permission level is "+(change_needed ? "now" : "already at")+$" {newPermLevel}.";
                         }
-                        await e.Channel.SendMessage(reply);
+                        await e.Channel.SendMessageAsync(reply);
                     }
                 });
 
@@ -298,9 +293,9 @@ namespace Nekobot
                 .Description("I'll leave the server this command was used in.")
                 .Do(async e =>
                 {
-                    await e.Channel.SendMessage("Bye bye!");
+                    await e.Channel.SendMessageAsync("Bye bye!");
                     await Music.Stop(e.Server);
-                    await e.Server.Leave();
+                    await e.Server.LeaveAsync();
                 });
 
             group.CreateCommand("color")
@@ -319,12 +314,12 @@ namespace Nekobot
                         byte red = Convert.ToByte(rgb ? int.Parse(e.Args[1]) : Convert.ToInt32(e.Args[1].Substring(0, 2), 16));
                         byte green = Convert.ToByte(rgb ? int.Parse(e.Args[2]) : Convert.ToInt32(e.Args[1].Substring(2, 2), 16));
                         byte blue = Convert.ToByte(rgb ? int.Parse(e.Args[3]) : Convert.ToInt32(e.Args[1].Substring(4, 2), 16));
-                        Role role = e.Server.FindRoles(e.Args[0]).FirstOrDefault(); // TODO: In the future, we will probably use MentionedRoles for this.
-                        await role.Edit(color: new Color(red, green, blue));
-                        await e.Channel.SendMessage($"Role {role.Name}'s color has been changed.");
+                        SocketRole role = (SocketRole)e.Server.Roles.FirstOrDefault(r => r.Name.Contains(e.Args[0])); // TODO: In the future, we will probably use MentionedRoles for this.
+                        await role.ModifyAsync(x => x.Color = new Color(red, green, blue));
+                        await e.Channel.SendMessageAsync($"Role {role.Name}'s color has been changed.");
                     }
                     else
-                        await e.Channel.SendMessage("The parameters are invalid.");
+                        await e.Channel.SendMessageAsync("The parameters are invalid.");
                 });
 
             Action<bool> make_nick_cmd = not_self =>
@@ -335,7 +330,7 @@ namespace Nekobot
                     .Do(async e =>
                     {
                         var nickname = string.Join(" ", e.Args);
-                        await (not_self ? e.User : e.Server.CurrentUser).Edit(nickname: nickname.Length == 0 ? null : nickname);
+                        await (not_self ? e.User as SocketGuildUser : (e.Server as SocketGuild).CurrentUser).ModifyAsync(x => x.Nickname = nickname.Length == 0 ? null : nickname); // TODO: Test if this works, I think it works different in Discord.Net 1.0
                     });
             };
             make_nick_cmd(true);
@@ -345,15 +340,15 @@ namespace Nekobot
                 .Parameter("Game", Commands.ParameterType.Unparsed)
                 .Description("I'll set my current game to something else (empty for no game).")
                 .MinPermissions(4)
-                .Do(e => client.SetGame(e.Args[0])); // TODO: Store current game in database(varchar(128)) instead of config?
+                .Do(e => client.SetGameAsync(e.Args[0])); // TODO: Store current game in database(varchar(128)) instead of config?
 
             group.CreateCommand("setavatar")
                 .Parameter("Avatar Link")
                 .Description("I'll set my current avatar to something else.")
                 .MinPermissions(4)
-                .Do(e => client.CurrentUser.Edit(avatar: new System.IO.MemoryStream(new System.Net.WebClient().DownloadData(e.Args[0]))));
+                .Do(e => client.CurrentUser.ModifyAsync(x => x.Avatar = new Discord.Image(new System.IO.MemoryStream(new System.Net.WebClient().DownloadData(e.Args[0])))));
 
-            Action<string, Action<IEnumerable<Message>, CommandEventArgs>> delcmd = (s,a) => group.CreateCommand(s)
+            Action<string, Action<IEnumerable<IMessage>, CommandEventArgs>> delcmd = (s,a) => group.CreateCommand(s)
                 .MinPermissions(4)
                 .Parameter("few", Commands.ParameterType.Required)
                 .Description("I'll delete the last `few` messages, and the command message.")
@@ -362,18 +357,18 @@ namespace Nekobot
                     var few = int.Parse(e.Args[0]);
                     if (few <= 0)
                     {
-                        await e.Channel.SendMessage("You're silly!");
+                        await e.Channel.SendMessageAsync("You're silly!");
                         return;
                     }
 
-                    if (e.Channel.IsPrivate || !e.Server.CurrentUser.GetPermissions(e.Channel).ManageMessages)
+                    if (e.Channel is IPrivateChannel || !(e.Server as SocketGuild).CurrentUser.GetPermissions(e.Channel).ManageMessages)
                     {
-                        await e.Channel.SendMessage("I can't even do that here.");
+                        await e.Channel.SendMessageAsync("I can't even do that here.");
                         return;
                     }
 
                     //bool too_old = false;
-                    await Helpers.DoToMessages(e.Channel, few, (msgs, has_cmd_msg) =>
+                    await Helpers.DoToMessages(e.Channel as SocketTextChannel, few, (msgs, has_cmd_msg) =>
                     {
                         int bonus = has_cmd_msg ? 1 : 0;
                         if (few < msgs.Count()) // Cut to size
@@ -385,14 +380,14 @@ namespace Nekobot
                         return removed;
                     });
                 });
-            delcmd("deletelast", async (msgs,e) => await e.Channel.DeleteMessages(msgs.ToArray()));
-            delcmd("deletelastold", (msgs, e) => { foreach (var m in msgs) m.Delete(); });
+            delcmd("deletelast", async (msgs,e) => await e.Channel.DeleteMessagesAsync(msgs.ToArray()));
+            delcmd("deletelastold", (msgs, e) => { foreach (var m in msgs) m.DeleteAsync(); });
 
             group.CreateCommand("setname")
                 .Parameter("New name", Commands.ParameterType.Unparsed)
                 .Description("I'll change my name to whatever you wish.")
                 .MinPermissions(4)
-                .Do(e => client.CurrentUser.Edit(config["password"].ToString(), e.Args[0]));
+                .Do(e => client.CurrentUser.ModifyAsync(x => x.Username = e.Args[0]));
 
             Flags.AddCommands(group);
         }
@@ -403,18 +398,20 @@ namespace Nekobot
         }
 
         // Variables
-        static DiscordClient client;
+        internal static DiscordSocketClient client;
+        internal static CommandService Cmds;
         static LastFM.LastfmClient lfclient;
         internal static JObject config;
         internal static ulong masterId;
+        internal static LogSeverity LogLevel;
 
-        internal static DiscordConfig Config => client.Config;
+        internal static ISelfUser Self => client.CurrentUser;
         internal static Dictionary<string, Action<string>> ConsoleCommands = new Dictionary<string, Action<string>>
         {
             {"songlist", s => Music.SongList()},
             {"restart", s => Helpers.Restart()},
             {"uptime", s => Log.Output($"Uptime: {Helpers.Uptime()}")},
-            {"version", s => Log.Output(Config.UserAgent)},
+            {"version", s => Log.Output(Console.Title)},
         };
 
         static void InputThread()
@@ -445,46 +442,27 @@ namespace Nekobot
             //client.LoggedOut += LoggedOut;
             client.UserJoined += UserJoined;
             client.UserLeft += UserLeft;
-            client.Log.Message += (s, e) => Log.Write(e);
-            client.UsingPermissionLevels(Helpers.GetPermissions);
+            client.Log += l => Log.Write(l);
             //Display errors that occur when a user tries to run a command
-            var commands = client.Commands();
-            commands.CommandErrored += CommandErrored;
+            Cmds.PermsService = new PermissionLevelService(Helpers.GetPermissions);
+            Cmds.CommandErrored += CommandErrored;
 
             //Log to the console whenever someone uses a command
-            commands.CommandExecuted += (s, e) => client.Log.Info("Command", $"{e.User.Name}: {e.Command.Text}");
+            Cmds.CommandExecuted += async (s, e) => await Log.Write(new LogMessage(LogSeverity.Info, "Command", $"{e.User.Username}: {e.Command.Text}"));
 
-            commands.CreateGroup("", group => GenerateCommands(group));
+            Cmds.CreateGroup("", group => GenerateCommands(group));
 
             // Keep the window open in case of crashes elsewhere... (hopefully)
             new Thread(InputThread).Start();
 
             //DiscordClient will automatically reconnect once we've established a connection, until then we loop on our end
-            client.ExecuteAndWait(async() =>
-            {
-                Log.Output("Ohayou, Master-san!", ConsoleColor.Cyan);
-                Log.Output(VersionCheck(), ConsoleColor.Cyan);
-                while (true)
-                {
-                    try
-                    {
-                        await (config.TryGetValue("token", out JToken token) ?
-                            client.Connect(token.ToString(), TokenType.Bot) :
-                            client.Connect(config["email"].ToString(), config["password"].ToString()));
-                        break;
-                    }
-                    catch (Exception ex)
-                    {
-                        client.Log.Error($"Login Failed", ex);
-                        await Task.Delay(client.Config.FailedReconnectDelay);
-                    }
-                }
-                // Connection, join server if there is one in config, and start music streams
-                if (config["server"].ToString() != "")
-                    (await client.GetInvite(config["server"].ToString()))?.Accept();
-                Voice.Startup(client);
-                commands.CreateGroup("", group => GenerateDelayedCommands(group));
-            });
+            Log.Output("Ohayou, Master-san!", ConsoleColor.Cyan);
+            Log.Output(VersionCheck(), ConsoleColor.Cyan);
+            client.LoginAsync(TokenType.Bot, config["token"].ToString()).ConfigureAwait(false);
+            client.LoggedIn += async () =>
+                // Connection, start music streams
+                await Voice.Startup(client);
+            Cmds.CreateGroup("", group => GenerateDelayedCommands(group));
         }
 
         protected static string CalculateTime(int minutes)
@@ -536,19 +514,18 @@ namespace Nekobot
             string musicFolder = config["musicFolder"].ToString();
             Music.Folder = musicFolder;
             Music.UseSubdirs = config["musicUseSubfolders"].ToObject<bool>();
+            LogLevel = config["loglevel"].ToObject<LogSeverity>();
 
-            client = new DiscordClient(new DiscordConfigBuilder
+            var conf = new DiscordSocketConfig
             {
-                AppName = "Nekobot",
-                AppVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString(3),
-                AppUrl = "https://github.com/Kusoneko/Nekobot",
-                LogLevel = config["loglevel"].ToObject<LogSeverity>(),
+                LogLevel = LogLevel,
                 MessageCacheSize = 1024,
-                UsePermissionsCache = true,
-            });
+                AlwaysDownloadUsers = true,
+            };
+            client = new DiscordSocketClient(conf);
 
             string helpmode = config["helpmode"].ToString();
-            client.UsingCommands(new CommandServiceConfig
+            Cmds = new CommandService(new CommandServiceConfig
             {
                 CommandChars = config["prefix"].ToString().ToCharArray(),
                 RequireCommandCharInPrivate = config["prefixprivate"].ToObject<bool>(),
@@ -556,31 +533,32 @@ namespace Nekobot
                 MentionCommandChar = config["mentioncommand"].ToObject<short>(),
                 HelpMode = helpmode.Equals("public") ? HelpMode.Public : helpmode.Equals("private") ? HelpMode.Private : HelpMode.Disabled
             }, Flags.GetNsfw, Flags.GetMusic, Flags.GetIgnored);
+            Cmds.Install(client);
 
-            Console.Title = Config.UserAgent;
+            Console.Title = $"{AppName}/{AppVersion} (https://github.com/Kusoneko/Nekobot) {DiscordConfig.UserAgent}";
         }
 
-        private static void UserLeft(object sender, UserEventArgs e)
+        private static async Task UserLeft(SocketGuildUser u)
         {
-            if (Flags.GetLeft(e.Server))
+            if (Flags.GetLeft(u.Guild))
             {
-                var c_str = Flags.GetLeftChan(e.Server);
-                var c = c_str.Length == 0 ? e.Server.DefaultChannel : e.Server.GetChannel(ulong.Parse(c_str));
-                c.SendMessage($"{e.User.Name} has left. ({(string.IsNullOrEmpty(e.User.Nickname) ? "" : "nick: {e.User.Nickname}, ")}id: {e.User.Id})");
+                var c_str = Flags.GetLeftChan(u.Guild);
+                var c = c_str.Length == 0 ? u.Guild.DefaultChannel : u.Guild.GetChannel(ulong.Parse(c_str));
+                await (c as IMessageChannel).SendMessageAsync($"{u.Username}#{u.Discriminator} has left. ({(string.IsNullOrEmpty(u.Nickname) ? "" : $"nick: {u.Nickname}, ")}id: {u.Id})");
             }
         }
 
-        private static void UserJoined(object sender, UserEventArgs e)
+        private static async Task UserJoined(SocketGuildUser u)
         {
-            if (Flags.GetWelcome(e.Server) && !Flags.GetIgnored(e.User))
+            if (Flags.GetWelcome(u.Guild) && !Flags.GetIgnored(u))
             {
-                var c_str = Flags.GetWelcomeChan(e.Server);
-                var c = c_str.Length == 0 ? e.Server.DefaultChannel : e.Server.GetChannel(ulong.Parse(c_str));
-                c.SendMessage($"Welcome to {e.Server.Name}, {e.User.Mention}! :hearts:");
+                var c_str = Flags.GetWelcomeChan(u.Guild);
+                var c = c_str.Length == 0 ? u.Guild.DefaultChannel : u.Guild.GetChannel(ulong.Parse(c_str));
+                await (c as IMessageChannel).SendMessageAsync($"Welcome to {u.Guild.Name}, {u.Mention}! :hearts:");
             }
-            var default_roles = Flags.GetDefaultRoles(e.Server).Select(r => e.Server.GetRole(r)).ToArray();
+            var default_roles = Flags.GetDefaultRoles(u.Guild).Select(r => u.Guild.GetRole(r)).ToArray();
             if (default_roles.Length > 0)
-                e.User.AddRoles(default_roles);
+                await u.AddRolesAsync(default_roles);
         }
 
         /*private static void LoggedOut(object sender, DisconnectedEventArgs e)
@@ -588,13 +566,13 @@ namespace Nekobot
             Log.Write(LogSeverity.Warning, "Logged Out.");
         }*/
 
-        private static void Ready(object sender, EventArgs e)
+        private static async Task Ready()
         {
-            Log.Write(LogSeverity.Warning, "Logged in and ready!");
-            client.SetGame(config["game"].ToString());
+            await Log.Write(LogSeverity.Warning, "Logged in and ready!");
+            await client.SetGameAsync(config["game"].ToString());
         }
 
-        private static void CommandErrored(object sender, CommandErrorEventArgs e)
+        private static async Task CommandErrored(CommandErrorEventArgs e)
         {
             string msg = e.Exception?.GetBaseException().Message;
             if (msg == null) //No exception - show a generic message
@@ -623,8 +601,8 @@ namespace Nekobot
             }
             if (msg != null)
             {
-                client.ReplyError(e, "Command Error: " + msg);
-                client.Log.Error("Command", msg);
+                await client.ReplyError(e, "Command Error: " + msg);
+                await Log.Write(new LogMessage(LogSeverity.Error, "Command", msg));
             }
         }
     }

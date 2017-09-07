@@ -1,4 +1,5 @@
 ﻿using Discord;
+using System;
 
 namespace Nekobot.Commands.Permissions.Levels
 {
@@ -7,16 +8,16 @@ namespace Nekobot.Commands.Permissions.Levels
         private readonly PermissionLevelService _service;
         private readonly int _minPermissions;
 
-        public PermissionLevelService Service => _service;
+        public PermissionLevelService Service;
         public int MinPermissions => _minPermissions;
 
-        internal PermissionLevelChecker(DiscordClient client, int minPermissions)
+        internal PermissionLevelChecker(PermissionLevelService permsservice, int minPermissions)
         {
-            _service = client.GetService<PermissionLevelService>(true);
+            _service = permsservice;
             _minPermissions = minPermissions;
         }
 
-        public bool CanRun(Command command, User user, Channel channel, out string error)
+        public bool CanRun(Command command, IUser user, IMessageChannel channel, out string error)
         {
             error = null; //Use default error text.
             int permissions = _service.GetPermissionLevel(user, channel);

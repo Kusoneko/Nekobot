@@ -28,7 +28,7 @@ namespace Nekobot
                     {
                         if (!int.TryParse(s, out int dummy))
                         {
-                            await e.Channel.SendMessage($"{s} is not a number!");
+                            await e.Channel.SendMessageAsync($"{s} is not a number!");
                             return;
                         }
                     }
@@ -36,7 +36,7 @@ namespace Nekobot
                     int max = e.Args.Length > 0 ? int.Parse(e.Args[e.Args.Length == 1 ? 0 : 1]) : 100;
                     if (min == max)
                     {
-                        await e.Channel.SendMessage($"You're joking right? It's {min}.");
+                        await e.Channel.SendMessageAsync($"You're joking right? It's {min}.");
                         return;
                     }
                     if (min > max)
@@ -45,7 +45,7 @@ namespace Nekobot
                         min = max;
                         max = z;
                     }
-                    await e.Channel.SendMessage($"Your number is **{new Random().Next(min,max+1)}**.");
+                    await e.Channel.SendMessageAsync($"Your number is **{new Random().Next(min,max+1)}**.");
                 });
 
             var dk = new DiceKernel().Init();
@@ -58,7 +58,7 @@ namespace Nekobot
                     var chan = e.Channel;
                     if (e.Args[0].ToLower() == "rick")
                     {
-                        await chan.SendMessage("https://youtu.be/dQw4w9WgXcQ");
+                        await chan.SendMessageAsync("https://youtu.be/dQw4w9WgXcQ");
                         return;
                     }
                     var args = string.Join(" ", e.Args);
@@ -70,7 +70,7 @@ namespace Nekobot
                         {
                             if (times <= 0)
                             {
-                                await chan.SendMessage($"0, baka!");
+                                await chan.SendMessageAsync($"0, baka!");
                                 return;
                             }
                             args = args.Substring(t+1);
@@ -104,7 +104,7 @@ namespace Nekobot
                             }
                             catch (Exception ex)
                             {
-                                await chan.SendMessage($"Invalid Arguments: {ex.Message}");
+                                await chan.SendMessageAsync($"Invalid Arguments: {ex.Message}");
                                 return;
                             }
                         }
@@ -115,13 +115,13 @@ namespace Nekobot
                         if (!do_default) response += "\nTotal Result = ";
                         response += $"**{total}**.";
                     }
-                    await chan.SendMessage(response);
+                    await chan.SendMessageAsync(response);
                 });
 
             group.CreateCommand("rollsentence")
                 .Parameter("[sentence]", Commands.ParameterType.Unparsed)
                 .Description("I'll replace all instances of dice expressions wrapped like {1d4} with their resolutions. (see ` help roll` for info on dice expressions)")
-                .Do(async e => await e.Channel.SendMessage(e.Args[0].Length == 0 ? "" : dd.ReplaceWrappedExpressions<double>(e.Args[0])));
+                .Do(async e => await e.Channel.SendMessageAsync(e.Args[0].Length == 0 ? "" : dd.ReplaceWrappedExpressions<double>(e.Args[0])));
         }
     }
 }

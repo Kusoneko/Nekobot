@@ -1,20 +1,15 @@
 ﻿using Discord;
-using Discord.Logging;
 using System;
-using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace Nekobot
 {
-    partial class Program
-    {
-        internal static LogManager CLog => client.Log;
-    }
     class Log
     {
-        static LogMessageEventArgs Args(LogSeverity s, string msg, Exception e = null) => new LogMessageEventArgs(s, null, msg, e);
-        public static void Write(LogSeverity s, string msg, Exception e = null) => Write(Args(s, msg, e));
-        public static void Write(LogMessageEventArgs e)
+        static LogMessage Args(LogSeverity s, string msg, Exception e = null, string source = null) => new LogMessage(s, source, msg, e);
+        public static async Task Write(LogSeverity s, string msg, Exception e = null, string source = null) => await Write(Args(s, msg, e, source));
+        public static async Task Write(LogMessage e)
         {
 #if !DEBUG
             if (e.Severity > LogSeverity.Info || e.Severity > Program.Config.LogLevel) return;
@@ -47,7 +42,7 @@ namespace Nekobot
                 exMessage = null;
 
             //Source
-            string sourceName = e.Source?.ToString();
+            string sourceName = e.Source;
 
             // Text
             string text;
@@ -80,7 +75,7 @@ namespace Nekobot
 
             text = builder.ToString();
 #if DEBUG
-            if (e.Severity <= Program.Config.LogLevel)
+            if (e.Severity <= Program.LogLevel)
 #endif
             {
                 Output(text, color);
@@ -89,6 +84,7 @@ namespace Nekobot
 #if DEBUG
             System.Diagnostics.Debug.WriteLine(text);
 #endif
+            await Task.CompletedTask;
         }
 
         static object log = new object();

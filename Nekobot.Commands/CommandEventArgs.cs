@@ -7,14 +7,15 @@ namespace Nekobot.Commands
     {
         private readonly string[] _args;
 
-        public Message Message { get; }
+        public IMessage Message { get; }
         public Command Command { get; }
 
-        public User User => Message.User;
-        public Channel Channel => Message.Channel;
-        public Server Server => Message.Channel.Server;
+        public IUser User => Message.Author;
+        public ITextChannel Channel => Message.Channel as ITextChannel;
+        public IVoiceChannel VoiceChannel => (User as IVoiceState).VoiceChannel;
+        public IGuild Server => (Message.Channel is IGuildChannel) ? (Message.Channel as IGuildChannel).Guild : null;
 
-        public CommandEventArgs(Message message, Command command, string[] args)
+        public CommandEventArgs(IMessage message, Command command, string[] args)
         {
             Message = message;
             Command = command;

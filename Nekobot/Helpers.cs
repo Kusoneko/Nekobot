@@ -8,6 +8,7 @@ using RestSharp;
 using Nekobot.Commands;
 using Nekobot.Commands.Permissions.Levels;
 using Newtonsoft.Json.Linq;
+using Discord.WebSocket;
 
 namespace Nekobot
 {
@@ -16,12 +17,14 @@ namespace Nekobot
         internal static RestClient GetRestClient(string baseUri)
             => new RestClient(baseUri) { UserAgent = Console.Title };
 
-        internal static int GetPermissions(User user, Channel channel)
+        internal static int GetPermissions(IUser user, IMessageChannel channel)
+            => GetPermissions(user.Id, channel);
+        internal static int GetPermissions(ulong user, IMessageChannel channel)
         {
-            if (user.Id == Program.masterId)
+            if (user == Program.masterId)
                 return 10;
-            return SQL.ExecuteScalarPos($"select count(perms) from users where user = '{user.Id}'")
-                ? SQL.ReadInt(SQL.ReadUser(user.Id, "perms")) : 0;
+            return SQL.ExecuteScalarPos($"select count(perms) from users where user = '{user}'")
+                ? SQL.ReadInt(SQL.ReadUser(user, "perms")) : 0;
         }
 
         internal static void OnOffCmd(CommandEventArgs e, Action<bool> action, string failmsg = null)
@@ -29,11 +32,11 @@ namespace Nekobot
             var arg = e.Args[0].ToLower();
             bool on = arg == "on";
             if (on || arg == "off") action(on);
-            else e.Channel.SendMessage(failmsg ?? $"{e.User.Mention}, '{string.Join(" ", e.Args)}' isn't a valid argument. Please use on or off instead.");
+            else e.Channel.SendMessageAsync(failmsg ?? $"{e.User.Mention}, '{string.Join(" ", e.Args)}' isn't a valid argument. Please use on or off instead.");
         }
 
-        internal static bool CanSay(Channel c, User u) => c.IsPrivate || u.Id == Program.masterId || u.GetPermissions(c).SendMessages;
-        internal static bool CanSay(ref Channel c, User u, Channel old)
+        internal static bool CanSay(IMessageChannel c, IGuildUser u) => c is IPrivateChannel || u.Id == Program.masterId || u.GetPermissions(c as IGuildChannel).SendMessages;
+        internal static bool CanSay(ref IMessageChannel c, IGuildUser u, IMessageChannel old)
         {
             if (CanSay(c, u))
                 return true;
@@ -51,29 +54,28 @@ namespace Nekobot
 
         internal static async Task PerformAction(CommandEventArgs e, string action, string reaction, bool perform_when_empty)
         {
-            bool mentions_neko = e.Message.IsMentioningMe();
+            bool mentions_neko = e.Message.MentionedUserIds.Contains(Program.Self.Id);
             string message = $"{e.User.Mention} {action}s ";
-            bool mentions_everyone = !e.Channel.IsPrivate && e.Message.MentionedRoles.Contains(e.Server.EveryoneRole);
+            bool mentions_everyone = !(e.Channel is IPrivateChannel) && e.Message.Tags.Any(t => t.Type == TagType.EveryoneMention);
             if (mentions_everyone)
                 message += e.Server.EveryoneRole.Mention;
-            else if (e.Channel.IsPrivate || (!e.Message.MentionedRoles.Any() && e.Message.MentionedUsers.Count() == (mentions_neko ? 1 : 0)))
-                message = perform_when_empty ? $"*{action}s {e.User.Mention}.*" : $"{message}{(e.Channel.IsPrivate ? e.Server.CurrentUser.Mention : "me")}.";
+            else if (e.Channel is IPrivateChannel || (!e.Message.MentionedRoleIds.Any() && e.Message.MentionedUserIds.Count() == (mentions_neko ? 1 : 0)))
+                message = perform_when_empty ? $"*{action}s {e.User.Mention}.*" : $"{message}{(e.Channel is IPrivateChannel ? Program.Self.Mention : "me")}.";
             else
             {
-                foreach (User u in e.Message.MentionedUsers)
-                    message += u.Mention + ' ';
-                foreach (Role r in e.Message.MentionedRoles)
-                    message += r.Mention + ' ';
+                foreach (var t in e.Message.Tags)
+                    if (t.Type == TagType.UserMention || t.Type == TagType.RoleMention)
+                        message += (t as IMentionable).Mention + ' ';
             }
-            await e.Channel.SendMessage(message);
-            if (e.Channel.IsPrivate ? !perform_when_empty : (mentions_everyone || mentions_neko || (!perform_when_empty && !(e.Message.MentionedUsers.Any() || e.Message.MentionedRoles.Any()))))
-                await e.Channel.SendMessage(reaction);
+            await e.Channel.SendMessageAsync(message);
+            if (e.Channel is IPrivateChannel ? !perform_when_empty : (mentions_everyone || mentions_neko || (!perform_when_empty && !(e.Message.MentionedUserIds.Any() || e.Message.MentionedRoleIds.Any()))))
+                await e.Channel.SendMessageAsync(reaction);
         }
 
-        internal static void CommaSeparateRoleNames(CommandEventArgs e, Action<IEnumerable<Role>, string> perform)
+        internal static void CommaSeparateRoleNames(CommandEventArgs e, Action<IEnumerable<SocketRole>, string> perform)
         {
             foreach (var str in e.Args[0].Split(','))
-                perform(e.Server.FindRoles(str), str);
+                perform((e.Server as SocketGuild).Roles.Where(r => r.Name.Contains(str)), str);
         }
 
         internal static string FileWithoutPath(string fullpath) => fullpath.Substring(fullpath.LastIndexOf('\\') + 1);
@@ -115,17 +117,18 @@ namespace Nekobot
             Environment.Exit(0);
         }
 
-        internal static string Nickname(User u) => string.IsNullOrEmpty(u.Nickname) ? u.Name : u.Nickname;
-        internal static Func<Message, DateTime> MsgTime => msg => msg.Timestamp;
+        internal static string Nickname(SocketGuildUser u) => string.IsNullOrEmpty(u.Nickname) ? u.Username : u.Nickname;
 
-        internal static async Task DoToMessages(Channel c, int few, Func<IEnumerable<Message>, bool, int> perform)
+        internal static async Task DoToMessages(SocketTextChannel c, int few, Func<IEnumerable<IMessage>, bool, int> perform)
         {
-            var msgs = c.Messages.OrderByDescending(MsgTime);
-            var donecount = perform(msgs, true); // Let them know this contains this message.
+            var cachedmsgs = c.CachedMessages.OrderByDescending(msg => msg.Timestamp);
+            var donecount = perform(cachedmsgs, true); // Let them know this contains this message.
+            IMessage last = cachedmsgs.Last();
             while (donecount < few)
             {
-                msgs = (await c.DownloadMessages(relativeMessageId: msgs.Last().Id)).OrderByDescending(MsgTime);
+                var msgs = (await c.GetMessagesAsync(last, Direction.Before, few - donecount).Flatten()).OrderByDescending(msg => msg.Timestamp);
                 donecount += perform(msgs, false);
+                last = msgs.Last();
                 if (msgs.Count() < 100) break; // We must be at the end.
             }
         }

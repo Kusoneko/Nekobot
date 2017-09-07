@@ -114,7 +114,7 @@ namespace Nekobot.Commands
             }
         }
 
-        public bool CanRun(User user, Channel channel, out string error)
+        public bool CanRun(IUser user, IMessageChannel channel, out string error)
         {
             error = null;
             if (_commands.Count > 0)

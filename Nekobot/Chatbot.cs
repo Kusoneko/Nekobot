@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Discord;
 using Nekobot.Commands.Permissions.Levels;
 using RestSharp;
+using Discord.WebSocket;
 
 namespace Nekobot
 {
@@ -29,8 +30,8 @@ namespace Nekobot
                     Func<string> err = () => pre + (resp.StatusCode == HttpStatusCode.BadRequest ? GetJsonProperty(resp, "status") : resp.ErrorMessage);
                     while (bad() && i != 0)
                     {
-                        Log.Write(LogSeverity.Error, err());
-                        if (--i != 0) Log.Write(LogSeverity.Error, "Retrying in ten seconds");
+                        await Log.Write(LogSeverity.Error, err());
+                        if (--i != 0) await Log.Write(LogSeverity.Error, "Retrying in ten seconds");
                         await Task.Delay(10000);
                         resp = response();
                     }
@@ -71,33 +72,38 @@ namespace Nekobot
             static bool HasNekoNick(ref string msg, string nekonick) =>
                 !string.IsNullOrEmpty(nekonick) && HasNekoEmojiOrNot(ref msg, nekonick);
 
-            static bool HasNeko(ref string msg, User user)
+            static bool HasNeko(ref string msg, IUser user)
             {
-                string neko = user.Name;
-                string nekonick = user.Nickname;
+                string neko = user.Username;
+                SocketGuildUser guildneko = user is SocketGuildUser ? user as SocketGuildUser : null;
                 if (HasNekoEmojiOrNot(ref msg, neko)) // Have we been mentioned by our actual name?
                 {
-                    HasNekoNick(ref msg, nekonick); // Strip nick, too, just in case.
+                    if (guildneko != null)
+                        HasNekoNick(ref msg, guildneko.Nickname); // Strip nick, too, just in case.
                     return true;
                 }
-                return HasNekoNick(ref msg, nekonick); // Have we been mentioned by our nick?
+                return guildneko != null && HasNekoNick(ref msg, guildneko.Nickname); // Have we been mentioned by our nick?
             }
             #endregion
 
-            async Task Do(MessageEventArgs e)
+            async Task Do(IMessage e)
             {
                 if (chatbots.Count() == 0) return; // No bot sessions
-                string msg = e.Message.Text;
-                if (chatbots.ContainsKey(e.Channel.Id) && (e.Channel.IsPrivate || HasNeko(ref msg, e.Server.CurrentUser)))
+                string msg = e.Content;
+                IUser self = Program.Self;
+                if (e.Channel is SocketGuildChannel)
+                    self = (e.Channel as SocketGuildChannel).Guild.CurrentUser;
+                if (chatbots.ContainsKey(e.Channel.Id) && (e.Channel is IPrivateChannel || HasNeko(ref msg, self)))
                 {
                     /* Ideally, we'd ask in order, but to retry, we now await, so we can't.
                     string chat;
                     lock (chatbots[e.Channel.Id]) chat = chatbots[e.Channel.Id].Ask(msg); // Ask in order.
                     chat = WebUtility.HtmlDecode(chat);*/
                     var chat = WebUtility.HtmlDecode(await chatbots[e.Channel.Id].Ask(msg));
-                    await e.Channel.SendIsTyping();
-                    for (int i = 10; i != 0; --i) try { await (e.Message.IsTTS ? e.Channel.SendTTSMessage(chat) : e.Channel.SendMessage(chat)); break; }
-                        catch (Discord.Net.HttpException ex) { if (i == 1) Log.Write(LogSeverity.Error, $"{ex.Message}\nCould not SendMessage to {(e.Channel.IsPrivate ? "private" : "public")} channel {e.Channel} in response to {e.User}'s message: {e.Message.Text}"); }
+                    var disposable = e.Channel.EnterTypingState();
+                    for (int i = 10; i != 0; --i) try { await e.Channel.SendMessageAsync(chat, e.IsTTS); break; }
+                        catch (Discord.Net.HttpException ex) { if (i == 1) await Log.Write(LogSeverity.Error, $"{ex.Message}\nCould not SendMessage to {(e.Channel is IPrivateChannel ? "private" : "public")} channel {e.Channel} in response to {e.Author}'s message: {e.Content}"); disposable.Dispose(); }
+                    disposable.Dispose(); // Note: We probably don't need to call this, but I'm overtired, so I'm being cautious.
                 }
             }
 
@@ -125,7 +131,7 @@ namespace Nekobot
               return;
 
             // Create the handler
-            var handler = new Handler(group.Service.Client.CurrentUser.Id, creds["user"].ToString(), creds["key"].ToString());
+            var handler = new Handler(Program.Self.Id, creds["user"].ToString(), creds["key"].ToString());
 
             group.CreateCommand("bot")
                 .Alias("chatbot")
@@ -140,19 +146,19 @@ namespace Nekobot
                         Helpers.OnOffCmd(e, on =>
                         {
                             if (botstatus == on)
-                                e.Channel.SendMessage("The bot is already " + (botstatus ? "on" : "off") + $" for {e.Channel}");
+                                e.Channel.SendMessageAsync("The bot is already " + (botstatus ? "on" : "off") + $" for {e.Channel}");
                             else
                             {
                                 if (botstatus)
                                     handler.RemoveBot(e.Channel.Id);
                                 else
                                     handler.CreateBot(group.Service.Client.CurrentUser.Id.ToString(), e.Channel.Id.ToString());
-                                e.Channel.SendMessage("The bot is now " + (!botstatus ? "on" : "off") + $" for {e.Channel}");
+                                e.Channel.SendMessageAsync("The bot is now " + (!botstatus ? "on" : "off") + $" for {e.Channel}");
                                 SQL.AddOrUpdateFlag(e.Channel.Id, "chatbot", botstatus ? "-1" : "0");
                             }
                         });
                     }
-                    else e.Channel.SendMessage("The bot is currently " + (botstatus ? "on" : "off") + $" for {e.Channel}.");
+                    else e.Channel.SendMessageAsync("The bot is currently " + (botstatus ? "on" : "off") + $" for {e.Channel}.");
                 });
         }
     }

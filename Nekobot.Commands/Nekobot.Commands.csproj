@@ -42,11 +42,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AsyncEvent.cs" />
     <Compile Include="Command.cs" />
     <Compile Include="CommandBuilder.cs" />
     <Compile Include="CommandErrorEventArgs.cs" />
     <Compile Include="CommandEventArgs.cs" />
-    <Compile Include="CommandExtensions.cs" />
     <Compile Include="CommandMap.cs" />
     <Compile Include="CommandParameter.cs" />
     <Compile Include="CommandParser.cs" />
@@ -58,23 +58,20 @@
     <Compile Include="Permissions\Levels\PermissionLevelChecker.cs" />
     <Compile Include="Permissions\Levels\PermissionLevelExtensions.cs" />
     <Compile Include="Permissions\Levels\PermissionLevelService.cs" />
-    <Compile Include="Permissions\Userlist\BlacklistChecker.cs" />
-    <Compile Include="Permissions\Userlist\BlacklistExtensions.cs" />
-    <Compile Include="Permissions\Userlist\BlacklistService.cs" />
-    <Compile Include="Permissions\Userlist\UserlistService.cs" />
-    <Compile Include="Permissions\Userlist\WhitelistChecker.cs" />
-    <Compile Include="Permissions\Userlist\WhitelistExtensions.cs" />
-    <Compile Include="Permissions\Userlist\WhitelistService.cs" />
-    <Compile Include="Permissions\Visibility\PrivateChecker.cs" />
-    <Compile Include="Permissions\Visibility\PrivateExtensions.cs" />
-    <Compile Include="Permissions\Visibility\PublicChecker.cs" />
-    <Compile Include="Permissions\Visibility\PublicExtensions.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Discord.Net\src\Discord.Net.Net45\Discord.Net.csproj">
-      <Project>{8d71a857-879a-4a10-859e-5ff824ed6688}</Project>
-      <Name>Discord.Net</Name>
+    <ProjectReference Include="..\Discord.Net\src\Discord.Net.Core\Discord.Net.Core.csproj">
+      <Project>{3e085ad0-5c56-4f86-a78c-319caed3386e}</Project>
+      <Name>Discord.Net.Core</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Discord.Net\src\Discord.Net.Rest\Discord.Net.Rest.csproj">
+      <Project>{5f359d8b-e61a-4a57-ac3e-819d3af29c07}</Project>
+      <Name>Discord.Net.Rest</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Discord.Net\src\Discord.Net.WebSocket\Discord.Net.WebSocket.csproj">
+      <Project>{33c5fdc8-86dc-4a0c-9598-0dfc1d159df8}</Project>
+      <Name>Discord.Net.WebSocket</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

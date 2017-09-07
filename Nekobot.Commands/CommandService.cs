@@ -4,10 +4,11 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Discord;
+using Discord.WebSocket;
 
 namespace Nekobot.Commands
 {
-    public partial class CommandService : IService
+    public partial class CommandService
     {
         private readonly List<Command> _allCommands;
         private readonly Dictionary<string, CommandMap> _categories;
@@ -15,30 +16,36 @@ namespace Nekobot.Commands
 
         public CommandServiceConfig Config { get; }
         public CommandGroupBuilder Root { get; }
-        public DiscordClient Client { get; private set; }
+        public DiscordSocketClient Client { get; private set; }
+        public Permissions.Levels.PermissionLevelService PermsService;
 
         //AllCommands store a flattened collection of all commands
         public IEnumerable<Command> AllCommands => _allCommands;
 
-        private Func<Channel, bool> _getNsfwFlag;
-        private Func<User, bool> _getMusicFlag;
-        private Func<Channel, User, bool> _getIgnoredChannelFlag;
+        private Func<IMessageChannel, bool> _getNsfwFlag;
+        private Func<IVoiceState, bool> _getMusicFlag;
+        private Func<IMessageChannel, IUser, bool> _getIgnoredChannelFlag;
 
         //Groups store all commands by their module, used for more informative help
         internal IEnumerable<CommandMap> Categories => _categories.Values;
 
         //Allow stuff to happen when we don't handle a command.
-        public event Action<MessageEventArgs> NonCommands = delegate { };
+        public event Action<IMessage> NonCommands = delegate { };
 
         public event EventHandler<CommandEventArgs> CommandExecuted = delegate { };
-        public event EventHandler<CommandErrorEventArgs> CommandErrored = delegate { };
+        public event Func<CommandErrorEventArgs, Task> CommandErrored
+        {
+            add { _commandErrored.Add(value); }
+            remove { _commandErrored.Remove(value); }
+        }
+        private readonly AsyncEvent<Func<CommandErrorEventArgs, Task>> _commandErrored = new AsyncEvent<Func<CommandErrorEventArgs, Task>>();
 
         private void OnCommand(CommandEventArgs args)
             => CommandExecuted(this, args);
-        private void OnCommandError(CommandErrorType errorType, CommandEventArgs args, Exception ex = null)
-            => CommandErrored(this, new CommandErrorEventArgs(errorType, args, ex));
+        private async Task OnCommandError(CommandErrorType errorType, CommandEventArgs args, Exception ex = null)
+            => await _commandErrored.InvokeAsync(new CommandErrorEventArgs(errorType, args, ex)).ConfigureAwait(false);
 
-        public CommandService(CommandServiceConfig config, Func<Channel, bool> getNsfwFlag = null, Func<User, bool> getMusicFlag = null, Func<Channel, User, bool> getIgnoredChannelFlag = null)
+        public CommandService(CommandServiceConfig config, Func<IMessageChannel, bool> getNsfwFlag = null, Func<IVoiceState, bool> getMusicFlag = null, Func<IMessageChannel, IUser, bool> getIgnoredChannelFlag = null)
         {
             Config = config;
 
@@ -51,9 +58,10 @@ namespace Nekobot.Commands
             Root = new CommandGroupBuilder(this);
         }
 
-        void IService.Install(DiscordClient client)
+        public void Install(DiscordSocketClient client)
         {
             Client = client;
+            var self = client.CurrentUser;
             Config.Lock();
 
             if (Config.HelpMode != HelpMode.Disabled)
@@ -64,43 +72,44 @@ namespace Nekobot.Commands
                     .Description("Returns information about commands.")
                     .Do(async e =>
                     {
-                        Channel replyChannel = Config.HelpMode == HelpMode.Public ? e.Channel : await e.User.CreatePMChannel().ConfigureAwait(false);
+                        var replyChannel = Config.HelpMode == HelpMode.Public ? e.Channel : (IMessageChannel)await e.User.GetOrCreateDMChannelAsync().ConfigureAwait(false);
                         if (e.Args.Length > 0) //Show command help
                         {
                             var map = _map.GetItem(string.Join(" ", e.Args));
                             if (map != null)
                                 await ShowCommandHelp(map, e.User, e.Channel, replyChannel).ConfigureAwait(false);
                             else
-                                await replyChannel.SendMessage("Unable to display help: Unknown command.").ConfigureAwait(false);
+                                await replyChannel.SendMessageAsync("Unable to display help: Unknown command.").ConfigureAwait(false);
                         }
                         else //Show general help
                             await ShowGeneralHelp(e.User, e.Channel, replyChannel).ConfigureAwait(false);
                     });
             }
 
-            client.MessageReceived += async (s, e) =>
+            client.MessageReceived += async e =>
             {
                 if (_allCommands.Count == 0)  return;
-                if (e.Message.User == null || e.Message.User.Id == Client.CurrentUser.Id) return;
+                if (e.Author == null || e.Author.Id == Client.CurrentUser.Id) return;
 
-                string msg = e.Message.RawText;
+                string msg = e.Content;
                 if (msg.Length == 0) return;
 
                 // Check ignored before doing work
-                if (_getIgnoredChannelFlag != null ? _getIgnoredChannelFlag(e.Message.Channel, e.User) : false)
+                if (_getIgnoredChannelFlag != null ? _getIgnoredChannelFlag(e.Channel, e.Author) : false)
                     return;
 
                 //Check for command char if one is provided
                 var chars = Config.CommandChars;
                 bool mentionreq = Config.MentionCommandChar >= 1;
+                bool priv = e.Channel is IPrivateChannel;
                 if (chars.Any() || mentionreq)
                 {
                     bool hasCommandChar = chars.Contains(msg[0]);
-                    if (!hasCommandChar && (e.Message.Channel.IsPrivate ? Config.RequireCommandCharInPrivate : Config.RequireCommandCharInPublic))
+                    if (!hasCommandChar && (priv ? Config.RequireCommandCharInPrivate : Config.RequireCommandCharInPublic))
                     {
-                        if (mentionreq && e.Message.IsMentioningMe())
+                        if (mentionreq && e.MentionedUsers.Contains(self))
                         {
-                            string neko = !string.IsNullOrEmpty(e.Server.CurrentUser.Nickname) ? client.CurrentUser.NicknameMention : client.CurrentUser.Mention;
+                            string neko = !priv && !string.IsNullOrEmpty((await (e.Channel as IGuildChannel).Guild.GetUserAsync(self.Id)).Nickname) ? $"<@!{client.CurrentUser.Id}>" : $"<@{client.CurrentUser.Id}>";
                             if (neko.Length+2 > msg.Length)
                             {
                                 NonCommands(e);
@@ -139,8 +148,8 @@ namespace Nekobot.Commands
                 CommandParser.ParseCommand(msg, _map, out var commands, out int argPos);                
                 if (commands == null)
                 {
-                    CommandEventArgs errorArgs = new CommandEventArgs(e.Message, null, null);
-                    OnCommandError(CommandErrorType.UnknownCommand, errorArgs);
+                    CommandEventArgs errorArgs = new CommandEventArgs(e, null, null);
+                    await OnCommandError(CommandErrorType.UnknownCommand, errorArgs);
                     NonCommands(e);
                     return;
                 }
@@ -156,31 +165,31 @@ namespace Nekobot.Commands
                                 continue;
                             else
                             {
-                                var errorArgs = new CommandEventArgs(e.Message, command, null);
-                                OnCommandError(error.Value, errorArgs);
+                                var errorArgs = new CommandEventArgs(e, command, null);
+                                await OnCommandError(error.Value, errorArgs);
                                 return;
                             }
                         }
 
-                        var eventArgs = new CommandEventArgs(e.Message, command, args);
+                        var eventArgs = new CommandEventArgs(e, command, args);
 
                         // Check permissions
                         if (!command.CanRun(eventArgs.User, eventArgs.Channel, out var errorText))
                         {
-                            OnCommandError(CommandErrorType.BadPermissions, eventArgs, errorText != null ? new Exception(errorText) : null);
+                            await OnCommandError(CommandErrorType.BadPermissions, eventArgs, errorText != null ? new Exception(errorText) : null);
                             return;
                         }
                         // Check flags
-                        bool nsfwAllowed = _getNsfwFlag != null ? _getNsfwFlag(e.Message.Channel) : false;
-                        if (!nsfwAllowed && !e.Channel.IsPrivate && command.NsfwFlag)
+                        bool nsfwAllowed = _getNsfwFlag != null ? _getNsfwFlag(e.Channel) : false;
+                        if (!nsfwAllowed && !priv && command.NsfwFlag)
                         {
-                            OnCommandError(CommandErrorType.BadPermissions, eventArgs, new NsfwFlagException());
+                            await OnCommandError(CommandErrorType.BadPermissions, eventArgs, new NsfwFlagException());
                             return;
                         }
-                        bool isInMusicChannel = _getMusicFlag != null ? _getMusicFlag(e.Message.User) : false;
+                        bool isInMusicChannel = _getMusicFlag != null ? _getMusicFlag(e.Author as IVoiceState) : false;
                         if (command.MusicFlag && !isInMusicChannel)
                         {
-                            OnCommandError(CommandErrorType.BadPermissions, eventArgs, new MusicFlagException());
+                            await OnCommandError(CommandErrorType.BadPermissions, eventArgs, new MusicFlagException());
                             return;
                         }
 
@@ -192,17 +201,17 @@ namespace Nekobot.Commands
                         }
                         catch (Exception ex)
                         {
-                            OnCommandError(CommandErrorType.Exception, eventArgs, ex);
+                            await OnCommandError(CommandErrorType.Exception, eventArgs, ex);
                         }
                         return;
                     }
-                    var errorArgs2 = new CommandEventArgs(e.Message, null, null);
-                    OnCommandError(CommandErrorType.BadArgCount, errorArgs2);
+                    var errorArgs2 = new CommandEventArgs(e, null, null);
+                    await OnCommandError(CommandErrorType.BadArgCount, errorArgs2);
                 }
             };
         }
 
-        public Task ShowGeneralHelp(User user, Channel channel, Channel replyChannel = null)
+        public Task ShowGeneralHelp(IUser user, IMessageChannel channel, IMessageChannel replyChannel = null)
         {
             if (replyChannel == null) replyChannel = channel;
             StringBuilder output = new StringBuilder();
@@ -243,7 +252,7 @@ namespace Nekobot.Commands
 
                         if (output.Length >= 1900) // Allow 100 characters to avoid going over character limit
                         {
-                            tasks.Add(replyChannel.SendMessage(output.ToString()));
+                            tasks.Add(replyChannel.SendMessageAsync(output.ToString()));
                             output.Clear();
                             isFirstItem = true;
                         }
@@ -266,11 +275,11 @@ namespace Nekobot.Commands
                 output.AppendLine($"`{(has_chars ? chars[0].ToString() : "")}help <command>` can tell you more about how to use a command.");
             }
 
-            tasks.Add(replyChannel.SendMessage(output.ToString()));
+            tasks.Add(replyChannel.SendMessageAsync(output.ToString()));
             return Task.WhenAll(tasks);
         }
 
-        private Task ShowCommandHelp(CommandMap map, User user, Channel channel, Channel replyChannel = null)
+        private Task ShowCommandHelp(CommandMap map, IUser user, IMessageChannel channel, IMessageChannel replyChannel = null)
         {
             StringBuilder output = new StringBuilder();
 
@@ -323,18 +332,18 @@ namespace Nekobot.Commands
                 output.AppendLine("There are no commands you have permission to run.");
             }
 
-            return (replyChannel ?? channel).SendMessage(output.ToString());
+            return (replyChannel ?? channel).SendMessageAsync(output.ToString());
         }
-        public Task ShowCommandHelp(Command command, User user, Channel channel, Channel replyChannel = null)
+        public Task ShowCommandHelp(Command command, IUser user, IMessageChannel channel, IMessageChannel replyChannel = null)
         {
             var output = new StringBuilder();
             if (!command.CanRun(user, channel, out var error))
                 output.AppendLine(error ?? "You do not have permission to access this command.");
             else
                 ShowCommandHelpInternal(command, user, channel, output);
-            return (replyChannel ?? channel).SendMessage(output.ToString());
+            return (replyChannel ?? channel).SendMessageAsync(output.ToString());
         }
-        private void ShowCommandHelpInternal(Command command, User user, Channel channel, StringBuilder output)
+        private void ShowCommandHelpInternal(Command command, IUser user, IMessageChannel channel, StringBuilder output)
         {
             output.Append('`');
             output.Append(command.Text);
