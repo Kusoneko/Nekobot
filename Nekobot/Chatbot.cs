@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 using Discord;
 using Nekobot.Commands.Permissions.Levels;
@@ -18,11 +19,14 @@ namespace Nekobot
             readonly string _key;
             class Session
             {
+                internal static string GetJsonProperty(IRestResponse response, string property)
+                    => Newtonsoft.Json.Linq.JObject.Parse(response.Content)[property].ToString();
+
                 static async Task<string> AvoidBadResponse(Func<IRestResponse> response, string pre, Func<IRestResponse, string> final = null, int i = 3)
                 {
                     var resp = response();
-                    Func<bool> bad = () => resp.StatusCode != System.Net.HttpStatusCode.OK;
-                    Func<string> err = () => pre + resp.ErrorMessage;
+                    Func<bool> bad = () => resp.StatusCode != HttpStatusCode.OK;
+                    Func<string> err = () => pre + (resp.StatusCode == HttpStatusCode.BadRequest ? GetJsonProperty(resp, "status") : resp.ErrorMessage);
                     while (bad() && i != 0)
                     {
                         Log.Write(LogSeverity.Error, err());
@@ -45,7 +49,7 @@ namespace Nekobot
                 internal async Task<string> Ask(string text) =>
                     await AvoidBadResponse(() => rc.Execute(new RestRequest("ask", Method.POST).AddParameter("text", text)),
                         "Responding to chat failed: ",
-                        response => Newtonsoft.Json.Linq.JObject.Parse(response.Content)["response"].ToString());
+                        response => GetJsonProperty(response, "response"));
 
                 RestClient rc = Helpers.GetRestClient("https://cleverbot.io/1.0");
             }
@@ -89,8 +93,8 @@ namespace Nekobot
                     /* Ideally, we'd ask in order, but to retry, we now await, so we can't.
                     string chat;
                     lock (chatbots[e.Channel.Id]) chat = chatbots[e.Channel.Id].Ask(msg); // Ask in order.
-                    chat = System.Net.WebUtility.HtmlDecode(chat);*/
-                    var chat = System.Net.WebUtility.HtmlDecode(await chatbots[e.Channel.Id].Ask(msg));
+                    chat = WebUtility.HtmlDecode(chat);*/
+                    var chat = WebUtility.HtmlDecode(await chatbots[e.Channel.Id].Ask(msg));
                     await e.Channel.SendIsTyping();
                     for (int i = 10; i != 0; --i) try { await (e.Message.IsTTS ? e.Channel.SendTTSMessage(chat) : e.Channel.SendMessage(chat)); break; }
                         catch (Discord.Net.HttpException ex) { if (i == 1) Log.Write(LogSeverity.Error, $"{ex.Message}\nCould not SendMessage to {(e.Channel.IsPrivate ? "private" : "public")} channel {e.Channel} in response to {e.User}'s message: {e.Message.Text}"); }
