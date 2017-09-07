@@ -142,6 +142,7 @@ namespace Nekobot
             await c.SendMessage($"https://lewdchan.com/{chan}/src/{list[new Random().Next(0, list.Count())]}");
         }
 
+#if lewdchanexisted
         static void CreateLewdCommand(Commands.CommandGroupBuilder group, string chan)
         {
             group.CreateCommand(chan)
@@ -149,6 +150,7 @@ namespace Nekobot
                 .Description($"I'll give you a random image from https://lewdchan.com/{chan}/")
                 .Do(async e => await LewdSX(chan, e.Channel));
         }
+#endif
         static void CreateBooruCommand(Commands.CommandGroupBuilder group, string booru, string alias) => CreateBooruCommand(group, booru, new[]{alias});
         static void CreateBooruCommand(Commands.CommandGroupBuilder group, string booru, string[] aliases = null)
         {
@@ -164,10 +166,12 @@ namespace Nekobot
 
         internal static void AddCommands(Commands.CommandGroupBuilder group)
         {
+#if lewdchanexisted
             CreateLewdCommand(group, "neko");
             CreateLewdCommand(group, "qt");
             CreateLewdCommand(group, "kitsune");
             CreateLewdCommand(group, "lewd");
+#endif
 
             var imagedir = Program.config["images"].ToString();
             if (imagedir.Length == 0) imagedir = "images";
