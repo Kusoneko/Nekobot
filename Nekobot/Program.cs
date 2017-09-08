@@ -308,9 +308,10 @@ namespace Nekobot
                 .Description("I'll set a role's color to the hex(000000-FFFFFF) or rgb(0-255 0-255 0-255) color value provided.")
                 .Do(async e =>
                 {
-                    if (e.Args.Count() == 2 || e.Args.Count() == 4)
+                    var argcount = e.Args.Count();
+                    if (argcount == 2 || argcount == 4)
                     {
-                        bool rgb = e.Args.Count() == 4; // assume hex code was provided when 2, rgb when 4
+                        bool rgb = argcount == 4; // assume hex code was provided when 2, rgb when 4
                         byte red = Convert.ToByte(rgb ? int.Parse(e.Args[1]) : Convert.ToInt32(e.Args[1].Substring(0, 2), 16));
                         byte green = Convert.ToByte(rgb ? int.Parse(e.Args[2]) : Convert.ToInt32(e.Args[1].Substring(2, 2), 16));
                         byte blue = Convert.ToByte(rgb ? int.Parse(e.Args[3]) : Convert.ToInt32(e.Args[1].Substring(4, 2), 16));
