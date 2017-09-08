@@ -287,11 +287,11 @@ namespace Nekobot
                             int index = message.IndexOf('>', selfmention ? message.IndexOf('>') : 0);
                             if (index+2 < message.Length)
                             {
-                                ulong mentionid = Convert.ToUInt64(message.Substring(2, index-2));
+                                ulong mentionid = tag.Key;
                                 if (mentionid != Program.client.CurrentUser.Id)
                                 {
                                     channel = usermention ? await (tag.Value as IUser).GetOrCreateDMChannelAsync() : tag.Value as IMessageChannel;
-                                    if (Helpers.CanSay(ref channel, (IGuildUser)channel.GetUserAsync(e.User.Id), e.Channel))
+                                    if (Helpers.CanSay(ref channel, await channel.GetUserAsync(e.User.Id), e.Channel))
                                         message = message.Substring(index + 2);
                                 }
                             }

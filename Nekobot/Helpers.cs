@@ -35,8 +35,14 @@ namespace Nekobot
             else e.Channel.SendMessageAsync(failmsg ?? $"{e.User.Mention}, '{string.Join(" ", e.Args)}' isn't a valid argument. Please use on or off instead.");
         }
 
-        internal static bool CanSay(IMessageChannel c, IGuildUser u) => c is IPrivateChannel || u.Id == Program.masterId || u.GetPermissions(c as IGuildChannel).SendMessages;
-        internal static bool CanSay(ref IMessageChannel c, IGuildUser u, IMessageChannel old)
+        internal static bool CanSay(IMessageChannel c, IUser u)
+        {
+            if (c is IPrivateChannel || u.Id == Program.masterId)
+                return true;
+            var chan = c is IGuildChannel ? c as IGuildChannel : null;
+            return chan == null ? true : chan.GetUserAsync(u.Id).Result.GetPermissions(chan).SendMessages;
+        }
+        internal static bool CanSay(ref IMessageChannel c, IUser u, IMessageChannel old)
         {
             if (CanSay(c, u))
                 return true;
