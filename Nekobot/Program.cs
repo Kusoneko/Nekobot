@@ -460,10 +460,14 @@ namespace Nekobot
             Log.Output("Ohayou, Master-san!", ConsoleColor.Cyan);
             Log.Output(VersionCheck(), ConsoleColor.Cyan);
             client.LoginAsync(TokenType.Bot, config["token"].ToString()).ConfigureAwait(false);
-            client.LoggedIn += async () =>
+            client.Connected += async () =>
+            {
                 // Connection, start music streams
                 await Voice.Startup(client);
-            Cmds.CreateGroup("", group => GenerateDelayedCommands(group));
+                // Add delayed commands
+                Cmds.CreateGroup("", group => GenerateDelayedCommands(group));
+            };
+            client.StartAsync().ConfigureAwait(false);
         }
 
         protected static string CalculateTime(int minutes)
