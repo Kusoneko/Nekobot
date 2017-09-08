@@ -204,9 +204,10 @@ namespace Nekobot
             };
             group.CreateCommand("addquote")
                 .Parameter("<quote>|<author>[|year]", Commands.ParameterType.MultipleUnparsed)
-                .Description($"I'll add a quote to {quote_site}quotes")
+                .Description($"I'll add a quote to {quote_site}quotes, mentions will be garbage text in this.")
                 .Do(async e =>
                 {
+                    // TODO: Resolve mentions?
                     var args = string.Join(" ", e.Args).Split('|');
                     if (args.Length < 2)
                     {
@@ -217,7 +218,7 @@ namespace Nekobot
                 });
             group.CreateCommand("quotemessage")
                 .Parameter("messageid", Commands.ParameterType.Required)
-                .Description($"I'll add a message from this channel as a quote on {quote_site}quotes")
+                .Description($"I'll add a message from this channel as a quote on {quote_site}quotes, mentions will be resolved.")
                 .Do(async e =>
                 {
                     IMessage message = await e.Channel.GetMessageAsync(Convert.ToUInt64(e.Args[0]));
@@ -226,7 +227,7 @@ namespace Nekobot
                         await e.Channel.SendMessageAsync("Sorry, I couldn't find that message!");
                         return;
                     }
-                    await e.Channel.SendMessageAsync(add_quote(message.Content, Helpers.Nickname(message.Author as SocketGuildUser), message.Timestamp.Date.ToShortDateString()));
+                    await e.Channel.SendMessageAsync(add_quote(Helpers.ResolveTags(message), Helpers.Nickname(message.Author as SocketGuildUser), message.Timestamp.Date.ToShortDateString()));
                 });
 
             Google.AddCommands(group);
