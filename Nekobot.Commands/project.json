@@ -1,4 +1,4 @@
 {
-  "frameworks": { "net46": { } },
+  "frameworks": { "net47": { } },
   "runtimes": { "win": { }, "win-x86": { }, "win-x64": { } }
 }
