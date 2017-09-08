@@ -396,7 +396,8 @@ The current topic is: {chan.Topic}";
                         var found = new List<IMessage>();
                         await Helpers.DoToMessages((e.Channel as SocketTextChannel), few, (msgs, has_cmd_msg) =>
                         {
-                            found.AddRange(has_cmd_msg ? msgs.Where(s => s.Id != e.Message.Id && s.Content.Contains(search)) : msgs.Where(s => s.Content.Contains(search)));
+                            Func<IMessage, bool> find = s => Helpers.ResolveTags(s).Contains(search);
+                            found.AddRange(has_cmd_msg ? msgs.Where(s => s.Id != e.Message.Id && find(s)) : msgs.Where(find));
                             return found.Count();
                         });
 
