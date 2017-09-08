@@ -68,7 +68,7 @@ namespace Nekobot
 
         internal static bool GetMusic(IVoiceState user) => Music.Get(user.VoiceChannel);
 
-        internal static bool GetNsfw(IChannel chan) => SQL.ReadBool(SQL.ReadChannel(chan.Id, "nsfw"));
+        internal static bool GetNsfw(IChannel chan) => (chan as ITextChannel).IsNsfw || SQL.ReadBool(SQL.ReadChannel(chan.Id, "nsfw"));
 
         private static string GetAnnounceChan(IGuild s, string id) => SQL.ReadServer(s.Id, id);
         private static bool GetServerAnnounce(IGuild s, string b) => SQL.ReadBool(SQL.ReadServer(s.Id, b), true);
