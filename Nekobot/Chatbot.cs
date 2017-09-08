@@ -89,7 +89,7 @@ namespace Nekobot
             async Task Do(IMessage e)
             {
                 if (chatbots.Count() == 0) return; // No bot sessions
-                string msg = e.Content;
+                string msg = Helpers.ResolveTags(e);
                 IUser self = Program.Self;
                 if (e.Channel is SocketGuildChannel)
                     self = (e.Channel as SocketGuildChannel).Guild.CurrentUser;
