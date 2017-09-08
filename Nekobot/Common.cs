@@ -361,7 +361,7 @@ The current topic is: {chan.Topic}";
                         {
                             var u = t.Value as IUser;
                             var url = u.GetAvatarUrl();
-                            await e.Channel.SendMessageAsync(u.Mention + (url == null ? " has no avatar." : $"'s avatar is: {url}"));
+                            await e.Channel.SendMessageAsync(u.Mention + (url == null ? " has no avatar." : $"'s avatar is: {url.Substring(0, url.LastIndexOf('?'))}"));
                         }
                 });
 
