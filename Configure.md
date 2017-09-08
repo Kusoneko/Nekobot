@@ -4,8 +4,6 @@ When updating, be sure to check this file to be sure you'll be set up appropriat
 You'll need to make a config.json file in the same place as the executable using this template:
 ```javascript
 {
-    "email" : "myemail@example.com",
-    "password" : "MySuperSecretPassword123",
     "token" : "MySuperSecretOAuth2Token",
     "SoundCloud" : {},
     "LastFM" : {},
@@ -33,8 +31,8 @@ Quick links to descriptions: [Credentials](#credentials) | [master](#master) | [
 [Further Setup Instructions](#other-setup)
 
 ### Credentials
-The email and password lines are self explanatory, however, you should instead use the token line.
-How? Like so: Go to [Discord's Apps page](https://discordapp.com/developers/applications/me) and create a new application, configure it however you like, then hit the button to create it. It'll take you to a page that offers you to create a bot user, do so. You'll be offered a link to click to reveal your bot token, click it and use it for this field.
+The token line is your bot's password, how do you get one?
+Like so: Go to [Discord's Apps page](https://discordapp.com/developers/applications/me) and create a new application, configure it however you like, then hit the button to create it. It'll take you to a page that offers you to create a bot user, do so. You'll be offered a link to click to reveal your bot token, click it and use it for this field.
 You might be wondering how to invite your bot to a server, have no fear, all you need to do is create a link `https://discordapp.com/oauth2/authorize?scope=bot&client_id=` and add the Client ID from the App Details section of that page. (If you don't have permissions on the server, give this link to someone who does.)
 The email and password lines will go away in the future, so to avoid breakage, do this as soon as you can.
 
