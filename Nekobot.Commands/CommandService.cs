@@ -61,7 +61,6 @@ namespace Nekobot.Commands
         public void Install(DiscordSocketClient client)
         {
             Client = client;
-            var self = client.CurrentUser;
             Config.Lock();
 
             if (Config.HelpMode != HelpMode.Disabled)
@@ -72,7 +71,7 @@ namespace Nekobot.Commands
                     .Description("Returns information about commands.")
                     .Do(async e =>
                     {
-                        var replyChannel = Config.HelpMode == HelpMode.Public ? e.Channel : (IMessageChannel)await e.User.GetOrCreateDMChannelAsync().ConfigureAwait(false);
+                        var replyChannel = Config.HelpMode == HelpMode.Public ? e.Channel : await e.User.GetOrCreateDMChannelAsync().ConfigureAwait(false);
                         if (e.Args.Length > 0) //Show command help
                         {
                             var map = _map.GetItem(string.Join(" ", e.Args));
@@ -98,6 +97,7 @@ namespace Nekobot.Commands
                 if (_getIgnoredChannelFlag != null ? _getIgnoredChannelFlag(e.Channel, e.Author) : false)
                     return;
 
+                var self = client.CurrentUser;
                 //Check for command char if one is provided
                 var chars = Config.CommandChars;
                 bool mentionreq = Config.MentionCommandChar >= 1;
@@ -107,7 +107,8 @@ namespace Nekobot.Commands
                     bool hasCommandChar = chars.Contains(msg[0]);
                     if (!hasCommandChar && (priv ? Config.RequireCommandCharInPrivate : Config.RequireCommandCharInPublic))
                     {
-                        if (mentionreq && e.MentionedUsers.Contains(self))
+                        var tag = e.Tags.FirstOrDefault(t => t.Type == TagType.UserMention && t.Key == self.Id);
+                        if (mentionreq && tag != null)
                         {
                             string neko = !priv && !string.IsNullOrEmpty((await (e.Channel as IGuildChannel).Guild.GetUserAsync(self.Id)).Nickname) ? $"<@!{self.Id}>" : $"<@{self.Id}>";
                             if (neko.Length+2 > msg.Length)
@@ -115,7 +116,7 @@ namespace Nekobot.Commands
                                 NonCommands(e);
                                 return;
                             }
-                            if (msg.StartsWith(neko))
+                            if (tag.Index == 0)
                                 msg = msg.Substring(neko.Length+1);
                             else
                             {
