@@ -11,7 +11,11 @@ namespace Nekobot.Commands
         public Command Command { get; }
 
         public IUser User => Message.Author;
-        public ITextChannel Channel => Message.Channel as ITextChannel;
+        // Standard channel for messages
+        public IMessageChannel Channel => Message.Channel;
+        // Channel in a Guild where messages can be sent
+        public ITextChannel TextChannel => Channel as ITextChannel;
+        // Voice Channel in a Guild
         public IVoiceChannel VoiceChannel => (User as IVoiceState).VoiceChannel;
         public IGuild Server => (Message.Channel is IGuildChannel) ? (Message.Channel as IGuildChannel).Guild : null;
 

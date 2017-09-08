@@ -145,7 +145,7 @@ namespace Nekobot.Commands
                 }
 
                 //Parse command
-                CommandParser.ParseCommand(msg, _map, out var commands, out int argPos);                
+                CommandParser.ParseCommand(msg, _map, out var commands, out int argPos);
                 if (commands == null)
                 {
                     CommandEventArgs errorArgs = new CommandEventArgs(e, null, null);
@@ -180,14 +180,12 @@ namespace Nekobot.Commands
                             return;
                         }
                         // Check flags
-                        bool nsfwAllowed = _getNsfwFlag != null ? _getNsfwFlag(e.Channel) : false;
-                        if (!nsfwAllowed && !priv && command.NsfwFlag)
+                        if (!priv && command.NsfwFlag && (_getNsfwFlag != null ? _getNsfwFlag(e.Channel) : false))
                         {
                             await OnCommandError(CommandErrorType.BadPermissions, eventArgs, new NsfwFlagException());
                             return;
                         }
-                        bool isInMusicChannel = _getMusicFlag != null ? _getMusicFlag(e.Author as IVoiceState) : false;
-                        if (command.MusicFlag && !isInMusicChannel)
+                        if (priv && command.MusicFlag && !(_getMusicFlag != null ? _getMusicFlag(e.Author as IVoiceState) : false))
                         {
                             await OnCommandError(CommandErrorType.BadPermissions, eventArgs, new MusicFlagException());
                             return;

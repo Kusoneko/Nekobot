@@ -120,7 +120,7 @@ namespace Nekobot
                 .Do(e => Helpers.OnOffCmd(e, on =>
                 {
                     string status = on ? "en" : "dis";
-                    ITextChannel c = (ITextChannel)e.Server.GetChannelAsync(e.Message.MentionedChannelIds.FirstOrDefault()) ?? e.Channel;
+                    ITextChannel c = (ITextChannel)e.Server.GetChannelAsync(e.Message.MentionedChannelIds.FirstOrDefault()) ?? e.TextChannel;
                     if (GetWelcome(e.Server, c) == on)
                         e.Channel.SendMessageAsync($"{e.User.Mention}, Welcoming is already {status}abled, here.");
                     else
@@ -138,7 +138,7 @@ namespace Nekobot
                 .Do(e => Helpers.OnOffCmd(e, on =>
                 {
                     string status = on ? "en" : "dis";
-                    ITextChannel c = e.Message.Tags.FirstOrDefault(t => t.Type == TagType.ChannelMention)?.Value as ITextChannel ?? e.Channel;
+                    ITextChannel c = e.Message.Tags.FirstOrDefault(t => t.Type == TagType.ChannelMention)?.Value as ITextChannel ?? e.TextChannel;
                     if (GetLeft(e.Server, c) == on)
                         e.Channel.SendMessageAsync($"{e.User.Mention}, Announcing people who leave is already {status}abled, here.");
                     else

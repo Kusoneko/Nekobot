@@ -955,13 +955,13 @@ namespace Nekobot
                 .MinPermissions(1)
                 .FlagMusic(true)
                 .Description("I'll toggle repeat mode on the stream")
-                .Do(e => playlist[e.VoiceChannel.Id].Repeat(e.Channel, false));
+                .Do(e => playlist[e.VoiceChannel.Id].Repeat(e.TextChannel, false));
 
             group.CreateCommand("repeat single")
                 .MinPermissions(1)
                 .FlagMusic(true)
                 .Description("I'll turn single song repeat mode on for the stream")
-                .Do(e => playlist[e.VoiceChannel.Id].Repeat(e.Channel, true));
+                .Do(e => playlist[e.VoiceChannel.Id].Repeat(e.TextChannel, true));
 
             // Administrator commands
             group.CreateCommand("music")

@@ -362,7 +362,7 @@ namespace Nekobot
                         return;
                     }
 
-                    if (e.Channel is IPrivateChannel || !(e.Server as SocketGuild).CurrentUser.GetPermissions(e.Channel).ManageMessages)
+                    if (e.Channel is IPrivateChannel || !(e.Server as SocketGuild).CurrentUser.GetPermissions(e.TextChannel).ManageMessages)
                     {
                         await e.Channel.SendMessageAsync("I can't even do that here.");
                         return;
