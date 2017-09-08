@@ -50,6 +50,9 @@ namespace Nekobot
             return false;
         }
 
+        internal static string ResolveTags(IMessage msg)
+            => msg is SocketUserMessage && msg.Tags.Any() ? (msg as SocketUserMessage).Resolve() : msg.Content;
+
         internal static IEnumerable<string> GraphemeClusters(string s)
         {
             var enumerator = System.Globalization.StringInfo.GetTextElementEnumerator(s);
