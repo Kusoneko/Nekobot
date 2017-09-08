@@ -109,7 +109,7 @@ namespace Nekobot.Commands
                     {
                         if (mentionreq && e.MentionedUsers.Contains(self))
                         {
-                            string neko = !priv && !string.IsNullOrEmpty((await (e.Channel as IGuildChannel).Guild.GetUserAsync(self.Id)).Nickname) ? $"<@!{client.CurrentUser.Id}>" : $"<@{client.CurrentUser.Id}>";
+                            string neko = !priv && !string.IsNullOrEmpty((await (e.Channel as IGuildChannel).Guild.GetUserAsync(self.Id)).Nickname) ? $"<@!{self.Id}>" : $"<@{self.Id}>";
                             if (neko.Length+2 > msg.Length)
                             {
                                 NonCommands(e);
