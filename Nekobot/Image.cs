@@ -37,7 +37,7 @@ namespace Nekobot
             public static Board Get(string booru, string tags)
             {
                 Board board =
-                booru == "safebooru" ? A("http://safebooru.org") :
+                booru == "safebooru" ? A("http://safebooru.org", true) :
                 booru == "gelbooru" ? A("http://gelbooru.com") :
                 booru == "rule34" ? A("http://rule34.xxx", true) :
                 booru == "konachan" ? B("http://konachan.com") :
