@@ -328,7 +328,7 @@ namespace Nekobot
                 return null;
             }
 
-            internal async Task PlayUri(Discord.Audio.IAudioClient _client, string uri, Func<bool> cancel = null)
+            internal async Task PlayUri(IAudioClient _client, string uri, Func<bool> cancel = null)
             {
                 var musicReader = Reader(uri);
                 if (musicReader == null)
@@ -336,19 +336,20 @@ namespace Nekobot
                     await Log.Write(LogSeverity.Warning, $"{uri} couldn't be read.", null, "Stream");
                     return;
                 }
-                var outFormat = new WaveFormat(48000, 16, 4);
+                var outFormat = new WaveFormat(48000, 16, 2);
                 using (var resampler = new MediaFoundationResampler(musicReader, outFormat) { ResamplerQuality = 60 })
                 {
                     int blockSize = outFormat.AverageBytesPerSecond; // 1 second
                     byte[] buffer = new byte[blockSize];
-                    while (cancel == null || !cancel())
+                    using (var stream = _client.CreatePCMStream(AudioApplication.Music))
                     {
-                        bool end = musicReader.Position+blockSize > musicReader.Length; // Stop at the end, work around the bug that has it Read twice.
-                        if (resampler.Read(buffer, 0, blockSize) <= 0) break; // Break on failed read.
-                        var stream = _client.CreatePCMStream(AudioApplication.Music);
-                        await stream.WriteAsync(buffer, 0, blockSize);
-                        await stream.FlushAsync().ConfigureAwait(false);
-                        if (end) break;
+                        while (cancel == null || !cancel())
+                        {
+                            var read = resampler.Read(buffer, 0, blockSize);
+                            if (read <= 0) break; // Break on failed read.
+                            await stream.WriteAsync(buffer, 0, read);
+                        }
+                        stream.Flush();
                     }
                 }
                 musicReader.Dispose();
