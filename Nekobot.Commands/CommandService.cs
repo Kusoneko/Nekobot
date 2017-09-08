@@ -181,7 +181,7 @@ namespace Nekobot.Commands
                             return;
                         }
                         // Check flags
-                        if (!priv && command.NsfwFlag && (_getNsfwFlag != null ? _getNsfwFlag(e.Channel) : false))
+                        if (!priv && command.NsfwFlag && !(_getNsfwFlag != null ? _getNsfwFlag(e.Channel) : false))
                         {
                             await OnCommandError(CommandErrorType.BadPermissions, eventArgs, new NsfwFlagException());
                             return;
