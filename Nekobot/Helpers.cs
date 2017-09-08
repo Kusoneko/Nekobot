@@ -69,12 +69,12 @@ namespace Nekobot
             if (mentions_everyone)
                 message += e.Server.EveryoneRole.Mention;
             else if (e.Channel is IPrivateChannel || (!e.Message.MentionedRoleIds.Any() && e.Message.MentionedUserIds.Count() == (mentions_neko ? 1 : 0)))
-                message = perform_when_empty ? $"*{action}s {e.User.Mention}.*" : $"{message}{(e.Channel is IPrivateChannel ? Program.Self.Mention : "me")}.";
+                message = perform_when_empty ? $"*{action}s {e.User.Mention}.*" : $"{message}me.";
             else
             {
                 foreach (var t in e.Message.Tags)
                     if (t.Type == TagType.UserMention || t.Type == TagType.RoleMention)
-                        message += (t as IMentionable).Mention + ' ';
+                        message += (t.Value as IMentionable).Mention + ' ';
             }
             await e.Channel.SendMessageAsync(message);
             if (e.Channel is IPrivateChannel ? !perform_when_empty : (mentions_everyone || mentions_neko || (!perform_when_empty && !(e.Message.MentionedUserIds.Any() || e.Message.MentionedRoleIds.Any()))))
