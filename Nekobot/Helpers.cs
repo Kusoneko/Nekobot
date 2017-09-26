@@ -128,6 +128,19 @@ namespace Nekobot
 
         internal static string Nickname(SocketGuildUser u) => string.IsNullOrEmpty(u.Nickname) ? u.Username : u.Nickname;
 
+        internal static async Task SendEmbed(ITextChannel c, EmbedBuilder b)
+        {
+            if (b.Fields.Count != 0) await c.SendMessageAsync(string.Empty, embed: b.Build());
+        }
+        internal static void SendEmbedEarly(ITextChannel c, ref EmbedBuilder b)
+        {
+            if (b.Fields.Count == EmbedBuilder.MaxFieldCount)
+            {
+                c.SendMessageAsync(string.Empty, embed: b.Build());
+                b = new EmbedBuilder();
+            }
+        }
+
         internal static async Task DoToMessages(SocketTextChannel c, int few, Func<IEnumerable<IMessage>, bool, int> perform)
         {
             var cachedmsgs = c.CachedMessages.OrderByDescending(msg => msg.Timestamp);

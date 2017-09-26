@@ -129,11 +129,11 @@ For every calendar you want to have a command for, get its calendar id from [her
   "Command name here" :
   {
     "calendarId" : "primary",
-    "includeDescription" : false
+    "hideDescription" : false
   }
 }
 ```
-`includeDescription` will determine if the description is included by default in the command without specifying by ID (this could be spammy).
+`hideDescription` will determine if the description is to be hidden.
 You'll be prompted via a webpage on your browser, on the initial run, to grant permissions to Nekobot.
 
 ### Custom Response Commands
