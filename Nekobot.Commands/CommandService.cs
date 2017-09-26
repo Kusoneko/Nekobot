@@ -213,12 +213,20 @@ namespace Nekobot.Commands
         public Task ShowGeneralHelp(IUser user, IMessageChannel channel, IMessageChannel replyChannel = null)
         {
             if (replyChannel == null) replyChannel = channel;
-            StringBuilder output = new StringBuilder();
+            var output = new EmbedBuilder();
             var tasks = new List<Task>();
+            Action sendAndClear = () =>
+            {
+                tasks.Add(replyChannel.SendMessageAsync(string.Empty, embed: output.Build()));
+                output = new EmbedBuilder();
+            };
             bool isFirstCategory = true;
             foreach (var category in _categories)
             {
                 bool isFirstItem = true;
+                bool isNamelessCat = category.Key == "";
+                var field = new EmbedFieldBuilder();
+                string value = string.Empty;
                 foreach (var group in category.Value.SubGroups)
                 {
                     if (group.IsVisible && (group.HasSubGroups || group.HasNonAliases) && group.CanRun(user, channel, out var error))
@@ -231,56 +239,67 @@ namespace Nekobot.Commands
                             {
                                 isFirstCategory = false;
                                 //Called for the first non-empty category
-                                output.AppendLine("These are the commands you can use:");
+                                output.WithTitle("These are the commands you can use:");
                             }
-                            else
-                                output.AppendLine();
-                            if (category.Key != "")
+                            if (!isNamelessCat)
                             {
-                                output.Append(Format.Bold(category.Key));
-                                output.Append(": ");
+                                field.Name = category.Key;
                             }
                         }
                         else
-                            output.Append(", ");
-                        output.Append('`');
-                        output.Append(group.Name);
+                            value += ", ";
+                        value += $"`{group.Name}";
                         if (group.HasSubGroups)
-                            output.Append("*");
-                        output.Append('`');
+                            value += "*";
+                        value += "`";
 
-                        if (output.Length >= 1900) // Allow 100 characters to avoid going over character limit
+                        if (value.ToString().Length >= (isNamelessCat ? EmbedBuilder.MaxDescriptionLength : EmbedFieldBuilder.MaxFieldValueLength) - 100) // Allow 100 characters to avoid going over character limit
                         {
-                            tasks.Add(replyChannel.SendMessageAsync(output.ToString()));
-                            output.Clear();
+                            if (isNamelessCat)
+                            {
+                                output.WithDescription(value);
+                                sendAndClear();
+                            }
+                            else
+                            {
+                                output.AddField(field);
+                                field = new EmbedFieldBuilder();
+                            }
                             isFirstItem = true;
                         }
                     }
                 }
+                if (isNamelessCat)
+                    output.WithDescription(value);
+                else
+                    output.AddField(field);
+                if (output.Fields.Count == EmbedBuilder.MaxFieldCount)
+                    sendAndClear();
             }
 
-            if (output.Length == 0)
-                output.Append("There are no commands you have permission to run.");
+            if (string.IsNullOrEmpty(output.Description) && output.Fields.Count == 0 && tasks.Count() == 0)
+                output.WithDescription("There are no commands you have permission to run.");
             else
             {
-                output.Append("\n\n");
-
+                var field = new EmbedFieldBuilder().WithName("Furthermore");
                 var chars = Config.CommandChars;
                 bool has_chars = chars.Any();
                 if (has_chars)
-                    output.AppendLine($"You can use `{(chars.Length == 1 ? chars[0].ToString() : $"{string.Join(" ", chars.Take(chars.Length - 1))}` or `{chars.Last()}")}` to call a command.");
+                    field.Value = $"You can use `{(chars.Length == 1 ? chars[0].ToString() : $"{string.Join(" ", chars.Take(chars.Length - 1))}` or `{chars.Last()}")}` to call a command.\n";
                 if (Config.MentionCommandChar != 0)
-                    output.AppendLine($"You can {(has_chars ? "also " : "")}@mention me before {(Config.MentionCommandChar == 1 ? "" : "or after ")}a command{(has_chars ? ", instead" : "")}.");
-                output.AppendLine($"`{(has_chars ? chars[0].ToString() : "")}help <command>` can tell you more about how to use a command.");
+                    field.Value += $"You can {(has_chars ? "also " : "")}@mention me before {(Config.MentionCommandChar == 1 ? "" : "or after ")}a command{(has_chars ? ", instead" : "")}.\n";
+                field.Value += $"`{(has_chars ? chars[0].ToString() : "")}help <command>` can tell you more about how to use a command.";
+                output.AddField(field);
             }
 
-            tasks.Add(replyChannel.SendMessageAsync(output.ToString()));
+
+            tasks.Add(replyChannel.SendMessageAsync(string.Empty, embed:output.Build()));
             return Task.WhenAll(tasks);
         }
 
         private Task ShowCommandHelp(CommandMap map, IUser user, IMessageChannel channel, IMessageChannel replyChannel = null)
         {
-            StringBuilder output = new StringBuilder();
+            EmbedBuilder output = new EmbedBuilder();
 
             IEnumerable<Command> cmds = map.Commands;
             bool isFirstCmd = true;
@@ -295,90 +314,87 @@ namespace Nekobot.Commands
                     {
                         if (isFirstCmd)
                             isFirstCmd = false;
-                        else
-                            output.AppendLine();
                         ShowCommandHelpInternal(cmd, user, channel, output);
                     }
                 }
             }
             else
             {
-                output.Append('`');
-                output.Append(map.FullName);
-                output.Append("`\n");
+                output.WithTitle(map.FullName);
             }
 
             bool isFirstSubCmd = true;
+
+            var field = new EmbedFieldBuilder();
             foreach (var subCmd in map.SubGroups.Where(x => x.CanRun(user, channel, out error) && x.IsVisible))
             {
                 if (isFirstSubCmd)
                 {
                     isFirstSubCmd = false;
-                    output.Append("**Sub Commands:** ");
+                    field.WithName("Sub Commands");
                 }
                 else
-                    output.Append(", ");
-                output.Append('`');
-                output.Append(subCmd.Name);
+                    field.Value += ", ";
+                field.Value += $"`{subCmd.Name}";
                 if (subCmd.SubGroups.Any())
-                    output.Append("*");
-                output.Append('`');
+                    field.Value += "*";
+                field.Value += "`";
             }
+            if (!string.IsNullOrEmpty(field.Name)) output.AddField(field);
 
             if (isFirstCmd && isFirstSubCmd) //Had no commands and no subcommands
             {
-                output.Clear();
-                output.AppendLine("There are no commands you have permission to run.");
+                output = new EmbedBuilder().WithDescription("There are no commands you have permission to run.");
             }
 
-            return (replyChannel ?? channel).SendMessageAsync(output.ToString());
+            return (replyChannel ?? channel).SendMessageAsync(string.Empty, embed: output.Build());
         }
         public Task ShowCommandHelp(Command command, IUser user, IMessageChannel channel, IMessageChannel replyChannel = null)
         {
-            var output = new StringBuilder();
+            var output = new EmbedBuilder();
             if (!command.CanRun(user, channel, out var error))
-                output.AppendLine(error ?? "You do not have permission to access this command.");
+                output.WithDescription(error ?? "You do not have permission to access this command.");
             else
                 ShowCommandHelpInternal(command, user, channel, output);
-            return (replyChannel ?? channel).SendMessageAsync(output.ToString());
+            return (replyChannel ?? channel).SendMessageAsync(string.Empty, embed:output.Build());
         }
-        private void ShowCommandHelpInternal(Command command, IUser user, IMessageChannel channel, StringBuilder output)
+        private void ShowCommandHelpInternal(Command command, IUser user, IMessageChannel channel, EmbedBuilder output)
         {
-            output.Append('`');
-            output.Append(command.Text);
+            var field = new EmbedFieldBuilder();
+            var cmd = command.Text;
             foreach (var param in command.Parameters)
             {
                 switch (param.Type)
                 {
                     case ParameterType.Required:
-                        output.Append($" <{param.Name}>");
+                        cmd += $" <{param.Name}>";
                         break;
                     case ParameterType.Optional:
-                        output.Append($" [{param.Name}]");
+                        cmd += $" [{param.Name}]";
                         break;
                     case ParameterType.Multiple:
                     case ParameterType.MultipleUnparsed:
-                        output.Append($" [{param.Name}]");
+                        cmd += $" [{param.Name}]";
                         break;
                     case ParameterType.Unparsed:
-                        output.Append($" {param.Name}");
+                        cmd += $" {param.Name}";
                         break;
                 }
             }
-            output.Append('`');
-            output.AppendLine($": {command.Description ?? "No description."}");
+            field.WithName($"`{cmd}`");
+            field.WithValue($"{command.Description ?? "No description."}");
 
             if (command.Aliases.Any())
-                output.AppendLine($"**Aliases:** `" + string.Join("`, `", command.Aliases) + '`');
+                field.Value += $"\n**Aliases:** `" + string.Join("`, `", command.Aliases) + '`';
 
             if (command.NsfwFlag || command.MusicFlag)
             {
-                string flags ="**Flags:** ";
+                string flags = "\n**Flags:** ";
                 if (command.MusicFlag) flags += "Music ";
                 if (command.NsfwFlag) flags += "NSFW ";
-                flags = flags.TrimEnd(' ');
-                output.AppendLine(flags);
+                field.Value += flags.TrimEnd(' ');
             }
+            output.AddField(field);
         }
 
         public void CreateGroup(string cmd, Action<CommandGroupBuilder> config = null) => Root.CreateGroup(cmd, config);
