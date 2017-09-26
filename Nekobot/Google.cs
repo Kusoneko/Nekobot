@@ -63,9 +63,9 @@ namespace Nekobot
                                 foreach (var item in events.Items)
                                 {
                                     builder.AddField(new EmbedFieldBuilder().WithName(item.Summary).WithValue(desc(item)));
-                                    Helpers.SendEmbedEarly(e.TextChannel, ref builder);
+                                    Helpers.SendEmbedEarly(e.Channel, ref builder);
                                 }
-                                await Helpers.SendEmbed(e.TextChannel, builder);
+                                await Helpers.SendEmbed(e.Channel, builder);
                             }
                             else await e.Channel.SendMessageAsync("Apparently, there's nothing coming up nor taking place right now...");
                         });
