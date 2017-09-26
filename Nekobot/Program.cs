@@ -431,7 +431,8 @@ namespace Nekobot
             }
         }
 
-        static void Main(string[] args)
+        static void Main(string[] args) => MainAsync(args).GetAwaiter().GetResult();
+        static async Task MainAsync(string[] args)
         {
             // Load up the DB, or create it if it doesn't exist
             SQL.LoadDB();
@@ -459,7 +460,7 @@ namespace Nekobot
             //DiscordClient will automatically reconnect once we've established a connection, until then we loop on our end
             Log.Output("Ohayou, Master-san!", ConsoleColor.Cyan);
             Log.Output(VersionCheck(), ConsoleColor.Cyan);
-            client.LoginAsync(TokenType.Bot, config["token"].ToString()).ConfigureAwait(false);
+            await client.LoginAsync(TokenType.Bot, config["token"].ToString());
             client.Connected += async () =>
             {
                 // Connection, start music streams
@@ -467,7 +468,10 @@ namespace Nekobot
                 // Add delayed commands
                 Cmds.CreateGroup("", group => GenerateDelayedCommands(group));
             };
-            client.StartAsync().ConfigureAwait(false);
+            await client.StartAsync();
+
+            // Wait infinitely so your bot actually stays connected.
+            await Task.Delay(-1);
         }
 
         protected static string CalculateTime(int minutes)
