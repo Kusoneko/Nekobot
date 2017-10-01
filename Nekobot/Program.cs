@@ -352,7 +352,8 @@ namespace Nekobot
             Action<string, Action<IEnumerable<IMessage>, CommandEventArgs>> delcmd = (s,a) => group.CreateCommand(s)
                 .MinPermissions(4)
                 .Parameter("few", Commands.ParameterType.Required)
-                .Description("I'll delete the last `few` messages, and the command message.")
+                .Parameter("force", Commands.ParameterType.Optional)
+                .Description("I'll delete the last `few` messages, and the command message.\nAdd `force` to delete pinned messages.")
                 .Do(async e =>
                 {
                     var few = int.Parse(e.Args[0]);
@@ -361,6 +362,7 @@ namespace Nekobot
                         await e.Channel.SendMessageAsync("You're silly!");
                         return;
                     }
+                    bool force = e.Args.Length > 1 && e.Args[1].Equals("force", StringComparison.CurrentCultureIgnoreCase);
 
                     if (e.Channel is IPrivateChannel || !(e.Server as SocketGuild).CurrentUser.GetPermissions(e.TextChannel).ManageMessages)
                     {
@@ -372,6 +374,8 @@ namespace Nekobot
                     await Helpers.DoToMessages(e.Channel as SocketTextChannel, few, (msgs, has_cmd_msg) =>
                     {
                         int bonus = has_cmd_msg ? 1 : 0;
+                        if (!force)
+                            msgs = msgs.Where(m => !m.IsPinned);
                         if (few < msgs.Count()) // Cut to size
                             msgs = msgs.Take(few + bonus);
                         int removed = msgs.Count() - bonus;
