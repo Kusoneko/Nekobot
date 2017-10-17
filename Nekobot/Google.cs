@@ -48,7 +48,7 @@ namespace Nekobot
                                 if (!int.TryParse(e.Args[0], out results)) // Must be an event ID
                                 {
                                     var r = await service.Events.Get(val["calendarId"].ToString(), e.Args[0]).ExecuteAsync();
-                                    await e.Channel.SendMessageAsync(string.Empty, embed: new EmbedBuilder().WithTitle(r.Summary).WithDescription(desc(r)).Build());
+                                    await e.Channel.SendMessageAsync(string.Empty, embed: Helpers.EmbedBuilder.WithTitle(r.Summary).WithDescription(desc(r)).Build());
                                     return;
                                 }
                             var request = service.Events.List(val["calendarId"].ToString());
@@ -59,7 +59,7 @@ namespace Nekobot
                             var events = await request.ExecuteAsync();
                             if (events.Items?.Count > 0)
                             {
-                                var builder = new EmbedBuilder();
+                                var builder = Helpers.EmbedBuilder;
                                 foreach (var item in events.Items)
                                 {
                                     builder.AddField(new EmbedFieldBuilder().WithName(item.Summary).WithValue(desc(item)));

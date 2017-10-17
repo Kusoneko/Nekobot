@@ -18,7 +18,7 @@ namespace Nekobot
             await Task.Factory.StartNew(async () =>
             {
                 await perform(args.User as SocketGuildUser, roles);
-                var message = await Helpers.SendEmbed(args, Program.Cmds.EmbedBuilder().WithDescription($"I {verbed} role(s): {string.Join(", ", roles.Select(r => r.Mention))}"));
+                var message = await Helpers.SendEmbed(args, Helpers.EmbedBuilder.WithDescription($"I {verbed} role(s): {string.Join(", ", roles.Select(r => r.Mention))}"));
                 await Task.Delay(4000);
                 await args.TextChannel.DeleteMessagesAsync(new[] { message, args.Message });
             });
@@ -26,7 +26,7 @@ namespace Nekobot
 
         public static async Task ListRolesAsync(CommandEventArgs args)
         {
-            var builder = Program.Cmds.EmbedBuilder().WithDescription("The roles you can use with `giverole` and `removerole` are as follows:");
+            var builder = Helpers.EmbedBuilder.WithDescription("The roles you can use with `giverole` and `removerole` are as follows:");
             IterateRolesDo(args, role => builder.AddField(role.Key, $"{role.Value["description"]}\n"));
             await Helpers.SendEmbed(args, builder);
         }
