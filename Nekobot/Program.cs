@@ -238,6 +238,8 @@ namespace Nekobot
                     }
                 });
 
+            Roles.AddCommands(group);
+
             // Administrator commands
             group.CreateCommand("restart")
                 .Description("Restart me (if I'm misbehaving... I deserve it, sir.)")

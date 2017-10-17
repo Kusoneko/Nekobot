@@ -74,6 +74,7 @@
     <Compile Include="Helpers.cs" />
     <Compile Include="Image.cs" />
     <Compile Include="Log.cs" />
+    <Compile Include="Roles.cs" />
     <Compile Include="RPG.cs" />
     <Compile Include="SQL.cs" />
     <Compile Include="Program.cs" />

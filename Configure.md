@@ -24,7 +24,8 @@ You'll need to make a config.json file in the same place as the executable using
     "musicFolder" : "",
     "musicUseSubfolders" : false,
     "gestures" : "",
-    "images" : ""
+    "images" : "",
+    "roles" : {}
 }
 ```
 Quick links to descriptions: [Credentials](#credentials) | [master](#master) | [server](#server) | [prefix, prefixprivate, prefix and mentioncommand](#prefix) | [color](#color) | [helpmode](#helpmode) | [loglevel](#log-level) | [game](#game) | [musicFolder, and musicUseSubfolders](#music-folder) | [gestures](#gesture-folder) | [images](#image-folder) | [Calendar](#google-calendar)
@@ -146,5 +147,28 @@ If you want to have custom commands that say something (or different things, ran
 + Create a file in Nekobot's output directory called custom\_response\_commands.json
 + Model it after the response\_commands.json already in this directory.
 If you want to add such commands to the project itself, or tweak existing ones, please contribute to the project's response\_commands.json and let us know!
+
+### Roles Commands
+If you want users to be able to obtain and remove certain roles on their own, you may wish to use the Roles submap, its format is, for the most part, straight forward:
+```json
+{
+    "id of a server":
+    {
+        "Human readable name of role":
+	{
+	    id: 33333
+	    permissions: 2,
+	    description: "This is an example role, it will require a minimum permission level of 2 to obtain, its id is 33333."
+	},
+	"The NSFW role":
+	{
+	    id: 666666666666666,
+	    description: "Sacrifice your soul, become forever tainted!"
+	}
+    }
+}
+```
+Multiple servers may be specified, the actual name of the role isn't important, it' just what the user will use with the command.`permission` is optional, `description` is necessary.
+IDs for roles are obtainable by making the role mentionable and then mentioning the role with a `\` just before it. We highly suggest doing this in a channel that isn't accessible to most users in the role already, so as to avoid pinging them. (Don't forget to make it unmentionable again, if you need to).
 
 For `ytrequest` to work with webm videos, please install the [Required codecs](https://tools.google.com/dlpage/webmmf/).
