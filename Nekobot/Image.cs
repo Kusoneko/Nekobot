@@ -37,7 +37,7 @@ namespace Nekobot
             public static Board Get(string booru, string tags)
             {
                 Board board =
-                booru == "safebooru" ? A("http://safebooru.org") :
+                booru == "safebooru" ? A("http://safebooru.org", true) :
                 booru == "gelbooru" ? A("http://gelbooru.com") :
                 booru == "rule34" ? A("http://rule34.xxx", true) :
                 booru == "konachan" ? B("http://konachan.com") :
@@ -184,7 +184,7 @@ namespace Nekobot
                     Func<Commands.CommandEventArgs, Task> cmd_body = async e =>
                     {
                         var files = from file in System.IO.Directory.EnumerateFiles($@"{subdir}", "*.*").Where(s => imgexts.Contains(System.IO.Path.GetExtension(s.ToLower()))) select new { File = file };
-                        await e.Channel.SendFile(files.ElementAt(new Random().Next(0, files.Count())).File);
+                        await e.Channel.SendFile(files.ElementAt(new Random().Next(0, files.Count()-1)).File);
                     };
                     if (data == null) group.CreateCommand(Helpers.FileWithoutPath(subdir)).Do(cmd_body);
                     else Helpers.CreateJsonCommand(group, data.ToObject<Dictionary<string, JToken>>().First(), (cmd,cmd_data) =>
