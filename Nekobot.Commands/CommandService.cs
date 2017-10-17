@@ -210,15 +210,21 @@ namespace Nekobot.Commands
             };
         }
 
+        // Call this to get a colored embed builder
+        public EmbedBuilder EmbedBuilder() => new EmbedBuilder()
+        {
+            Color = Config.EmbedColor,
+        };
+
         public Task ShowGeneralHelp(IUser user, IMessageChannel channel, IMessageChannel replyChannel = null)
         {
             if (replyChannel == null) replyChannel = channel;
-            var output = new EmbedBuilder();
+            var output = EmbedBuilder();
             var tasks = new List<Task>();
             Action sendAndClear = () =>
             {
                 tasks.Add(replyChannel.SendMessageAsync(string.Empty, embed: output.Build()));
-                output = new EmbedBuilder();
+                output = EmbedBuilder();
             };
             bool isFirstCategory = true;
             foreach (var category in _categories)
@@ -253,7 +259,7 @@ namespace Nekobot.Commands
                             value += "*";
                         value += "`";
 
-                        if (value.ToString().Length >= (isNamelessCat ? EmbedBuilder.MaxDescriptionLength : EmbedFieldBuilder.MaxFieldValueLength) - 100) // Allow 100 characters to avoid going over character limit
+                        if (value.ToString().Length >= (isNamelessCat ? Discord.EmbedBuilder.MaxDescriptionLength : EmbedFieldBuilder.MaxFieldValueLength) - 100) // Allow 100 characters to avoid going over character limit
                         {
                             if (isNamelessCat)
                             {
@@ -273,7 +279,7 @@ namespace Nekobot.Commands
                     output.WithDescription(value);
                 else
                     output.AddField(field);
-                if (output.Fields.Count == EmbedBuilder.MaxFieldCount)
+                if (output.Fields.Count == Discord.EmbedBuilder.MaxFieldCount)
                     sendAndClear();
             }
 
@@ -299,7 +305,7 @@ namespace Nekobot.Commands
 
         private Task ShowCommandHelp(CommandMap map, IUser user, IMessageChannel channel, IMessageChannel replyChannel = null)
         {
-            EmbedBuilder output = new EmbedBuilder();
+            EmbedBuilder output = EmbedBuilder();
 
             IEnumerable<Command> cmds = map.Commands;
             bool isFirstCmd = true;
@@ -344,14 +350,14 @@ namespace Nekobot.Commands
 
             if (isFirstCmd && isFirstSubCmd) //Had no commands and no subcommands
             {
-                output = new EmbedBuilder().WithDescription("There are no commands you have permission to run.");
+                output = EmbedBuilder().WithDescription("There are no commands you have permission to run.");
             }
 
             return (replyChannel ?? channel).SendMessageAsync(string.Empty, embed: output.Build());
         }
         public Task ShowCommandHelp(Command command, IUser user, IMessageChannel channel, IMessageChannel replyChannel = null)
         {
-            var output = new EmbedBuilder();
+            var output = EmbedBuilder();
             if (!command.CanRun(user, channel, out var error))
                 output.WithDescription(error ?? "You do not have permission to access this command.");
             else

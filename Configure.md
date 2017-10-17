@@ -17,6 +17,7 @@ You'll need to make a config.json file in the same place as the executable using
     "prefixprivate" : true,
     "prefixpublic" : true,
     "mentioncommand" : 1,
+    "color" : [232, 1, 255],
     "helpmode" : "private",
     "loglevel" : 2,
     "game" : "Happy Nekobot Fun Times",
@@ -26,7 +27,7 @@ You'll need to make a config.json file in the same place as the executable using
     "images" : ""
 }
 ```
-Quick links to descriptions: [Credentials](#credentials) | [master](#master) | [server](#server) | [prefix, prefixprivate, prefix and mentioncommand](#prefix) | [helpmode](#helpmode) | [loglevel](#log-level) | [game](#game) | [musicFolder, and musicUseSubfolders](#music-folder) | [gestures](#gesture-folder) | [images](#image-folder) | [Calendar](#google-calendar)
+Quick links to descriptions: [Credentials](#credentials) | [master](#master) | [server](#server) | [prefix, prefixprivate, prefix and mentioncommand](#prefix) | [color](#color) | [helpmode](#helpmode) | [loglevel](#log-level) | [game](#game) | [musicFolder, and musicUseSubfolders](#music-folder) | [gestures](#gesture-folder) | [images](#image-folder) | [Calendar](#google-calendar)
 
 [Further Setup Instructions](#other-setup)
 
@@ -64,6 +65,10 @@ A list of characters that can be the character used in front of literally every 
 + The prefixpublic setting requires the use of prefix in channels when true.
 
 The mentioncommand setting allows @mentioning the bot instead of using prefix in channels when 1, when 2 allows you to mention after the command and its args as well.
+
+### Color
+The RGB of the color you would like used with embed responses to commands.
+In the format [R, G, B].
 
 ### HelpMode
 There are three settings, "public", "private", and disabled, if it's disabled, there'll be no help. If it's public, the help command will be responded to in the channel it's issued. If it's private, responses will be in PM.

@@ -538,9 +538,11 @@ namespace Nekobot
             client = new DiscordSocketClient(conf);
 
             string helpmode = config["helpmode"].ToString();
+            var color = config["color"].ToObject<List<byte>>();
             Cmds = new CommandService(new CommandServiceConfig
             {
                 CommandChars = config["prefix"].ToString().ToCharArray(),
+                EmbedColor = new Color(color[0], color[1], color[2]),
                 RequireCommandCharInPrivate = config["prefixprivate"].ToObject<bool>(),
                 RequireCommandCharInPublic = config["prefixpublic"].ToObject<bool>(),
                 MentionCommandChar = config["mentioncommand"].ToObject<short>(),

@@ -1,4 +1,5 @@
 ﻿using System;
+using Discord;
 
 namespace Nekobot.Commands
 {
@@ -12,10 +13,7 @@ namespace Nekobot.Commands
             }
             set
             {
-                if (value != null)
-                    CommandChars = new char[] { value.Value };
-                else
-                    CommandChars = new char[0];
+                CommandChars = value != null ? new char[] { value.Value } : new char[0];
             }
         }
         public char[] CommandChars { get { return _commandChars; } set { SetValue(ref _commandChars, value); } }
@@ -25,6 +23,9 @@ namespace Nekobot.Commands
         public short MentionCommandChar;
 
         public HelpMode HelpMode { get { return _helpMode; } set { SetValue(ref _helpMode, value); } }
+
+        public Color EmbedColor { get; set; }
+
         private HelpMode _helpMode = HelpMode.Disabled;
 
         //Lock
