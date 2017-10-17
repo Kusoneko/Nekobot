@@ -236,6 +236,8 @@ namespace Nekobot
                     }
                 });
 
+            Roles.AddCommands(group);
+
             // Moderator commands
             group.CreateCommand("invite")
                 .Parameter("invite code or link", Commands.ParameterType.Required)
