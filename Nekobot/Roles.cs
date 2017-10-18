@@ -55,16 +55,16 @@ namespace Nekobot
                 .Do(args => ListRolesAsync(args));
 
             Action<CommandBuilder, string, string, Func<User, IEnumerable<Role>, Task>> AddRemove = (cmd, verb, verbed, perform) =>
-                cmd.Parameter("role (or roles, only comma separated)", ParameterType.MultipleUnparsed)
+                cmd.Parameter("role (or roles, comma separated)", ParameterType.Unparsed)
                     .AddCheck(Check)
                     .Description($"I'll {verb} you the roles you request (see `listroles`)")
                     .Do(async args =>
                     {
-                        var keys = args.Args[0].Split(',');
+                        var keys = args.Args[0].Split(',').Select(k => k.Trim().ToLower());
                         var roles = new List<Role>();
                         IterateRolesDo(args, role =>
                         {
-                            if (keys.Any(key => key.Equals(role.Key, StringComparison.CurrentCultureIgnoreCase)))
+                            if (keys.Any(key => key.Equals(role.Key.ToLower())))
                                 roles.Add(args.Server.GetRole(role.Value["id"].ToObject<ulong>()));
                         });
                         await PerformNotifyRemove(args, perform, roles, verbed);
