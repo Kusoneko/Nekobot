@@ -26,9 +26,14 @@ namespace Nekobot
 
         public static async Task ListRolesAsync(CommandEventArgs args)
         {
-            var builder = Helpers.EmbedBuilder.WithDescription("The roles you can use with `giverole` and `removerole` are as follows:");
-            IterateRolesDo(args, role => builder.AddField(role.Key, $"{role.Value["description"]}\n"));
-            await Helpers.SendEmbed(args, builder);
+            var builder = Helpers.EmbedBuilder.WithTitle("The roles you can use with `giverole` and `removerole` are as follows:");
+            var str = string.Empty;
+            IterateRolesDo(args, role =>
+            {
+                var desc = role.Value["description"].ToString();
+                str += $"{Format.Bold(role.Key)}{(desc.Length != 0 ? $": {desc}" : string.Empty)}\n";
+            });
+            await Helpers.SendEmbed(args, builder.WithDescription(str));
         }
 
         public static void IterateRolesDo(CommandEventArgs args, Action<KeyValuePair<string, JToken>> action)
