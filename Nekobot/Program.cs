@@ -355,7 +355,8 @@ namespace Nekobot
                 .MinPermissions(4)
                 .Parameter("few", Commands.ParameterType.Required)
                 .Parameter("force", Commands.ParameterType.Optional)
-                .Description("I'll delete the last `few` messages, and the command message.\nAdd `force` to delete pinned messages.")
+                .Parameter("mentions", Commands.ParameterType.MultipleUnparsed)
+                .Description("I'll delete the last `few` messages, and the command message.\nAdd `force` to delete pinned messages.     ")
                 .Do(async e =>
                 {
                     var few = int.Parse(e.Args[0]);
@@ -364,25 +365,33 @@ namespace Nekobot
                         await e.Channel.SendMessageAsync("You're silly!");
                         return;
                     }
-                    bool force = e.Args.Length > 1 && e.Args[1].Equals("force", StringComparison.CurrentCultureIgnoreCase);
+                    bool force = e.Args.Length > 1 && e.Args.Any(arg => arg.Equals("force", StringComparison.CurrentCultureIgnoreCase));
 
                     if (e.Channel is IPrivateChannel || !(e.Server as SocketGuild).CurrentUser.GetPermissions(e.TextChannel).ManageMessages)
                     {
                         await e.Channel.SendMessageAsync("I can't even do that here.");
                         return;
                     }
+                    var users = e.Message.MentionedUserIds;
+                    if (Cmds.Config.MentionCommandChar != 0 && !Cmds.Config.CommandChars.Contains(e.Message.Content[0]) && users.Count(id => id == client.CurrentUser.Id) == 1) // Don't include the mention that triggered us...
+                        users.Where(id => id != client.CurrentUser.Id);
+                    if (!users.Any()) users = null;
+                    else
+                    {
+                        users = users?.Distinct().ToArray();
+                        // Delete the command message too, for this case.
+                        await e.Message.DeleteAsync();
+                    }
 
-                    //bool too_old = false;
                     await Helpers.DoToMessages(e.Channel as SocketTextChannel, few, (msgs, has_cmd_msg) =>
                     {
-                        int bonus = has_cmd_msg ? 1 : 0;
-                        if (!force)
-                            msgs = msgs.Where(m => !m.IsPinned);
+                        int bonus = (users == null && has_cmd_msg) ? 1 : 0;
+                        if (!force || users != null)
+                            msgs = msgs.Where(m => (force || !m.IsPinned) && (users == null || users.Contains(m.Author.Id)));
                         if (few < msgs.Count()) // Cut to size
                             msgs = msgs.Take(few + bonus);
                         int removed = msgs.Count() - bonus;
                         few -= removed;
-                        //if (!too_old)
                         Task.Run(() => a(msgs, e));
                         return removed;
                     });
