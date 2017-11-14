@@ -358,6 +358,7 @@ namespace Nekobot
             Action<string, Action<IEnumerable<Message>, CommandEventArgs>> delcmd = (s,a) => group.CreateCommand(s)
                 .MinPermissions(4)
                 .Parameter("few", Commands.ParameterType.Required)
+                .Parameter("mentions", Commands.ParameterType.MultipleUnparsed)
                 .Description("I'll delete the last `few` messages, and the command message.")
                 .Do(async e =>
                 {
@@ -374,15 +375,26 @@ namespace Nekobot
                         return;
                     }
 
-                    //bool too_old = false;
+                    var users = e.Message.MentionedUsers;
+                    if (Cmds.Config.MentionCommandChar != 0 && !Cmds.Config.CommandChars.Contains(e.Message.RawText[0]) && users.Count(user => user.Id == client.CurrentUser.Id) == 1) // Don't include the mention that triggered us...
+                        users.Where(user => user.Id != client.CurrentUser.Id);
+                    if (!users.Any()) users = null;
+                    else
+                    {
+                        users = users?.Distinct().ToArray();
+                        // Delete the command message too, for this case.
+                        await e.Message.Delete();
+                    }
+
                     await Helpers.DoToMessages(e.Channel, few, (msgs, has_cmd_msg) =>
                     {
-                        int bonus = has_cmd_msg ? 1 : 0;
+                        int bonus = (users == null && has_cmd_msg) ? 1 : 0;
+                        if (users != null)
+                            msgs = msgs.Where(m => users.Contains(m.User));
                         if (few < msgs.Count()) // Cut to size
                             msgs = msgs.Take(few + bonus);
                         int removed = msgs.Count() - bonus;
                         few -= removed;
-                        //if (!too_old)
                         Task.Run(() => a(msgs, e));
                         return removed;
                     });
