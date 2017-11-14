@@ -17,7 +17,7 @@ namespace Nekobot
             await Task.Factory.StartNew(async () =>
             {
                 await perform(args.User, roles);
-                var message = await args.Channel.SendMessage($"I {verbed} role(s): {string.Join(", ", roles.Select(r => r.Mention))}");
+                var message = await args.Channel.SendMessage($"I {verbed} role(s): {string.Join(", ", roles.Select(r => '@'+r.Name))}");
                 await Task.Delay(4000);
                 await args.Channel.DeleteMessages(new[] { message, args.Message });
             });
@@ -25,7 +25,7 @@ namespace Nekobot
 
         public static async Task ListRolesAsync(CommandEventArgs args)
         {
-            var str = Format.Underline("The roles you can use with `giverole` and `removerole` are as follows:\n");
+            var str = "__The roles you can use with `giverole` and `removerole` are as follows:__\n";
             IterateRolesDo(args, role =>
             {
                 var desc = role.Value["description"].ToString();
