@@ -396,7 +396,7 @@ namespace Nekobot
                         return removed;
                     });
                 });
-            delcmd("deletelast", async (msgs,e) => await e.Channel.DeleteMessagesAsync(msgs.ToArray()));
+            delcmd("deletelast", async (msgs,e) => await e.TextChannel.DeleteMessagesAsync(msgs.ToArray()));
             delcmd("deletelastold", (msgs, e) => { foreach (var m in msgs) m.DeleteAsync(); });
 
             group.CreateCommand("setname")
@@ -486,7 +486,7 @@ namespace Nekobot
             await client.StartAsync();
 
             // Wait infinitely so your bot actually stays connected.
-            await Task.Delay(-1);
+            await Task.Delay(Timeout.Infinite);
         }
 
         protected static string CalculateTime(int minutes)
