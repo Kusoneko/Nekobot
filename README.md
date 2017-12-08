@@ -1,5 +1,5 @@
-# Nekobot Alpha
-Version 2.8.0 (dev)
+# Nekobot Beta
+Version 2.8.29
 
 Bot for Discord using the [Discord.Net](https://github.com/RogueException/Discord.Net) Library.
 
