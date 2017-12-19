@@ -17,6 +17,7 @@ namespace Nekobot
                 A, // Sends XML responses, doesn't offer JSON
                 A_HTTP_NEEDED, // Stupid boards that violate reason when returning "file_url"
                 B, // Anything >= this uses json, api is more clearly defined. We'll use xml to get count for this type.
+                E621, // Pulled a nasty trick, no longer can we just pick any random page, we need to make a random index into a two dimensional calculation
                 Sankaku, // Nasty, doesn't support xml response (needed for count), we'll just consider there to be 1000 pages to choose from if there are any at all.
             }
             Board(string link, string resource, string post, Type type, bool shorten)
@@ -26,13 +27,33 @@ namespace Nekobot
                 Post = post;
                 _type = type;
                 _shorten = shorten;
-                _rclient = Helpers.GetRestClient(Link);
+                _rclient = type == Type.Sankaku ? new RestClient(Link) { UserAgent = "SCChannelApp/2.8 (Android; black)" } : Helpers.GetRestClient(Link);
             }
             static Board A(string link, bool needs_http = false, bool shorten = false) =>
                 new Board(link, $"index.php?page=dapi&s=post&q=index&limit=1&pid=", "/index.php?page=post&s=view&id=", needs_http ? Type.A_HTTP_NEEDED : Type.A, shorten);
             static Board B(string link, bool shorten = true, Type type = Type.B) =>
                 new Board(link, $"post/index.json?limit=1&page=", "/post/show/", type, shorten);
             static Board Sankaku(string board) => B($"https://{board}.sankakucomplex.com", false, Type.Sankaku);
+
+            void Login(JObject boardconf)
+            {
+                var prop = boardconf.Property("login");
+                if (prop != null)
+                {
+                    _rclient.AddDefaultParameter("login", prop.Value);
+                    var login = prop;
+                    prop = boardconf.Property("api_key");
+                    if (prop != null)
+                        _rclient.AddDefaultParameter("api_key", prop.Value);
+                    else
+                    {
+                        prop = boardconf.Property("password_hash");
+                        _rclient.AddDefaultParameter("password_hash", prop != null ? prop.Value : Helpers.ToSHA1($"choujin-steiner--{boardconf["password"]}--"));
+                    }
+                    if (_type == Type.Sankaku)
+                        _rclient.AddDefaultParameter("appkey", Helpers.ToSHA1($"sankakuapp_{login.Value.ToString().ToLower()}_Z5NE9YASej"));
+                }
+            }
 
             public static Board Get(string booru, string tags)
             {
@@ -45,7 +66,7 @@ namespace Nekobot
                 booru == "lolibooru" ? B("http://lolibooru.moe") :
                 booru == "sankaku" ? Sankaku("chan") :
                 //booru == "sankakuidol" ? Sankaku("idol") :
-                booru == "e621" ? B("https://e621.net", false)
+                booru == "e621" ? B("https://e621.net", false, Type.E621)
                 : null;
 
                 var boardconf = (JObject)Program.config["Booru"].SelectToken(booru);
@@ -55,18 +76,7 @@ namespace Nekobot
                     if (default_tags != null)
                         tags += ' ' + string.Join(" ", default_tags.Values());
                     if (board?._type >= Type.B) // Type A has no auth in the api.
-                    {
-                        var login = boardconf.Property("login");
-                        if (login != null)
-                        {
-                            board._rclient.AddDefaultParameter("login", login.Value);
-                            var prop = boardconf.Property("api_key");
-                            if (prop != null)
-                                board._rclient.AddDefaultParameter("api_key", prop.Value);
-                            else
-                                board._rclient.AddDefaultParameter("password_hash", boardconf["password_hash"]);
-                        }
-                    }
+                        board.Login(boardconf);
                 }
                 board._rclient.AddDefaultParameter("tags", tags);
                 return board;
@@ -75,7 +85,7 @@ namespace Nekobot
             public JToken Common(string resource, bool json)
             {
                 var content = _rclient.Execute(new RestRequest(resource, Method.GET)).Content;
-                if (json) return JObject.Parse(content.TrimStart('[').TrimEnd(']'));
+                if (json) return JArray.Parse(content);
                 return Helpers.XmlToJson(content)["posts"];
             }
 
@@ -90,9 +100,11 @@ namespace Nekobot
             public string GetImageLink(int rnd)
             {
                 var json = _type >= Type.B;
-                var res = Common(Resource + rnd.ToString(), json);
+                bool e621 = _type == Type.E621;
+                var res = Common(e621 ? $"post/index.json?limit={Math.Min(rnd, 320)}&page={rnd/320}" : (Resource + rnd.ToString()), json);
                 string prefix = !json ? "@" : "";
                 if (!json) res = (JObject)res["post"];
+                else res = res[e621 ? rnd % 320 : 0];
                 return $"**<{Link}{Post}{res[$"{prefix}id"].ToString()}>** {(_type == Type.A_HTTP_NEEDED || _type == Type.Sankaku ? "http:" : "")}{GetFileUrl(res, prefix)}";
             }
 
@@ -101,7 +113,7 @@ namespace Nekobot
                 var type_a = _type < Type.B;
                 var sankaku = !type_a && _type == Type.Sankaku;
                 var res = Common(!type_a && !sankaku ? "post/index.xml?limit=1" : Resource, sankaku);
-                return sankaku ? res.ToString().Length == 0 ? 0 : 1000
+                return sankaku ? res[0].ToString().Length == 0 ? 0 : 1000
                     : res["@count"].ToObject<int>();
             }
 
@@ -114,6 +126,7 @@ namespace Nekobot
                     try
                     {
                         int posts = board.GetPostCount();
+                        if (board._type == Type.E621) posts = Math.Min(320 * 750, posts); // Clamp before randomization for userfacing random.
                         await e.Channel.SendMessageAsync(posts == 0 ?
                             $"There is nothing under the tag(s):\n{tags}\non {booru}. Please try something else." :
                             board.GetImageLink(posts == 1 ? 0 : new Random().Next(1, posts - 1)));

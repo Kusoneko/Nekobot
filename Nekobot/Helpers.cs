@@ -3,7 +3,9 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Threading.Tasks;
+using System.Text;
 using RestSharp;
 using Nekobot.Commands;
 using Nekobot.Commands.Permissions.Levels;
@@ -63,6 +65,8 @@ namespace Nekobot
 
         public static Task<IUserMessage> SendEmbed(CommandEventArgs args, EmbedBuilder builder)
             => args.Channel.SendMessageAsync("", embed: builder.Build());
+
+        internal static object ToSHA1(string str) => SHA1.Create().ComputeHash(Encoding.UTF8.GetBytes(str));
 
         internal static async Task PerformAction(CommandEventArgs e, string action, string reaction, bool perform_when_empty)
         {
