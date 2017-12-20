@@ -66,6 +66,9 @@ namespace Nekobot
         public static Task<IUserMessage> SendEmbed(CommandEventArgs args, EmbedBuilder builder)
             => args.Channel.SendMessageAsync("", embed: builder.Build());
 
+        public static Task<IUserMessage> SendEmbed(CommandEventArgs args, string description)
+            => SendEmbed(args, EmbedBuilder.WithDescription(description));
+
         internal static object ToSHA1(string str) => SHA1.Create().ComputeHash(Encoding.UTF8.GetBytes(str));
 
         internal static async Task PerformAction(CommandEventArgs e, string action, string reaction, bool perform_when_empty)

@@ -97,15 +97,22 @@ namespace Nekobot
                 return ret.Substring(0, ret.IndexOf(md5)+md5.Length) + ret.Substring(ret.LastIndexOf('.'));
             }
 
-            public string GetImageLink(int rnd)
+            public Discord.EmbedBuilder GetEmbed(int rnd)
             {
                 var json = _type >= Type.B;
                 bool e621 = _type == Type.E621;
                 var res = Common(e621 ? $"post/index.json?limit={Math.Min(rnd, 320)}&page={rnd/320}" : (Resource + rnd.ToString()), json);
+                res = json ? res[e621 ? rnd % 320 : 0] : (JObject)res["post"];
+
                 string prefix = !json ? "@" : "";
-                if (!json) res = (JObject)res["post"];
-                else res = res[e621 ? rnd % 320 : 0];
-                return $"**<{Link}{Post}{res[$"{prefix}id"].ToString()}>** {(_type == Type.A_HTTP_NEEDED || _type == Type.Sankaku ? "http:" : "")}{GetFileUrl(res, prefix)}";
+                var postlink = $"{Link}{Post}{res[$"{prefix}id"]}";
+                var imageurl = GetFileUrl(res, prefix);
+                if (_type == Type.A_HTTP_NEEDED || _type == Type.Sankaku) imageurl = $"http:{imageurl}";
+                var description = Helpers.FieldExistsSafe(res, $"{prefix}description", string.Empty);
+
+                var builder = Helpers.EmbedBuilder.WithDescription($"[{(string.IsNullOrEmpty(description) ? postlink : description)}]({postlink})");
+                builder.WithImageUrl(imageurl);
+                return builder;
             }
 
             public int GetPostCount()
@@ -127,9 +134,10 @@ namespace Nekobot
                     {
                         int posts = board.GetPostCount();
                         if (board._type == Type.E621) posts = Math.Min(320 * 750, posts); // Clamp before randomization for userfacing random.
-                        await e.Channel.SendMessageAsync(posts == 0 ?
-                            $"There is nothing under the tag(s):\n{tags}\non {booru}. Please try something else." :
-                            board.GetImageLink(posts == 1 ? 0 : new Random().Next(1, posts - 1)));
+                        if (posts == 0)
+                            await Helpers.SendEmbed(e, $"There is nothing under the tag(s):\n{tags}\non {booru}. Please try something else.");
+                        else
+                            await Helpers.SendEmbed(e, board.GetEmbed(posts == 1 ? 0 : new Random().Next(0, posts - 1)));
                         return;
                     }
                     catch { }
