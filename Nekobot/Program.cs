@@ -355,8 +355,8 @@ namespace Nekobot
                 .MinPermissions(4)
                 .Parameter("few", Commands.ParameterType.Required)
                 .Parameter("force", Commands.ParameterType.Optional)
-                .Description("I'll delete the last `few` messages, and the command message.\nAdd `force` to delete pinned messages.")
                 .Parameter("mentions", Commands.ParameterType.MultipleUnparsed)
+                .Description("I'll delete the last `few` messages, and the command message.\nAdd `force` to delete pinned messages.")
                 .Do(async e =>
                 {
                     var few = int.Parse(e.Args[0]);

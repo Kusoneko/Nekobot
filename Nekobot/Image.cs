@@ -140,7 +140,7 @@ namespace Nekobot
                             await Helpers.SendEmbed(e, board.GetEmbed(posts == 1 ? 0 : new Random().Next(0, posts - 1)));
                         return;
                     }
-                    catch { }
+                    catch (Exception ex) { await Log.Write(Discord.LogSeverity.Warning, "", ex, booru); }
                 }
                 await e.Channel.SendMessageAsync($"Failed ten times, something must be broken with {booru}'s API.");
             }
@@ -153,6 +153,8 @@ namespace Nekobot
             private RestClient _rclient;
         }
 
+#if lewdchanexisted
+
         static async Task LewdSX(string chan, Discord.IMessageChannel c)
         {
             string result = Helpers.GetRestClient("https://lewdchan.com").Execute(new RestRequest($"{chan}/src/list.php", Method.GET)).Content;
@@ -162,8 +164,6 @@ namespace Nekobot
                 list.Add(m.Value);
             await c.SendMessageAsync($"https://lewdchan.com/{chan}/src/{list[new Random().Next(0, list.Count())]}");
         }
-
-#if lewdchanexisted
         static void CreateLewdCommand(Commands.CommandGroupBuilder group, string chan)
         {
             group.CreateCommand(chan)
@@ -187,7 +187,7 @@ namespace Nekobot
 
         internal static void AddCommands(Commands.CommandGroupBuilder group)
         {
-#if false
+#if lewdchanexisted
             CreateLewdCommand(group, "neko");
             CreateLewdCommand(group, "qt");
             CreateLewdCommand(group, "kitsune");
