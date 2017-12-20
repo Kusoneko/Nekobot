@@ -475,7 +475,7 @@ namespace Nekobot
             //DiscordClient will automatically reconnect once we've established a connection, until then we loop on our end
             Log.Output("Ohayou, Master-san!", ConsoleColor.Cyan);
             Log.Output(VersionCheck(), ConsoleColor.Cyan);
-            await client.LoginAsync(TokenType.Bot, config["token"].ToString());
+            await client.LoginAsync(TokenType.Bot, config["token"].ToString()).ConfigureAwait(false);
             client.Connected += async () =>
             {
                 // Connection, start music streams
@@ -483,7 +483,7 @@ namespace Nekobot
                 // Add delayed commands
                 Cmds.CreateGroup("", group => GenerateDelayedCommands(group));
             };
-            await client.StartAsync();
+            await client.StartAsync().ConfigureAwait(false);
 
             // Wait infinitely so your bot actually stays connected.
             await Task.Delay(Timeout.Infinite);
