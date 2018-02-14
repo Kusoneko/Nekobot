@@ -486,6 +486,9 @@ namespace Nekobot
                 await Voice.Startup(client);
                 // Add delayed commands
                 Cmds.CreateGroup("", group => GenerateDelayedCommands(group));
+
+                // Add reliability service now, so it doesn't see our first connection.
+                new ReliabilityService(client, Log.Write);
             };
             await client.StartAsync().ConfigureAwait(false);
 
