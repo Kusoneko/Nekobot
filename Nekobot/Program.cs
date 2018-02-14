@@ -463,7 +463,7 @@ namespace Nekobot
             //client.LoggedOut += LoggedOut;
             client.UserJoined += UserJoined;
             client.UserLeft += UserLeft;
-            client.Log += l => Log.Write(l);
+            client.Log += Log.Write;
             //Display errors that occur when a user tries to run a command
             Cmds.PermsService = new PermissionLevelService(Helpers.GetPermissions);
             Cmds.CommandErrored += CommandErrored;
