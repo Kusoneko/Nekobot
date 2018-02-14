@@ -289,6 +289,10 @@ namespace Nekobot
                 });
 
             // Owner commands
+            group.CreateCommand("ban")
+                .MinPermissions(8)
+                .Parameter("id")
+                .Do(e => e.Server.AddBanAsync(ulong.Parse(e.Args[0])));
 
             group.CreateCommand("leave")
                 .MinPermissions(3)
