@@ -159,7 +159,7 @@ namespace Nekobot
             IMessage last = cachedmsgs.Last();
             while (donecount < few)
             {
-                var msgs = (await c.GetMessagesAsync(last, Direction.Before, few - donecount).Flatten()).OrderByDescending(msg => msg.Timestamp);
+                var msgs = (await c.GetMessagesAsync(last, Direction.Before, few - donecount).FlattenAsync()).OrderByDescending(msg => msg.Timestamp);
                 donecount += perform(msgs, false);
                 last = msgs.Last();
                 if (msgs.Count() < 100) break; // We must be at the end.
