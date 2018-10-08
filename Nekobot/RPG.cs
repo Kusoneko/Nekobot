@@ -11,7 +11,7 @@ namespace Nekobot
         {
             public DiceKernel Init()
             {
-                new RollGen.Domain.IoC.RollGenModuleLoader().LoadModules(this);
+                new RollGen.IoC.RollGenModuleLoader().LoadModules(this);
                 return this;
             }
         }
@@ -49,7 +49,7 @@ namespace Nekobot
                 });
 
             var dk = new DiceKernel().Init();
-            var dd = dk.Get<IDice>();
+            var dd = dk.Get<Dice>();
             group.CreateCommand("roll")
                 .Parameter("[times]t [dice expressions]", Commands.ParameterType.Unparsed)
                 .Description("I'll roll a dice expression([count]d[sides]k[kept][mods...]...) as many `times` as you ask(default 1). (If empty or just `times`, will roll default: 1d6.)")
@@ -87,7 +87,7 @@ namespace Nekobot
                         double val;
                         if (do_default)
                         {
-                            val = dd.Roll().D6().AsSum();
+                            val = dd.Roll().d6().AsSum();
                             response += $"{val} {(total == null ? "" : times == 1 ? "=" : "+")} ";
                         }
                         else
