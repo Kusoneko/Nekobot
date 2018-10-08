@@ -223,7 +223,7 @@ namespace Nekobot.Commands
             var tasks = new List<Task>();
             Action sendAndClear = () =>
             {
-                tasks.Add(replyChannel.SendMessageAsync(string.Empty, embed: output.Build()));
+                tasks.Add(replyChannel.SendMessageAsync(embed: output.Build()));
                 output = EmbedBuilder();
             };
             bool isFirstCategory = true;
