@@ -141,13 +141,13 @@ namespace Nekobot
         internal static EmbedBuilder EmbedBuilder => Program.Cmds.EmbedBuilder();
         internal static async Task SendEmbed(IMessageChannel c, EmbedBuilder b)
         {
-            if (b.Fields.Count != 0) await c.SendMessageAsync(string.Empty, embed: b.Build());
+            if (b.Fields.Count != 0) await c.SendMessageAsync(embed: b.Build());
         }
         internal static void SendEmbedEarly(IMessageChannel c, ref EmbedBuilder b)
         {
             if (b.Fields.Count == EmbedBuilder.MaxFieldCount)
             {
-                c.SendMessageAsync(string.Empty, embed: b.Build());
+                c.SendMessageAsync(embed: b.Build());
                 b = EmbedBuilder;
             }
         }
@@ -159,10 +159,10 @@ namespace Nekobot
             IMessage last = cachedmsgs.Last();
             while (donecount < few)
             {
-                var msgs = (await c.GetMessagesAsync(last, Direction.Before, few - donecount).FlattenAsync()).OrderByDescending(msg => msg.Timestamp);
+                var msgs = (await c.GetMessagesAsync(last, Direction.Before).FlattenAsync()).OrderByDescending(msg => msg.Timestamp);
                 donecount += perform(msgs, false);
                 last = msgs.Last();
-                if (msgs.Count() < 100) break; // We must be at the end.
+                if (msgs.Count() < DiscordConfig.MaxMessagesPerBatch) break; // We must be at the end.
             }
         }
         internal static string ZeroPadding(float count)
