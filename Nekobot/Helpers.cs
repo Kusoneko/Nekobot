@@ -139,6 +139,9 @@ namespace Nekobot
         internal static string Nickname(SocketGuildUser u) => string.IsNullOrEmpty(u.Nickname) ? u.Username : u.Nickname;
 
         internal static EmbedBuilder EmbedBuilder => Program.Cmds.EmbedBuilder();
+
+        internal static EmbedBuilder EmbedDesc(string str) => EmbedBuilder.WithDescription(str);
+
         internal static async Task SendEmbed(IMessageChannel c, EmbedBuilder b)
         {
             if (b.Fields.Count != 0) await c.SendMessageAsync(embed: b.Build());
