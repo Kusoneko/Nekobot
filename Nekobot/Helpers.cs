@@ -64,7 +64,7 @@ namespace Nekobot
         internal static string RemoveEmoji(string text) => System.Text.RegularExpressions.Regex.Replace(text, @"\p{Cs}", "");
 
         public static Task<IUserMessage> SendEmbed(CommandEventArgs args, EmbedBuilder builder)
-            => args.Channel.SendMessageAsync("", embed: builder.Build());
+            => args.Channel.SendMessageAsync(embed: builder.Build());
 
         public static Task<IUserMessage> SendEmbed(CommandEventArgs args, string description)
             => SendEmbed(args, EmbedBuilder.WithDescription(description));
@@ -139,15 +139,18 @@ namespace Nekobot
         internal static string Nickname(SocketGuildUser u) => string.IsNullOrEmpty(u.Nickname) ? u.Username : u.Nickname;
 
         internal static EmbedBuilder EmbedBuilder => Program.Cmds.EmbedBuilder();
+
+        internal static EmbedBuilder EmbedDesc(string str) => EmbedBuilder.WithDescription(str);
+
         internal static async Task SendEmbed(IMessageChannel c, EmbedBuilder b)
         {
-            if (b.Fields.Count != 0) await c.SendMessageAsync(string.Empty, embed: b.Build());
+            if (b.Fields.Count != 0) await c.SendMessageAsync(embed: b.Build());
         }
         internal static void SendEmbedEarly(IMessageChannel c, ref EmbedBuilder b)
         {
             if (b.Fields.Count == EmbedBuilder.MaxFieldCount)
             {
-                c.SendMessageAsync(string.Empty, embed: b.Build());
+                c.SendMessageAsync(embed: b.Build());
                 b = EmbedBuilder;
             }
         }
@@ -159,10 +162,10 @@ namespace Nekobot
             IMessage last = cachedmsgs.Last();
             while (donecount < few)
             {
-                var msgs = (await c.GetMessagesAsync(last, Direction.Before, few - donecount).FlattenAsync()).OrderByDescending(msg => msg.Timestamp);
+                var msgs = (await c.GetMessagesAsync(last, Direction.Before).FlattenAsync()).OrderByDescending(msg => msg.Timestamp);
                 donecount += perform(msgs, false);
                 last = msgs.Last();
-                if (msgs.Count() < 100) break; // We must be at the end.
+                if (msgs.Count() < DiscordConfig.MaxMessagesPerBatch) break; // We must be at the end.
             }
         }
         internal static string ZeroPadding(float count)

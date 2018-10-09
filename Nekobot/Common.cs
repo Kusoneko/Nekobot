@@ -49,12 +49,13 @@ namespace Nekobot
                 .Description("I'll tell you how long I've been awake~")
                 .Do(e => e.Channel.SendMessageAsync(Format.Code(Helpers.Uptime().ToString())));
 
-            Func<SocketRole, string> role_info = r =>
+            EmbedFieldBuilder role_info(SocketRole r)
             {
-                string ret = $"{r.Name} is id {r.Id}, has {r.Members.Count()} members, color is {r.Color}, perms are {r.Permissions.RawValue}, and position is {r.Position}";
+                string ret = $"ID is {r.Id}, has {r.Members.Count()} members, color is {r.Color}, perms are {r.Permissions.RawValue}, and position is {r.Position}";
                 if (r.IsManaged) ret += "; it is managed by the server";
-                return $"{ret}.\n";
-            };
+                ret += $"\nIt was created on {r.CreatedAt}";
+                return new EmbedFieldBuilder().WithName(r.Name).WithValue(ret);
+            }
             group.CreateCommand("whois")
                 .Alias("getinfo")
                 .Parameter("[@User1] [@User2] [...]", Commands.ParameterType.Unparsed)
@@ -62,28 +63,41 @@ namespace Nekobot
                 .Do(async e =>
                 {
                     if (e.Args[0].Length == 0 || (!e.Message.MentionedUserIds.Any() && !e.Message.MentionedRoleIds.Any())) return;
-                    string reply = "";
                     bool oniicheck = e.User.Id == 63299786798796800;
+                    var embed = Helpers.EmbedDesc("WhoIs Response");
+                    async Task<IUserMessage> send() => await e.Channel.SendMessageAsync(embed: embed.Build());
                     foreach (var t in e.Message.Tags)
                     {
+                        if (embed.Fields.Count == EmbedBuilder.MaxFieldCount)
+                        {
+                            await send();
+                            embed.Fields.Clear();
+                        }
                         switch (t.Type)
                         {
                             case TagType.RoleMention:
-                                reply += role_info(t.Value as SocketRole);
+                                embed.AddField(role_info(t.Value as SocketRole));
                                 break;
                             case TagType.UserMention:
                                 var u = t.Value as IGuildUser;
                                 bool onii = oniicheck && u.Id == 63296013791666176;
-                                string possessive = onii ? "his" : "their";
-                                reply += u.Username;
-                                if (!string.IsNullOrEmpty(u.Nickname)) reply += $" (Nick: {u.Nickname})";
-                                reply += $"{(onii ? " is your onii-chan <3 and his" : "'s")} id is {u.Id}, {possessive} discriminator is {u.Discriminator} and {possessive} permission level is {Helpers.GetPermissions(u, e.Channel)}.";
-                                if (u.IsBot) reply += " Also, they are a bot!";
-                                reply += '\n';
+                                string possessive = onii ? "His" : "Their";
+                                string pronoun = onii ? "He" : "They";
+                                var field = new EmbedFieldBuilder();
+                                string reply = string.Empty;
+                                if (onii) reply += "is your onii-chan <3\n";
+                                if (!string.IsNullOrEmpty(u.Nickname)) reply += $"Nick: {u.Nickname}\n";
+                                reply += $"ID: {u.Id}\n{possessive} discriminator is {u.Discriminator}. {possessive} permission level is {Helpers.GetPermissions(u, e.Channel)}.";
+                                reply += $"\n{pronoun} joined Discord on {u.CreatedAt}.\n{pronoun} joined this server on {u.JoinedAt}.\n";
+                                if (u.IsBot) reply += $" {pronoun} are also a bot!";
+                                reply += $" {possessive} status is {u.Status}.\n";
+                                if (u.Activity != null) reply += $"\n{pronoun} {(onii ? "is" : "are")} {u.Activity.Type} {u.Activity.Name}.";
+                                if (u.VoiceChannel != null) reply += $"Current voice channel: {u.VoiceChannel.Name}";
+                                embed.AddField(u.Username, reply);
                                 break;
                         }
                     }
-                    await e.Channel.SendMessageAsync('\n' + reply);
+                    if (embed.Fields.Count != 0) await send();
                 });
 
             group.CreateCommand("whois role")
@@ -107,10 +121,15 @@ namespace Nekobot
 
             Image.AddCommands(group);
 
-            Action<Commands.CommandEventArgs, Func<string, string>> lookup_cmd = (e, f) =>
+            Func<Commands.CommandEventArgs, Task<bool>> lookup_nothing = async e =>
             {
                 var args = e.Args[0];
-                e.Channel.SendMessageAsync(args.Length == 0 ? "I cannot lookup nothing, silly!" : f(args));
+                if (args.Length == 0)
+                {
+                    await Helpers.SendEmbed(e, Helpers.EmbedDesc("I cannot lookup nothing, silly!"));
+                    return true;
+                }
+                return false;
             };
 
             group.CreateCommand("urban")
@@ -118,40 +137,53 @@ namespace Nekobot
                 .Alias("ud")
                 .Parameter("phrase", Commands.ParameterType.Unparsed)
                 .Description("I'll give you the urban dictionary definition of a phrase.")
-                .Do(e => lookup_cmd(e, args =>
+                .Do(async e =>
                 {
+                    if (await lookup_nothing(e)) return;
                     var req = new RestRequest("define", Method.GET);
-                    req.AddQueryParameter("term", args);
+                    req.AddQueryParameter("term", e.Args[0]);
                     var json = JObject.Parse(Helpers.GetRestClient("http://api.urbandictionary.com/v0").Execute(req).Content);
                     var list = json["list"];
-                    if (!list.HasValues) return "No results found.";
-                    var sounds = json["sounds"];
-                    var sound = sounds.HasValues ? $"Sound: {sounds.First}" : string.Empty;
+                    if (!list.HasValues)
+                    {
+                        await Helpers.SendEmbed(e, Helpers.EmbedDesc("No results found."));
+                        return;
+                    }
                     var resp = list[0];
-                    return $"{resp["word"]}: {resp["definition"]}\n⬆{resp["thumbs_up"]} ⬇{resp["thumbs_down"]} <{resp["permalink"]}>```{resp["example"]}```{sound}";
-                }));
+                    var embed = Helpers.EmbedDesc(resp["definition"].ToString())
+                        .WithTitle(resp["word"].ToString())
+                        .WithUrl(resp["permalink"].ToString())
+                        .WithFooter($"⬆{resp["thumbs_up"]} ⬇{resp["thumbs_down"]}")
+                        .WithTimestamp(DateTime.Parse(resp["written_on"].ToString(), null, System.Globalization.DateTimeStyles.RoundtripKind))
+                        .AddField("Example", resp["example"]);
+                    var sounds = resp["sound_urls"];
+                    if (sounds.HasValues)
+                        embed.AddField(sounds.Count() > 1 ? "Sounds" : "Sound", string.Join("\n", sounds)); // I wish we could embed just one of these and have an audio player, but this works too.
+                    await Helpers.SendEmbed(e, embed);
+                });
 
             if (Helpers.FieldExists("WolframAlpha", "appid"))
             {
                 group.CreateCommand("wolfram")
                     .Parameter("input", Commands.ParameterType.Unparsed)
-                    .Description("I'll look something up for you on ")
-                    .Do(e => lookup_cmd(e, args =>
+                    .Description("I'll look something up for you on WolframAlpha")
+                    .Do(async e =>
                     {
+                        if (await lookup_nothing(e)) return;
                         var rc = Helpers.GetRestClient("http://api.wolframalpha.com/v2/"); // TODO: Do we want this static?
                         rc.AddDefaultParameter("appid", Program.config["WolframAlpha"]["appid"]);
                         var req = new RestRequest("query", Method.GET);
-                        req.AddQueryParameter("input", args);
-                        string ret = "";
+                        req.AddQueryParameter("input", e.Args[0]);
                         var json = Helpers.XmlToJson(rc.Execute(req).Content)["queryresult"];
                         if (!json["@success"].ToObject<bool>())
                         {
                             const string didyoumeans = "didyoumeans";
                             if (Helpers.FieldExists(json, didyoumeans))
                             {
-                                ret += "Perhaps you meant";
+                                var embed = Helpers.EmbedBuilder.WithTitle("Perhaps you meant");
                                 json = json[didyoumeans];
                                 int count = json["@count"].ToObject<int>();
+                                string ret = "";
                                 Func<JToken, string> format_suggestion = suggestion => $" `{suggestion["#text"]}`";
                                 json = json["didyoumean"];
                                 if (count == 1)
@@ -159,13 +191,16 @@ namespace Nekobot
                                 else for (int i = 0; i < count; ++i)
                                     ret += (i == 0 ? "" : i == count-1 ? ", or " : ",")+format_suggestion(json[i]);
                                 ret += '?';
+                                await Helpers.SendEmbed(e, embed.WithDescription(ret.TrimStart()));
                             }
-                            else ret = "Sorry, I couldn't find anything for your input.";
+                            await Helpers.SendEmbed(e, Helpers.EmbedDesc("Sorry, I couldn't find anything for your input."));
                         }
                         else
                         {
                             int show = 4; // Show the first four results
                             json = json["pod"];
+                            string ret = "";
+                            //var embed = Helpers.EmbedBuilder.WithTitle($"Results for {e.Args}");
                             for (int i = 0, count = json.Count(); show != 0 && i < count; ++i)
                             {
                                 var pod = json[i];
@@ -178,9 +213,10 @@ namespace Nekobot
                                 else for (int j =0; show != 0 && j < numsubpods; ++j, --show)
                                     ret += $"{pod["subpod"][j]["img"]["@src"]}\n";
                             }
+                            await e.Channel.SendMessageAsync(ret);
+                            //await Helpers.SendEmbed(e, embed.WithDescription(ret)); // I don't know how this would look good, at this point.
                         }
-                        return ret;
-                    }));
+                    });
             }
 
             var quote_site = "http://bacon.mlgdoor.uk/";
@@ -405,14 +441,15 @@ The current topic is: {chan.Topic}";
                             await e.Channel.SendMessageAsync("None found...");
                         else foreach (var msg in found.Take(few))
                         {
-                            var extradata = $"[{msg.Timestamp}]{msg.Author.Username}:";
-                            // If the message would reach the max if we add extra data, send that separate.
-                            if (msg.Content.Length + extradata.Length >= 1999)
+                            var extradata = $"[[{msg.Timestamp}]({msg.GetJumpUrl()})]{msg.Author.Username}:";
+                            //if (msg.Content.Length > EmbedBuilder.MaxDescriptionLength) // This should never happen, unless we decide to start searching embeds.
                             {
-                                await e.Channel.SendMessageAsync(extradata);
-                                await e.Channel.SendMessageAsync(msg.Content);
+                                var builder = Helpers.EmbedBuilder;
+                                builder.WithTimestamp(msg.Timestamp).WithDescription(msg.Content);
+                                builder.WithTitle($"{msg.Author.ToString()}'s message").WithUrl(msg.GetJumpUrl());
+                                await e.Channel.SendMessageAsync(embed: builder.Build());
                             }
-                            else await e.Channel.SendMessageAsync($"{extradata} {msg.Content}");
+                            //else await e.Channel.SendMessageAsync($"Content too long to show, message here: <{msg.GetJumpUrl()}>");
                         }
                     }
                 });
