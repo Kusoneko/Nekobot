@@ -49,12 +49,13 @@ namespace Nekobot
                 .Description("I'll tell you how long I've been awake~")
                 .Do(e => e.Channel.SendMessageAsync(Format.Code(Helpers.Uptime().ToString())));
 
-            Func<SocketRole, string> role_info = r =>
+            EmbedFieldBuilder role_info(SocketRole r)
             {
-                string ret = $"{r.Name} is id {r.Id}, has {r.Members.Count()} members, color is {r.Color}, perms are {r.Permissions.RawValue}, and position is {r.Position}";
+                string ret = $"ID is {r.Id}, has {r.Members.Count()} members, color is {r.Color}, perms are {r.Permissions.RawValue}, and position is {r.Position}";
                 if (r.IsManaged) ret += "; it is managed by the server";
-                return $"{ret}.\n";
-            };
+                ret += $"\nIt was created on {r.CreatedAt}";
+                return new EmbedFieldBuilder().WithName(r.Name).WithValue(ret);
+            }
             group.CreateCommand("whois")
                 .Alias("getinfo")
                 .Parameter("[@User1] [@User2] [...]", Commands.ParameterType.Unparsed)
@@ -62,28 +63,41 @@ namespace Nekobot
                 .Do(async e =>
                 {
                     if (e.Args[0].Length == 0 || (!e.Message.MentionedUserIds.Any() && !e.Message.MentionedRoleIds.Any())) return;
-                    string reply = "";
                     bool oniicheck = e.User.Id == 63299786798796800;
+                    var embed = Helpers.EmbedDesc("WhoIs Response");
+                    async Task<IUserMessage> send() => await e.Channel.SendMessageAsync(embed: embed.Build());
                     foreach (var t in e.Message.Tags)
                     {
+                        if (embed.Fields.Count == EmbedBuilder.MaxFieldCount)
+                        {
+                            await send();
+                            embed.Fields.Clear();
+                        }
                         switch (t.Type)
                         {
                             case TagType.RoleMention:
-                                reply += role_info(t.Value as SocketRole);
+                                embed.AddField(role_info(t.Value as SocketRole));
                                 break;
                             case TagType.UserMention:
                                 var u = t.Value as IGuildUser;
                                 bool onii = oniicheck && u.Id == 63296013791666176;
-                                string possessive = onii ? "his" : "their";
-                                reply += u.Username;
-                                if (!string.IsNullOrEmpty(u.Nickname)) reply += $" (Nick: {u.Nickname})";
-                                reply += $"{(onii ? " is your onii-chan <3 and his" : "'s")} id is {u.Id}, {possessive} discriminator is {u.Discriminator} and {possessive} permission level is {Helpers.GetPermissions(u, e.Channel)}.";
-                                if (u.IsBot) reply += "\nAlso, they are a bot!";
-                                reply += '\n';
+                                string possessive = onii ? "His" : "Their";
+                                string pronoun = onii ? "He" : "They";
+                                var field = new EmbedFieldBuilder();
+                                string reply = string.Empty;
+                                if (onii) reply += "is your onii-chan <3\n";
+                                if (!string.IsNullOrEmpty(u.Nickname)) reply += $"Nick: {u.Nickname}\n";
+                                reply += $"ID: {u.Id}\n{possessive} discriminator is {u.Discriminator}. {possessive} permission level is {Helpers.GetPermissions(u, e.Channel)}.";
+                                reply += $"\n{pronoun} joined Discord on {u.CreatedAt}.\n{pronoun} joined this server on {u.JoinedAt}.\n";
+                                if (u.IsBot) reply += $" {pronoun} are also a bot!";
+                                reply += $" {possessive} status is {u.Status}.\n";
+                                if (u.Activity != null) reply += $"\n{pronoun} {(onii ? "is" : "are")} {u.Activity.Type} {u.Activity.Name}.";
+                                if (u.VoiceChannel != null) reply += $"Current voice channel: {u.VoiceChannel.Name}";
+                                embed.AddField(u.Username, reply);
                                 break;
                         }
                     }
-                    await e.Channel.SendMessageAsync('\n' + reply);
+                    if (embed.Fields.Count != 0) await send();
                 });
 
             group.CreateCommand("whois role")
