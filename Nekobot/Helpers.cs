@@ -64,7 +64,7 @@ namespace Nekobot
         internal static string RemoveEmoji(string text) => System.Text.RegularExpressions.Regex.Replace(text, @"\p{Cs}", "");
 
         public static Task<IUserMessage> SendEmbed(CommandEventArgs args, EmbedBuilder builder)
-            => args.Channel.SendMessageAsync("", embed: builder.Build());
+            => args.Channel.SendMessageAsync(embed: builder.Build());
 
         public static Task<IUserMessage> SendEmbed(CommandEventArgs args, string description)
             => SendEmbed(args, EmbedBuilder.WithDescription(description));
