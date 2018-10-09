@@ -12,7 +12,7 @@ namespace Nekobot
         public static async Task Write(LogMessage e)
         {
 #if !DEBUG
-            if (e.Severity > LogSeverity.Info || e.Severity > Program.Config.LogLevel) return;
+            if (e.Severity > LogSeverity.Info || e.Severity > Program.LogLevel) return;
 #endif
 
             //Color
